@@ -1,0 +1,21 @@
+{
+  "name": "DeckBattle.EditModeTests",
+  "rootNamespace": "DeckBattle.Tests",
+  "references": [
+    "DeckBattle.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "noEngineReferences": false
+}

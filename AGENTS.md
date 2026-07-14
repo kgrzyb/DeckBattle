@@ -97,6 +97,8 @@
 
 ## Testing and Verification
 
+- When interacting with Unity Editor, always use Unity MCP first for editor state, compilation checks, asset inspection, scene operations, and test automation.
+- Use Unity CLI only as a fallback when MCP cannot perform the required action, or for CI/batch workflows where the project is not already open in the Editor.
 - For gameplay logic, prefer edit mode tests on pure C# systems.
 - For Unity scene or prefab behavior, use play mode tests when the risk justifies it.
 - After code changes, run the narrowest relevant tests first.

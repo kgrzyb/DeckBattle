@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
+  m_Name: Archer
+  m_EditorClassIdentifier: 
+  UnitId: archer
+  DisplayName: Archer
+  UnitType: 1
+  Rarity: 0
+  ApCost: 2
+  MaxHp: 4
+  Attack: 2
+  Power: 2
+  AttackRange: 3
+  MoveRange: 1
+  AttackCooldown: 1.2
+  UnitPrefab: {fileID: 4905233732688456190, guid: c61b7deca06656f42a5fed87dc6f8d34,
+    type: 3}
+  CardArt: {fileID: 0}
