@@ -5,6 +5,8 @@ namespace DeckBattle
 {
     public sealed class BattleController : MonoBehaviour
     {
+        private const int MaxAutomaticFlowSteps = 32;
+
         public event System.Action StateChanged;
 
         [Header("Config")]
@@ -23,6 +25,7 @@ namespace DeckBattle
         private readonly Dictionary<int, UnitView> unitViewByRuntimeId = new Dictionary<int, UnitView>(16);
         private BattleState state;
         private CombatSimulationResult lastCombatResult;
+        private RoundResolutionResult lastRoundResolutionResult;
 
         public BattleState State
         {
@@ -37,6 +40,11 @@ namespace DeckBattle
         public CombatSimulationResult LastCombatResult
         {
             get { return lastCombatResult; }
+        }
+
+        public RoundResolutionResult LastRoundResolutionResult
+        {
+            get { return lastRoundResolutionResult; }
         }
 
         private void Start()
@@ -54,14 +62,14 @@ namespace DeckBattle
 
             state = BattleState.Create(battleConfig, playerDeck, enemyDeck, seed);
             lastCombatResult = null;
+            lastRoundResolutionResult = null;
             boardPresenter.Build(state.Board);
             if (playInitialVisibleUnits)
             {
                 PlayInitialVisibleUnits();
             }
 
-            ExecuteEnemyPreparationTurns();
-            ResolveCombatIfReady();
+            ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
         }
@@ -81,8 +89,7 @@ namespace DeckBattle
 
             CreateOrUpdateUnitView(result.Unit);
             PreparationTurnService.CompleteActiveSideAction(state);
-            ExecuteEnemyPreparationTurns();
-            ResolveCombatIfReady();
+            ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
             return true;
@@ -114,23 +121,24 @@ namespace DeckBattle
             }
 
             PreparationTurnService.MarkActiveSideReadyAndAdvance(state);
-            ExecuteEnemyPreparationTurns();
-            ResolveCombatIfReady();
+            ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
             return true;
         }
 
-        private void ExecuteEnemyPreparationTurns()
+        private bool ExecuteEnemyPreparationTurns()
         {
             if (state == null)
             {
-                return;
+                return false;
             }
 
+            bool progressed = false;
             while (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy && !state.Enemy.IsReady)
             {
                 EnemyPreparationAIResult aiResult = EnemyPreparationAI.ExecuteTurn(state);
+                progressed = true;
                 if (aiResult.PlayedUnit && aiResult.Unit != null)
                 {
                     CreateOrUpdateUnitView(aiResult.Unit);
@@ -141,16 +149,62 @@ namespace DeckBattle
                     break;
                 }
             }
+
+            return progressed;
         }
 
-        private void ResolveCombatIfReady()
+        private bool ResolveCombatAndRoundIfReady()
         {
             if (state == null || state.Phase != BattlePhase.Combat)
+            {
+                return false;
+            }
+
+            lastCombatResult = CombatSimulator.Simulate(state);
+            if (state.Phase == BattlePhase.RoundResolution)
+            {
+                lastRoundResolutionResult = RoundFlowService.ResolveRoundAndStartNext(state);
+            }
+
+            return true;
+        }
+
+        private void ProgressAutomaticFlow()
+        {
+            if (state == null)
             {
                 return;
             }
 
-            lastCombatResult = CombatSimulator.Simulate(state);
+            for (int step = 0; step < MaxAutomaticFlowSteps; step++)
+            {
+                if (state.Phase == BattlePhase.MatchEnd)
+                {
+                    return;
+                }
+
+                if (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Player && !state.Player.IsReady)
+                {
+                    return;
+                }
+
+                bool progressed = false;
+                if (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy)
+                {
+                    progressed = ExecuteEnemyPreparationTurns();
+                }
+                else if (state.Phase == BattlePhase.Combat)
+                {
+                    progressed = ResolveCombatAndRoundIfReady();
+                }
+
+                if (!progressed)
+                {
+                    return;
+                }
+            }
+
+            Debug.LogWarning("Automatic battle flow reached its safety step limit.", this);
         }
 
         private void PlayInitialVisibleUnits()

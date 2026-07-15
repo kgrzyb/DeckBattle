@@ -54,11 +54,51 @@ namespace DeckBattle
             return side == BattleSide.Player ? Player : Enemy;
         }
 
+        public void StartNextRound()
+        {
+            if (Phase != BattlePhase.RoundResolution)
+            {
+                throw new InvalidOperationException("Next round can only start after round resolution.");
+            }
+
+            RoundNumber++;
+            Phase = BattlePhase.RoundStart;
+            ActivePreparationSide = BattleSide.Player;
+
+            PreparePlayerForNextRound(Player);
+            PreparePlayerForNextRound(Enemy);
+
+            Phase = BattlePhase.Preparation;
+            PreparationTurnService.EnsureActiveSideCanAct(this);
+        }
+
         public int AllocateRuntimeUnitId()
         {
             int id = nextRuntimeUnitId;
             nextRuntimeUnitId++;
             return id;
+        }
+
+        private void PreparePlayerForNextRound(PlayerBattleState player)
+        {
+            player.IsReady = false;
+            player.Ap = CalculateRoundAp();
+            player.DeploymentSlots = CalculateDeploymentSlots();
+            FormationService.RestoreFormationAndResetRoundHealth(player);
+            DeckService.DrawCards(player, Config.DrawPerRound);
+        }
+
+        private int CalculateRoundAp()
+        {
+            int roundAp = Config.StartingAp + RoundNumber - 1;
+            return Math.Min(Config.MaxAp, roundAp);
+        }
+
+        private int CalculateDeploymentSlots()
+        {
+            int slotIncreases = (RoundNumber - 1) / Config.DeploymentSlotIncreaseEveryRounds;
+            int deploymentSlots = Config.StartingDeploymentSlots + slotIncreases;
+            return Math.Min(Config.MaxDeploymentSlots, deploymentSlots);
         }
     }
 }
