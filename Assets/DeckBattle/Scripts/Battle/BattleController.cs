@@ -14,7 +14,6 @@ namespace DeckBattle
         [SerializeField] private List<UnitDefinition> playerDeck = new List<UnitDefinition>(8);
         [SerializeField] private List<UnitDefinition> enemyDeck = new List<UnitDefinition>(8);
         [SerializeField] private int seed = 12345;
-        [SerializeField] private bool playInitialVisibleUnits;
 
         [Header("Presentation")]
         [SerializeField] private BoardPresenter boardPresenter;
@@ -65,10 +64,6 @@ namespace DeckBattle
             lastCombatResult = null;
             lastRoundResolutionResult = null;
             boardPresenter.Build(state.Board);
-            if (playInitialVisibleUnits)
-            {
-                PlayInitialVisibleUnits();
-            }
 
             ProgressAutomaticFlow();
             RefreshUnits();
@@ -206,34 +201,6 @@ namespace DeckBattle
             }
 
             Debug.LogWarning("Automatic battle flow reached its safety step limit.", this);
-        }
-
-        private void PlayInitialVisibleUnits()
-        {
-            TryPlayFirstAvailable(state.Player, new HexCoord(1, 0));
-            TryPlayFirstAvailable(state.Player, new HexCoord(3, 0));
-            TryPlayFirstAvailable(state.Enemy, new HexCoord(1, battleConfig.BoardHeight - 1));
-            TryPlayFirstAvailable(state.Enemy, new HexCoord(3, battleConfig.BoardHeight - 1));
-        }
-
-        private void TryPlayFirstAvailable(PlayerBattleState player, HexCoord coord)
-        {
-            if (player.Hand.Count == 0)
-            {
-                return;
-            }
-
-            for (int i = 0; i < player.Hand.Count; i++)
-            {
-                CardRuntimeState card = player.Hand[i];
-                if (UnitPlayService.ValidatePlay(state, player, card, coord) != PlayUnitFailReason.None)
-                {
-                    continue;
-                }
-
-                UnitPlayService.PlayUnit(state, player, card, coord);
-                return;
-            }
         }
 
         private void RefreshUnits()

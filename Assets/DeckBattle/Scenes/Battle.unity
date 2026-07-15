@@ -570,7 +570,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e058364f049f9bd40af93cf15af5b304, type: 2}
   - {fileID: 11400000, guid: c0686eab33d7c8d48a2448c351adc71b, type: 2}
   seed: 12345
-  playInitialVisibleUnits: 0
   boardPresenter: {fileID: 1201968723}
   unitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
     type: 3}

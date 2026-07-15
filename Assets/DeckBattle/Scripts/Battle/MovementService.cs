@@ -12,6 +12,22 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(board));
             }
 
+            var workspace = new MovementWorkspace(board.Width * board.Height);
+            return MoveTowardsTarget(board, mover, target, allUnits, workspace);
+        }
+
+        public static bool MoveTowardsTarget(
+            HexBoard board,
+            RuntimeUnit mover,
+            RuntimeUnit target,
+            IList<RuntimeUnit> allUnits,
+            MovementWorkspace workspace)
+        {
+            if (board == null)
+            {
+                throw new ArgumentNullException(nameof(board));
+            }
+
             if (mover == null)
             {
                 throw new ArgumentNullException(nameof(mover));
@@ -25,6 +41,11 @@ namespace DeckBattle
             if (allUnits == null)
             {
                 throw new ArgumentNullException(nameof(allUnits));
+            }
+
+            if (workspace == null)
+            {
+                throw new ArgumentNullException(nameof(workspace));
             }
 
             if (!mover.IsAlive || !target.IsAlive)
@@ -42,9 +63,10 @@ namespace DeckBattle
             int bestDistanceToTarget = currentDistance;
             int bestSteps = 0;
 
-            var visited = new List<HexCoord>(board.Width * board.Height);
-            var frontier = new List<PathNode>(board.Width * board.Height);
-            var neighbors = new List<HexCoord>(6);
+            workspace.Clear();
+            List<HexCoord> visited = workspace.Visited;
+            List<PathNode> frontier = workspace.Frontier;
+            List<HexCoord> neighbors = workspace.Neighbors;
             visited.Add(mover.BattleCoord);
             frontier.Add(new PathNode(mover.BattleCoord, 0));
 
@@ -144,7 +166,29 @@ namespace DeckBattle
             return coord.R < bestCoord.R;
         }
 
-        private readonly struct PathNode
+        public sealed class MovementWorkspace
+        {
+            internal readonly List<HexCoord> Visited;
+            internal readonly List<PathNode> Frontier;
+            internal readonly List<HexCoord> Neighbors;
+
+            public MovementWorkspace(int boardCellCapacity)
+            {
+                int capacity = Math.Max(1, boardCellCapacity);
+                Visited = new List<HexCoord>(capacity);
+                Frontier = new List<PathNode>(capacity);
+                Neighbors = new List<HexCoord>(6);
+            }
+
+            internal void Clear()
+            {
+                Visited.Clear();
+                Frontier.Clear();
+                Neighbors.Clear();
+            }
+        }
+
+        internal readonly struct PathNode
         {
             public readonly HexCoord Coord;
             public readonly int Steps;

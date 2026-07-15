@@ -41,6 +41,8 @@ namespace DeckBattle
                 allUnits.Add(combatants[i].Unit);
             }
 
+            var movementWorkspace = new MovementService.MovementWorkspace(battleState.Board.Width * battleState.Board.Height);
+
             CombatSimulationResult startResult;
             if (TryCreateEndedResult(battleState, 0, out startResult))
             {
@@ -77,7 +79,7 @@ namespace DeckBattle
                     }
                     else
                     {
-                        MovementService.MoveTowardsTarget(battleState.Board, unit, target, allUnits);
+                        MovementService.MoveTowardsTarget(battleState.Board, unit, target, allUnits, movementWorkspace);
                     }
 
                     CombatSimulationResult actionResult;

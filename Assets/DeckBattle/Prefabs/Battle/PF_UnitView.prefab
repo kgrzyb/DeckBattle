@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 4332660001639080517}
   - component: {fileID: 3695311291659987714}
   m_Layer: 0
-  m_Name: PF_UnitPlaceholder
+  m_Name: PF_UnitView
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

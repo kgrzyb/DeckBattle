@@ -65,6 +65,25 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void MoveTowardsTarget_CanReuseWorkspaceAcrossMoves()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var workspace = new MovementService.MovementWorkspace(board.Width * board.Height);
+            RuntimeUnit firstMover = CreateRuntimeUnit(1, BattleSide.Player, UnitType.Melee, new HexCoord(2, 0), 5, 1, 1, 1);
+            RuntimeUnit secondMover = CreateRuntimeUnit(2, BattleSide.Player, UnitType.Melee, new HexCoord(0, 0), 5, 1, 1, 1);
+            RuntimeUnit target = CreateRuntimeUnit(3, BattleSide.Enemy, UnitType.Melee, new HexCoord(2, 3), 5, 1, 1, 1);
+            var allUnits = new List<RuntimeUnit> { firstMover, secondMover, target };
+
+            bool firstMoved = MovementService.MoveTowardsTarget(board, firstMover, target, allUnits, workspace);
+            bool secondMoved = MovementService.MoveTowardsTarget(board, secondMover, target, allUnits, workspace);
+
+            Assert.IsTrue(firstMoved);
+            Assert.IsTrue(secondMoved);
+            Assert.AreEqual(new HexCoord(2, 1), firstMover.BattleCoord);
+            Assert.AreEqual(new HexCoord(0, 1), secondMover.BattleCoord);
+        }
+
+        [Test]
         public void Simulate_RangeAttacksWithoutMoving_WhenTargetIsInRange()
         {
             RuntimeUnit ranged = CreateRuntimeUnit(1, BattleSide.Player, UnitType.Range, new HexCoord(2, 0), 5, 2, 3, 1);
