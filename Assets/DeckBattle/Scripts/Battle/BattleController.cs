@@ -5,11 +5,14 @@ namespace DeckBattle
 {
     public sealed class BattleController : MonoBehaviour
     {
+        public event System.Action StateChanged;
+
         [Header("Config")]
         [SerializeField] private BattleConfig battleConfig;
         [SerializeField] private List<UnitDefinition> playerDeck = new List<UnitDefinition>(8);
         [SerializeField] private List<UnitDefinition> enemyDeck = new List<UnitDefinition>(8);
         [SerializeField] private int seed = 12345;
+        [SerializeField] private bool playInitialVisibleUnits;
 
         [Header("Presentation")]
         [SerializeField] private BoardPresenter boardPresenter;
@@ -17,11 +20,17 @@ namespace DeckBattle
         [SerializeField] private Transform unitRoot;
 
         private readonly List<UnitView> unitViews = new List<UnitView>(16);
+        private readonly Dictionary<int, UnitView> unitViewByRuntimeId = new Dictionary<int, UnitView>(16);
         private BattleState state;
 
         public BattleState State
         {
             get { return state; }
+        }
+
+        public BoardPresenter BoardPresenter
+        {
+            get { return boardPresenter; }
         }
 
         private void Start()
@@ -39,8 +48,61 @@ namespace DeckBattle
 
             state = BattleState.Create(battleConfig, playerDeck, enemyDeck, seed);
             boardPresenter.Build(state.Board);
-            PlayInitialVisibleUnits();
+            if (playInitialVisibleUnits)
+            {
+                PlayInitialVisibleUnits();
+            }
+
             RefreshUnits();
+            RaiseStateChanged();
+        }
+
+        public bool TryPlayPlayerCard(CardRuntimeState card, HexCoord coord)
+        {
+            if (state == null || state.Phase != BattlePhase.Preparation)
+            {
+                return false;
+            }
+
+            PlayUnitResult result = UnitPlayService.PlayUnit(state, state.Player, card, coord);
+            if (!result.Success)
+            {
+                return false;
+            }
+
+            CreateOrUpdateUnitView(result.Unit);
+            RaiseStateChanged();
+            return true;
+        }
+
+        public bool TryMovePlayerUnit(RuntimeUnit unit, HexCoord coord)
+        {
+            if (state == null || state.Phase != BattlePhase.Preparation)
+            {
+                return false;
+            }
+
+            FormationMoveResult result = FormationService.MoveUnit(state, state.Player, unit, coord);
+            if (!result.Success)
+            {
+                return false;
+            }
+
+            UpdateUnitView(unit);
+            RaiseStateChanged();
+            return true;
+        }
+
+        public bool ConfirmReady()
+        {
+            if (state == null || state.Phase != BattlePhase.Preparation)
+            {
+                return false;
+            }
+
+            state.Phase = BattlePhase.EnemyPreparation;
+            RaiseStateChanged();
+            return true;
         }
 
         private void PlayInitialVisibleUnits()
@@ -73,21 +135,50 @@ namespace DeckBattle
 
         private void RefreshUnits()
         {
-            ClearUnitViews();
-            CreateUnitViews(state.Player.Units);
-            CreateUnitViews(state.Enemy.Units);
+            if (state == null)
+            {
+                ClearUnitViews();
+                return;
+            }
+
+            SyncUnitViews(state.Player.Units);
+            SyncUnitViews(state.Enemy.Units);
         }
 
-        private void CreateUnitViews(List<RuntimeUnit> units)
+        private void SyncUnitViews(List<RuntimeUnit> units)
         {
-            Transform parent = unitRoot != null ? unitRoot : transform;
             for (int i = 0; i < units.Count; i++)
             {
-                RuntimeUnit unit = units[i];
-                UnitView view = Instantiate(unitPrefab, parent);
-                view.Bind(unit, boardPresenter.GetWorldPosition(unit.FormationCoord));
-                unitViews.Add(view);
+                CreateOrUpdateUnitView(units[i]);
             }
+        }
+
+        private void CreateOrUpdateUnitView(RuntimeUnit unit)
+        {
+            UnitView view;
+            if (unitViewByRuntimeId.TryGetValue(unit.RuntimeId, out view) && view != null)
+            {
+                view.Bind(unit, boardPresenter.GetWorldPosition(unit.FormationCoord));
+                return;
+            }
+
+            Transform parent = unitRoot != null ? unitRoot : transform;
+            view = Instantiate(unitPrefab, parent);
+            view.Bind(unit, boardPresenter.GetWorldPosition(unit.FormationCoord));
+            unitViews.Add(view);
+            unitViewByRuntimeId.Add(unit.RuntimeId, view);
+        }
+
+        private void UpdateUnitView(RuntimeUnit unit)
+        {
+            UnitView view;
+            if (!unitViewByRuntimeId.TryGetValue(unit.RuntimeId, out view) || view == null)
+            {
+                CreateOrUpdateUnitView(unit);
+                return;
+            }
+
+            view.SetWorldPosition(boardPresenter.GetWorldPosition(unit.FormationCoord));
         }
 
         private void ClearUnitViews()
@@ -101,6 +192,15 @@ namespace DeckBattle
             }
 
             unitViews.Clear();
+            unitViewByRuntimeId.Clear();
+        }
+
+        private void RaiseStateChanged()
+        {
+            if (StateChanged != null)
+            {
+                StateChanged.Invoke();
+            }
         }
     }
 }

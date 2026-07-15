@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 2350002170153783357}
   - component: {fileID: 8228949585036309009}
   - component: {fileID: 4422744890964404386}
+  - component: {fileID: 3023205366262120507}
   m_Layer: 0
   m_Name: PF_HexTile
   m_TagString: Untagged
@@ -123,3 +124,27 @@ MonoBehaviour:
   playerZoneColor: {r: 0.18, g: 0.34, b: 0.48, a: 1}
   enemyZoneColor: {r: 0.5, g: 0.23, b: 0.21, a: 1}
   neutralColor: {r: 0.27, g: 0.29, b: 0.27, a: 1}
+  legalHighlightColor: {r: 0.28, g: 0.72, b: 0.38, a: 1}
+  blockedHighlightColor: {r: 0.82, g: 0.32, b: 0.24, a: 1}
+  selectedHighlightColor: {r: 0.96, g: 0.78, b: 0.26, a: 1}
+--- !u!65 &3023205366262120507
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6636542260276242380}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.65, y: 0.18, z: 1.85}
+  m_Center: {x: 0, y: 0, z: 0}

@@ -11,6 +11,7 @@ namespace DeckBattle
         [SerializeField] private Color enemyColor = new Color(0.95f, 0.35f, 0.25f, 1f);
 
         public int RuntimeId { get; private set; }
+        public RuntimeUnit Unit { get; private set; }
 
         private MaterialPropertyBlock propertyBlock;
 
@@ -31,10 +32,16 @@ namespace DeckBattle
 
         public void Bind(RuntimeUnit unit, Vector3 worldPosition)
         {
+            Unit = unit;
             RuntimeId = unit.RuntimeId;
-            transform.position = worldPosition + Vector3.up * groundOffset;
+            SetWorldPosition(worldPosition);
             name = unit.Side + "_Unit_" + unit.RuntimeId + "_" + unit.Definition.DisplayName;
             ApplySideColor(unit.Side);
+        }
+
+        public void SetWorldPosition(Vector3 worldPosition)
+        {
+            transform.position = worldPosition + Vector3.up * groundOffset;
         }
 
         private void ApplySideColor(BattleSide side)

@@ -10,7 +10,9 @@ namespace DeckBattle
         [SerializeField] private float hexSize = 1f;
 
         private readonly List<HexTileView> tiles = new List<HexTileView>(32);
+        private readonly Dictionary<HexCoord, HexTileView> tileByCoord = new Dictionary<HexCoord, HexTileView>(32);
         private HexBoard board;
+        private HexTileView highlightedTile;
 
         public HexBoard Board
         {
@@ -40,6 +42,7 @@ namespace DeckBattle
                     tile.transform.localScale = Vector3.one * hexSize;
                     tile.Initialize(coord, GetDeploymentSide(coord));
                     tiles.Add(tile);
+                    tileByCoord.Add(coord, tile);
                 }
             }
         }
@@ -52,6 +55,100 @@ namespace DeckBattle
             }
 
             return transform.TransformPoint(board.ToLocalPosition(coord));
+        }
+
+        public HexTileView GetTileView(HexCoord coord)
+        {
+            HexTileView tile;
+            tileByCoord.TryGetValue(coord, out tile);
+            return tile;
+        }
+
+        public void HighlightSingleTile(HexTileView tile, bool isLegal)
+        {
+            if (highlightedTile == tile)
+            {
+                if (highlightedTile != null)
+                {
+                    if (isLegal)
+                    {
+                        highlightedTile.SetLegalHighlight();
+                    }
+                    else
+                    {
+                        highlightedTile.SetBlockedHighlight();
+                    }
+                }
+
+                return;
+            }
+
+            ClearHoverHighlight();
+
+            highlightedTile = tile;
+            if (highlightedTile == null)
+            {
+                return;
+            }
+
+            if (isLegal)
+            {
+                highlightedTile.SetLegalHighlight();
+            }
+            else
+            {
+                highlightedTile.SetBlockedHighlight();
+            }
+        }
+
+        public void HighlightFormationTiles(BattleState state, PlayerBattleState player, RuntimeUnit selectedUnit)
+        {
+            ClearHoverHighlight();
+
+            if (state == null || player == null || selectedUnit == null || board == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < tiles.Count; i++)
+            {
+                HexTileView tile = tiles[i];
+                bool legal = board.IsDeploymentCoord(player.Side, tile.Coord) && !FormationService.IsOccupied(player, tile.Coord, selectedUnit);
+                if (legal)
+                {
+                    tile.SetLegalHighlight();
+                }
+                else
+                {
+                    tile.ClearHighlight();
+                }
+            }
+
+            HexTileView selectedTile = GetTileView(selectedUnit.FormationCoord);
+            if (selectedTile != null)
+            {
+                selectedTile.SetSelectedHighlight();
+            }
+        }
+
+        public void ClearAllHighlights()
+        {
+            highlightedTile = null;
+            for (int i = 0; i < tiles.Count; i++)
+            {
+                tiles[i].ClearHighlight();
+            }
+        }
+
+        public void ClearHoverHighlight()
+        {
+            if (highlightedTile == null)
+            {
+                return;
+            }
+
+            highlightedTile.ClearHighlight();
+            highlightedTile = null;
         }
 
         private BattleSide? GetDeploymentSide(HexCoord coord)
@@ -83,6 +180,8 @@ namespace DeckBattle
             }
 
             tiles.Clear();
+            tileByCoord.Clear();
+            highlightedTile = null;
 
             Transform parent = tileRoot != null ? tileRoot : transform;
             for (int i = parent.childCount - 1; i >= 0; i--)
