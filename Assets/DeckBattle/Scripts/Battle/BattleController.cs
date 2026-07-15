@@ -53,13 +53,14 @@ namespace DeckBattle
                 PlayInitialVisibleUnits();
             }
 
+            ExecuteEnemyPreparationTurns();
             RefreshUnits();
             RaiseStateChanged();
         }
 
         public bool TryPlayPlayerCard(CardRuntimeState card, HexCoord coord)
         {
-            if (state == null || state.Phase != BattlePhase.Preparation)
+            if (state == null || state.Phase != BattlePhase.Preparation || state.ActivePreparationSide != BattleSide.Player || state.Player.IsReady)
             {
                 return false;
             }
@@ -71,13 +72,15 @@ namespace DeckBattle
             }
 
             CreateOrUpdateUnitView(result.Unit);
+            PreparationTurnService.CompleteActiveSideAction(state);
+            ExecuteEnemyPreparationTurns();
             RaiseStateChanged();
             return true;
         }
 
         public bool TryMovePlayerUnit(RuntimeUnit unit, HexCoord coord)
         {
-            if (state == null || state.Phase != BattlePhase.Preparation)
+            if (state == null || state.Phase != BattlePhase.Preparation || state.ActivePreparationSide != BattleSide.Player || state.Player.IsReady)
             {
                 return false;
             }
@@ -95,14 +98,37 @@ namespace DeckBattle
 
         public bool ConfirmReady()
         {
-            if (state == null || state.Phase != BattlePhase.Preparation)
+            if (state == null || state.Phase != BattlePhase.Preparation || state.ActivePreparationSide != BattleSide.Player || state.Player.IsReady)
             {
                 return false;
             }
 
-            state.Phase = BattlePhase.EnemyPreparation;
+            PreparationTurnService.MarkActiveSideReadyAndAdvance(state);
+            ExecuteEnemyPreparationTurns();
             RaiseStateChanged();
             return true;
+        }
+
+        private void ExecuteEnemyPreparationTurns()
+        {
+            if (state == null)
+            {
+                return;
+            }
+
+            while (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy && !state.Enemy.IsReady)
+            {
+                EnemyPreparationAIResult aiResult = EnemyPreparationAI.ExecuteTurn(state);
+                if (aiResult.PlayedUnit && aiResult.Unit != null)
+                {
+                    CreateOrUpdateUnitView(aiResult.Unit);
+                }
+
+                if (!state.Player.IsReady || !aiResult.PlayedUnit)
+                {
+                    break;
+                }
+            }
         }
 
         private void PlayInitialVisibleUnits()

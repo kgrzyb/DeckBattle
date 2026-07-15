@@ -8,6 +8,7 @@ namespace DeckBattle
         public int Hp;
         public int Ap;
         public int DeploymentSlots;
+        public bool IsReady;
         public readonly List<CardRuntimeState> Deck = new List<CardRuntimeState>(16);
         public readonly List<CardRuntimeState> Hand = new List<CardRuntimeState>(8);
         public readonly List<CardRuntimeState> PlayedCards = new List<CardRuntimeState>(8);

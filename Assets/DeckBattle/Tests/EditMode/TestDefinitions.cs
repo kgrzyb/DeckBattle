@@ -23,10 +23,15 @@ namespace DeckBattle.Tests
 
         public static UnitDefinition CreateUnit(string unitId, int apCost)
         {
+            return CreateUnit(unitId, apCost, UnitType.Melee);
+        }
+
+        public static UnitDefinition CreateUnit(string unitId, int apCost, UnitType unitType)
+        {
             UnitDefinition unit = ScriptableObject.CreateInstance<UnitDefinition>();
             unit.UnitId = unitId;
             unit.DisplayName = unitId;
-            unit.UnitType = UnitType.Melee;
+            unit.UnitType = unitType;
             unit.Rarity = UnitRarity.Common;
             unit.ApCost = apCost;
             unit.MaxHp = 5;

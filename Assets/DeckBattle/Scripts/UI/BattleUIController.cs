@@ -40,6 +40,7 @@ namespace DeckBattle
         private int shownUnits = int.MinValue;
         private int shownSlots = int.MinValue;
         private BattlePhase shownPhase = BattlePhase.None;
+        private BattleSide shownActivePreparationSide = (BattleSide)(-1);
 
         private void Awake()
         {
@@ -149,15 +150,16 @@ namespace DeckBattle
                 slotsText.text = "Sloty " + units + "/" + slots;
             }
 
-            if (phaseText != null && shownPhase != state.Phase)
+            if (phaseText != null && (shownPhase != state.Phase || shownActivePreparationSide != state.ActivePreparationSide))
             {
                 shownPhase = state.Phase;
-                phaseText.text = state.Phase.ToString();
+                shownActivePreparationSide = state.ActivePreparationSide;
+                phaseText.text = state.Phase == BattlePhase.Preparation ? state.Phase + " " + state.ActivePreparationSide : state.Phase.ToString();
             }
 
             if (readyButton != null)
             {
-                readyButton.interactable = state.Phase == BattlePhase.Preparation;
+                readyButton.interactable = state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Player && !state.Player.IsReady;
             }
         }
 

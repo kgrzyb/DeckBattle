@@ -60,7 +60,7 @@ namespace DeckBattle
         public bool BeginCardDrag(CardView cardView, CardRuntimeState card, Vector2 screenPosition)
         {
             BattleState state = battleController != null ? battleController.State : null;
-            if (state == null || state.Phase != BattlePhase.Preparation || card == null)
+            if (state == null || state.Phase != BattlePhase.Preparation || state.ActivePreparationSide != BattleSide.Player || state.Player.IsReady || card == null)
             {
                 return false;
             }
@@ -158,7 +158,7 @@ namespace DeckBattle
         private void SelectUnit(RuntimeUnit unit)
         {
             BattleState state = battleController != null ? battleController.State : null;
-            if (state == null || state.Phase != BattlePhase.Preparation)
+            if (state == null || state.Phase != BattlePhase.Preparation || state.ActivePreparationSide != BattleSide.Player || state.Player.IsReady)
             {
                 return;
             }

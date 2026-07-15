@@ -13,6 +13,7 @@ namespace DeckBattle
         public PlayerBattleState Player { get; private set; }
         public PlayerBattleState Enemy { get; private set; }
         public BattlePhase Phase { get; set; }
+        public BattleSide ActivePreparationSide { get; set; }
         public int RoundNumber { get; private set; }
 
         private BattleState()
@@ -33,6 +34,7 @@ namespace DeckBattle
                 Player = new PlayerBattleState(BattleSide.Player, config.StartingPlayerHp, config.StartingAp, config.StartingDeploymentSlots),
                 Enemy = new PlayerBattleState(BattleSide.Enemy, config.StartingEnemyHp, config.StartingAp, config.StartingDeploymentSlots),
                 Phase = BattlePhase.Preparation,
+                ActivePreparationSide = BattleSide.Player,
                 RoundNumber = 1
             };
 
@@ -43,7 +45,13 @@ namespace DeckBattle
             DeckService.Shuffle(state.Enemy.Deck, rng);
             DeckService.DrawCards(state.Player, config.StartingHandSize);
             DeckService.DrawCards(state.Enemy, config.StartingHandSize);
+            PreparationTurnService.EnsureActiveSideCanAct(state);
             return state;
+        }
+
+        public PlayerBattleState GetPlayerState(BattleSide side)
+        {
+            return side == BattleSide.Player ? Player : Enemy;
         }
 
         public int AllocateRuntimeUnitId()
