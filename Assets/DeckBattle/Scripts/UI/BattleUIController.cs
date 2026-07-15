@@ -20,6 +20,11 @@ namespace DeckBattle
         [SerializeField] private TextMeshProUGUI phaseText;
         [SerializeField] private Button readyButton;
 
+        [Header("Result")]
+        [SerializeField] private GameObject resultPanel;
+        [SerializeField] private TextMeshProUGUI resultText;
+        [SerializeField] private Button restartButton;
+
         [Header("Hand")]
         [SerializeField] private RectTransform handRoot;
         [SerializeField] private CardView cardViewPrefab;
@@ -41,12 +46,19 @@ namespace DeckBattle
         private int shownSlots = int.MinValue;
         private BattlePhase shownPhase = BattlePhase.None;
         private BattleSide shownActivePreparationSide = (BattleSide)(-1);
+        private bool shownResultPanelActive;
+        private string shownResultText;
 
         private void Awake()
         {
             if (readyButton != null)
             {
                 readyButton.onClick.AddListener(HandleReadyClicked);
+            }
+
+            if (restartButton != null)
+            {
+                restartButton.onClick.AddListener(HandleRestartClicked);
             }
 
             HideCardGhost();
@@ -82,6 +94,7 @@ namespace DeckBattle
             }
 
             RefreshHud(state);
+            RefreshResult(state);
             RefreshHand(state.Player.Hand);
         }
 
@@ -163,6 +176,48 @@ namespace DeckBattle
             }
         }
 
+        private void RefreshResult(BattleState state)
+        {
+            bool showResult = state.Phase == BattlePhase.MatchEnd;
+            SetResultPanelActive(showResult);
+            if (!showResult)
+            {
+                SetResultText(string.Empty);
+                return;
+            }
+
+            RoundResolutionResult result = battleController != null ? battleController.LastRoundResolutionResult : null;
+            if (result == null || !result.HasWinner)
+            {
+                SetResultText("Draw");
+                return;
+            }
+
+            SetResultText(result.Winner == BattleSide.Player ? "Victory" : "Defeat");
+        }
+
+        private void SetResultPanelActive(bool active)
+        {
+            if (resultPanel == null || shownResultPanelActive == active)
+            {
+                return;
+            }
+
+            shownResultPanelActive = active;
+            resultPanel.SetActive(active);
+        }
+
+        private void SetResultText(string value)
+        {
+            if (resultText == null || shownResultText == value)
+            {
+                return;
+            }
+
+            shownResultText = value;
+            resultText.text = value;
+        }
+
         private void RefreshHand(List<CardRuntimeState> hand)
         {
             if (handRoot == null || cardViewPrefab == null || IsSameHand(hand))
@@ -231,6 +286,14 @@ namespace DeckBattle
             if (battleController != null)
             {
                 battleController.ConfirmReady();
+            }
+        }
+
+        private void HandleRestartClicked()
+        {
+            if (battleController != null)
+            {
+                battleController.StartTestBattle();
             }
         }
     }

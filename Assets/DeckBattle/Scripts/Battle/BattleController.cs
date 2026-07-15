@@ -60,6 +60,7 @@ namespace DeckBattle
                 return;
             }
 
+            ClearUnitViews();
             state = BattleState.Create(battleConfig, playerDeck, enemyDeck, seed);
             lastCombatResult = null;
             lastRoundResolutionResult = null;
