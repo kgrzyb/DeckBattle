@@ -22,6 +22,7 @@ namespace DeckBattle
         private readonly List<UnitView> unitViews = new List<UnitView>(16);
         private readonly Dictionary<int, UnitView> unitViewByRuntimeId = new Dictionary<int, UnitView>(16);
         private BattleState state;
+        private CombatSimulationResult lastCombatResult;
 
         public BattleState State
         {
@@ -31,6 +32,11 @@ namespace DeckBattle
         public BoardPresenter BoardPresenter
         {
             get { return boardPresenter; }
+        }
+
+        public CombatSimulationResult LastCombatResult
+        {
+            get { return lastCombatResult; }
         }
 
         private void Start()
@@ -47,6 +53,7 @@ namespace DeckBattle
             }
 
             state = BattleState.Create(battleConfig, playerDeck, enemyDeck, seed);
+            lastCombatResult = null;
             boardPresenter.Build(state.Board);
             if (playInitialVisibleUnits)
             {
@@ -54,6 +61,7 @@ namespace DeckBattle
             }
 
             ExecuteEnemyPreparationTurns();
+            ResolveCombatIfReady();
             RefreshUnits();
             RaiseStateChanged();
         }
@@ -74,6 +82,8 @@ namespace DeckBattle
             CreateOrUpdateUnitView(result.Unit);
             PreparationTurnService.CompleteActiveSideAction(state);
             ExecuteEnemyPreparationTurns();
+            ResolveCombatIfReady();
+            RefreshUnits();
             RaiseStateChanged();
             return true;
         }
@@ -105,6 +115,8 @@ namespace DeckBattle
 
             PreparationTurnService.MarkActiveSideReadyAndAdvance(state);
             ExecuteEnemyPreparationTurns();
+            ResolveCombatIfReady();
+            RefreshUnits();
             RaiseStateChanged();
             return true;
         }
@@ -129,6 +141,16 @@ namespace DeckBattle
                     break;
                 }
             }
+        }
+
+        private void ResolveCombatIfReady()
+        {
+            if (state == null || state.Phase != BattlePhase.Combat)
+            {
+                return;
+            }
+
+            lastCombatResult = CombatSimulator.Simulate(state);
         }
 
         private void PlayInitialVisibleUnits()
@@ -184,13 +206,13 @@ namespace DeckBattle
             UnitView view;
             if (unitViewByRuntimeId.TryGetValue(unit.RuntimeId, out view) && view != null)
             {
-                view.Bind(unit, boardPresenter.GetWorldPosition(unit.FormationCoord));
+                view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
                 return;
             }
 
             Transform parent = unitRoot != null ? unitRoot : transform;
             view = Instantiate(unitPrefab, parent);
-            view.Bind(unit, boardPresenter.GetWorldPosition(unit.FormationCoord));
+            view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
             unitViews.Add(view);
             unitViewByRuntimeId.Add(unit.RuntimeId, view);
         }
@@ -204,7 +226,7 @@ namespace DeckBattle
                 return;
             }
 
-            view.SetWorldPosition(boardPresenter.GetWorldPosition(unit.FormationCoord));
+            view.SetWorldPosition(boardPresenter.GetWorldPosition(unit.BattleCoord));
         }
 
         private void ClearUnitViews()
