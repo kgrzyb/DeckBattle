@@ -13,15 +13,18 @@ namespace DeckBattle
             HexBoard board,
             List<UnitRuntimeState> units,
             Dictionary<HexCoord, UnitRuntimeState> unitByHex,
-            Dictionary<int, UnitRuntimeState> unitById)
+            Dictionary<int, UnitRuntimeState> unitById,
+            BattleRuntimeTuning tuning)
         {
             Board = board;
             this.units = units;
             this.unitByHex = unitByHex;
             this.unitById = unitById;
+            Tuning = tuning;
         }
 
         public HexBoard Board { get; private set; }
+        public BattleRuntimeTuning Tuning { get; private set; }
         public bool IsBattleEnded { get; private set; }
         public bool HasWinner { get; private set; }
         public BattleSide Winner { get; private set; }
@@ -32,6 +35,11 @@ namespace DeckBattle
         }
 
         public static BattleSimulation Create(HexBoard board, IList<UnitSpawnData> spawnData)
+        {
+            return Create(board, spawnData, BattleRuntimeTuning.Default);
+        }
+
+        public static BattleSimulation Create(HexBoard board, IList<UnitSpawnData> spawnData, BattleRuntimeTuning tuning)
         {
             if (board == null)
             {
@@ -59,7 +67,7 @@ namespace DeckBattle
                 unitById.Add(unitId, unit);
             }
 
-            return new BattleSimulation(board, units, unitByHex, unitById);
+            return new BattleSimulation(board, units, unitByHex, unitById, tuning);
         }
 
         public bool TryGetUnitAt(HexCoord hex, out UnitRuntimeState unit)

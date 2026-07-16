@@ -80,7 +80,8 @@ namespace DeckBattle
                     continue;
                 }
 
-                HexCoord destination = workspace.Path[1];
+                int movementSteps = Math.Min(simulation.Tuning.MovementStepsPerTick, workspace.Path.Count - 1);
+                HexCoord destination = workspace.Path[movementSteps];
                 if (!CanEndMoveOn(unit, destination, workspace.OccupiedHexes))
                 {
                     continue;

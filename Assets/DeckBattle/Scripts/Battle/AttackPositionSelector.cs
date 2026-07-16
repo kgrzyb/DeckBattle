@@ -54,7 +54,7 @@ namespace DeckBattle
             }
 
             HexBoard board = simulation.Board;
-            int attackRange = attacker.Definition.AttackRange;
+            int attackRange = simulation.Tuning.GetAttackRange(attacker.Definition);
             if (board.Distance(attacker.CurrentHex, target.CurrentHex) <= attackRange)
             {
                 attackPosition = attacker.CurrentHex;
@@ -72,7 +72,7 @@ namespace DeckBattle
             for (int i = 0; i < workspace.RangeHexes.Count; i++)
             {
                 HexCoord candidate = workspace.RangeHexes[i];
-                if (!IsCandidateAttackPosition(board, attacker, target, candidate, workspace.OccupiedHexes))
+                if (!IsCandidateAttackPosition(board, attacker, target, candidate, attackRange, workspace.OccupiedHexes))
                 {
                     continue;
                 }
@@ -107,6 +107,7 @@ namespace DeckBattle
             UnitRuntimeState attacker,
             UnitRuntimeState target,
             HexCoord candidate,
+            int attackRange,
             HashSet<HexCoord> occupiedHexes)
         {
             if (!board.IsWalkable(candidate))
@@ -114,7 +115,7 @@ namespace DeckBattle
                 return false;
             }
 
-            if (board.Distance(candidate, target.CurrentHex) > attacker.Definition.AttackRange)
+            if (board.Distance(candidate, target.CurrentHex) > attackRange)
             {
                 return false;
             }

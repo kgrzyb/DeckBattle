@@ -76,7 +76,7 @@ namespace DeckBattle
                 return null;
             }
 
-            if (HasReachableAttackPosition(simulation.Board, attacker, nearestEnemy, workspace))
+            if (HasReachableAttackPosition(simulation, attacker, nearestEnemy, workspace))
             {
                 return nearestEnemy;
             }
@@ -91,7 +91,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (HasReachableAttackPosition(simulation.Board, attacker, candidate, workspace)
+                if (HasReachableAttackPosition(simulation, attacker, candidate, workspace)
                     && IsBetterLowestHpTarget(candidate, lowestHpReachable, lowestReachableHp))
                 {
                     lowestHpReachable = candidate;
@@ -120,12 +120,13 @@ namespace DeckBattle
         }
 
         private static bool HasReachableAttackPosition(
-            HexBoard board,
+            BattleSimulation simulation,
             UnitRuntimeState attacker,
             UnitRuntimeState target,
             Workspace workspace)
         {
-            int range = attacker.Definition.AttackRange;
+            HexBoard board = simulation.Board;
+            int range = simulation.Tuning.GetAttackRange(attacker.Definition);
             if (board.Distance(attacker.CurrentHex, target.CurrentHex) <= range)
             {
                 return true;

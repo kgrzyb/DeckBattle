@@ -41,7 +41,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (simulation.Board.Distance(attacker.CurrentHex, target.CurrentHex) > attacker.Definition.AttackRange)
+                if (simulation.Board.Distance(attacker.CurrentHex, target.CurrentHex) > simulation.Tuning.GetAttackRange(attacker.Definition))
                 {
                     continue;
                 }
@@ -58,7 +58,7 @@ namespace DeckBattle
                 }
 
                 target.CurrentHp -= damage;
-                attacker.AttackCooldownRemaining = attacker.Definition.AttackCooldown;
+                attacker.AttackCooldownRemaining = simulation.Tuning.GetAttackCooldown(attacker.Definition);
                 attacks++;
                 totalDamage += damage;
                 if (eventQueue != null)
