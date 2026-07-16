@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace DeckBattle
 {
@@ -7,9 +6,7 @@ namespace DeckBattle
     {
         [SerializeField] private MeshRenderer meshRenderer;
         [SerializeField] private Transform modelRoot;
-        [SerializeField] private Transform healthBarRoot;
-        [SerializeField] private Image healthFillImage;
-        [SerializeField] private Transform healthFillTransform;
+        [SerializeField] private UnitHealthBarView healthBar;
         [SerializeField] private float groundOffset = 0.65f;
         [SerializeField] private float attackPulseDuration = 0.14f;
         [SerializeField] private float damageFlashDuration = 0.12f;
@@ -35,7 +32,6 @@ namespace DeckBattle
         private float damageTimer;
         private float deathTimer;
         private int maxHp = 1;
-        private int shownHp = -1;
         private bool isMoving;
         private bool isDying;
 
@@ -131,29 +127,9 @@ namespace DeckBattle
         public void SetHealth(int currentHp, int maximumHp)
         {
             maxHp = Mathf.Max(1, maximumHp);
-            int clampedHp = Mathf.Clamp(currentHp, 0, maxHp);
-            if (shownHp == clampedHp)
+            if (healthBar != null)
             {
-                return;
-            }
-
-            shownHp = clampedHp;
-            float normalized = (float)clampedHp / maxHp;
-            if (healthFillImage != null)
-            {
-                healthFillImage.fillAmount = normalized;
-            }
-
-            if (healthFillTransform != null)
-            {
-                Vector3 scale = healthFillTransform.localScale;
-                scale.x = normalized;
-                healthFillTransform.localScale = scale;
-            }
-
-            if (healthBarRoot != null)
-            {
-                healthBarRoot.gameObject.SetActive(clampedHp > 0 && clampedHp < maxHp);
+                healthBar.SetHealth(currentHp, maxHp);
             }
         }
 
@@ -182,10 +158,14 @@ namespace DeckBattle
             attackTimer = 0f;
             damageTimer = 0f;
             deathTimer = 0f;
-            shownHp = -1;
             if (modelRoot != null)
             {
                 modelRoot.localScale = baseModelScale;
+            }
+
+            if (healthBar != null)
+            {
+                healthBar.ResetScale();
             }
 
             SetWorldPosition(worldPosition);
@@ -240,6 +220,10 @@ namespace DeckBattle
             }
 
             modelRoot.localScale = baseModelScale * pulseScale;
+            if (healthBar != null && healthBar.transform.parent == modelRoot)
+            {
+                healthBar.CompensateParentScale(pulseScale);
+            }
 
             if (damageTimer > 0f)
             {
