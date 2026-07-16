@@ -86,6 +86,7 @@ namespace DeckBattle
             }
 
             spawnBuffer.Clear();
+            int nextGeneratedUnitId = 1;
             for (int i = 0; i < initialUnits.Count; i++)
             {
                 SpawnEntry entry = initialUnits[i];
@@ -94,7 +95,9 @@ namespace DeckBattle
                     continue;
                 }
 
-                spawnBuffer.Add(new UnitSpawnData(entry.Definition, entry.Side, entry.ToHexCoord()));
+                int unitId = entry.UnitId > 0 ? entry.UnitId : nextGeneratedUnitId;
+                spawnBuffer.Add(new UnitSpawnData(unitId, entry.Definition, entry.Side, entry.ToHexCoord()));
+                nextGeneratedUnitId = Mathf.Max(nextGeneratedUnitId, unitId) + 1;
             }
 
             StartBattle(spawnBuffer);
@@ -371,6 +374,7 @@ namespace DeckBattle
         [Serializable]
         private sealed class SpawnEntry
         {
+            public int UnitId;
             public UnitDefinition Definition;
             public BattleSide Side;
             public int Q;

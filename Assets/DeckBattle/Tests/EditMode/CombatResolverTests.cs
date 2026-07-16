@@ -90,9 +90,9 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(attacker, BattleSide.Player, new HexCoord(1, 1)),
-                    new UnitSpawnData(attacker, BattleSide.Player, new HexCoord(2, 0)),
-                    new UnitSpawnData(target, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, attacker, BattleSide.Player, new HexCoord(2, 0)),
+                    new UnitSpawnData(3, target, BattleSide.Enemy, new HexCoord(2, 1))
                 });
             simulation.Units[0].SetTarget(simulation.Units[2]);
             simulation.Units[1].SetTarget(simulation.Units[2]);
@@ -114,8 +114,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(ranged, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, ranged, BattleSide.Enemy, new HexCoord(2, 1))
                 });
             simulation.Units[0].SetTarget(simulation.Units[1]);
 
@@ -137,8 +137,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(attacker, BattleSide.Player, attackerHex),
-                    new UnitSpawnData(target, BattleSide.Enemy, targetHex)
+                    new UnitSpawnData(1, attacker, BattleSide.Player, attackerHex),
+                    new UnitSpawnData(2, target, BattleSide.Enemy, targetHex)
                 });
         }
 

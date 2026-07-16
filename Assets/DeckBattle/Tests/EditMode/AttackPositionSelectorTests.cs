@@ -12,8 +12,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(1, 1)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 1))
                 });
 
             bool found = AttackPositionSelector.TrySelectAttackPosition(
@@ -34,8 +34,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 1))
                 });
 
             bool found = AttackPositionSelector.TrySelectAttackPosition(
@@ -56,8 +56,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(ranged, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(ranged, BattleSide.Enemy, new HexCoord(3, 2))
+                    new UnitSpawnData(1, ranged, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, ranged, BattleSide.Enemy, new HexCoord(3, 2))
                 });
 
             bool found = AttackPositionSelector.TrySelectAttackPosition(
@@ -78,9 +78,9 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(2, 1)),
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(1, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 1)),
+                    new UnitSpawnData(3, melee, BattleSide.Player, new HexCoord(1, 1))
                 });
 
             bool found = AttackPositionSelector.TrySelectAttackPosition(
@@ -109,8 +109,8 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 1))
                 });
 
             bool found = AttackPositionSelector.TrySelectAttackPosition(

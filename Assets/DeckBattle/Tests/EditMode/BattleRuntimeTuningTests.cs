@@ -13,8 +13,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(player, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(enemy, BattleSide.Enemy, new HexCoord(2, 0))
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 0))
                 },
                 new BattleRuntimeTuning(1f, 1, 1));
             var loop = new BattleTickLoop(simulation, 1f);
@@ -36,8 +36,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(player, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(enemy, BattleSide.Enemy, new HexCoord(2, 0))
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 0))
                 },
                 new BattleRuntimeTuning(2f, 0, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
@@ -56,8 +56,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(player, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(enemy, BattleSide.Enemy, new HexCoord(3, 0))
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(3, 0))
                 },
                 new BattleRuntimeTuning(1f, 0, 2));
             var loop = new BattleTickLoop(simulation, 1f);

@@ -58,13 +58,12 @@ namespace DeckBattle
             for (int i = 0; i < spawnData.Count; i++)
             {
                 UnitSpawnData spawn = spawnData[i];
-                ValidateSpawn(board, spawn, unitByHex);
+                ValidateSpawn(board, spawn, unitByHex, unitById);
 
-                int unitId = i + 1;
-                var unit = new UnitRuntimeState(unitId, spawn.Definition, spawn.Side, spawn.StartHex);
+                var unit = new UnitRuntimeState(spawn.UnitId, spawn.Definition, spawn.Side, spawn.StartHex);
                 units.Add(unit);
                 unitByHex.Add(spawn.StartHex, unit);
-                unitById.Add(unitId, unit);
+                unitById.Add(spawn.UnitId, unit);
             }
 
             return new BattleSimulation(board, units, unitByHex, unitById, tuning);
@@ -123,8 +122,22 @@ namespace DeckBattle
             Winner = winner;
         }
 
-        private static void ValidateSpawn(HexBoard board, UnitSpawnData spawn, Dictionary<HexCoord, UnitRuntimeState> occupiedHexes)
+        private static void ValidateSpawn(
+            HexBoard board,
+            UnitSpawnData spawn,
+            Dictionary<HexCoord, UnitRuntimeState> occupiedHexes,
+            Dictionary<int, UnitRuntimeState> occupiedUnitIds)
         {
+            if (spawn.UnitId <= 0)
+            {
+                throw new ArgumentException("Spawn data contains a non-positive unit id.", nameof(spawn));
+            }
+
+            if (occupiedUnitIds.ContainsKey(spawn.UnitId))
+            {
+                throw new ArgumentException("Spawn data contains duplicate unit ids.", nameof(spawn));
+            }
+
             if (spawn.Definition == null)
             {
                 throw new ArgumentException("Spawn data contains a null unit definition.", nameof(spawn));

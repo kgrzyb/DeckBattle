@@ -30,6 +30,8 @@ namespace DeckBattle
         private readonly Dictionary<int, UnitView> unitViewByRuntimeId = new Dictionary<int, UnitView>(16);
         private readonly BattleEventQueue combatEventQueue = new BattleEventQueue(32);
         private BattleState state;
+        private BattleSimulation activeSimulation;
+        private BattleTickLoop activeTickLoop;
         private CombatSimulationResult lastCombatResult;
         private RoundResolutionResult lastRoundResolutionResult;
         private Coroutine combatRoutine;
@@ -184,7 +186,7 @@ namespace DeckBattle
                 return true;
             }
 
-            lastCombatResult = CombatSimulator.Simulate(state);
+            lastCombatResult = RunCombatSynchronously();
             if (state.Phase == BattlePhase.RoundResolution)
             {
                 lastRoundResolutionResult = RoundFlowService.ResolveRoundAndStartNext(state);
@@ -242,15 +244,32 @@ namespace DeckBattle
             lastCombatResult = null;
             lastRoundResolutionResult = null;
 
-            var tickLoop = new BattleStateCombatTickLoop(state, combatTickDuration, maxCombatTicks);
+            activeSimulation = BattleSimulationFactory.Create(state, BattleRuntimeTuning.Default);
+            activeTickLoop = new BattleTickLoop(activeSimulation, combatTickDuration);
             var tickWait = new WaitForSeconds(combatTickDuration);
             var roundWait = new WaitForSeconds(roundResolutionDelay);
             CombatSimulationResult result = null;
+            int ticks = 0;
 
             while (state != null && state.Phase == BattlePhase.Combat && result == null)
             {
-                result = tickLoop.Tick(combatEventQueue);
+                BattleTickResult tickResult = activeTickLoop.Tick(activeSimulation, combatEventQueue);
+                ticks++;
                 ProcessCombatEvents(combatEventQueue.Events);
+
+                if (tickResult.BattleEnded)
+                {
+                    state.Phase = BattlePhase.RoundResolution;
+                    BattleSimulationResultApplier.Apply(state, activeSimulation);
+                    result = BattleSimulationCombatService.CreateCombatResult(tickResult, ticks);
+                }
+                else if (ticks >= maxCombatTicks)
+                {
+                    state.Phase = BattlePhase.RoundResolution;
+                    BattleSimulationResultApplier.Apply(state, activeSimulation);
+                    result = CombatSimulationResult.MaxTicksReached(ticks);
+                }
+
                 RaiseStateChanged();
                 yield return tickWait;
             }
@@ -269,8 +288,25 @@ namespace DeckBattle
 
             isCombatAnimating = false;
             combatRoutine = null;
+            activeSimulation = null;
+            activeTickLoop = null;
             RaiseStateChanged();
             ProgressAutomaticFlow();
+        }
+
+        private CombatSimulationResult RunCombatSynchronously()
+        {
+            activeSimulation = BattleSimulationFactory.Create(state, BattleRuntimeTuning.Default);
+            activeTickLoop = new BattleTickLoop(activeSimulation, combatTickDuration);
+            CombatSimulationResult result = BattleSimulationCombatService.RunToResolution(
+                state,
+                activeSimulation,
+                activeTickLoop,
+                maxCombatTicks,
+                combatEventQueue);
+            activeSimulation = null;
+            activeTickLoop = null;
+            return result;
         }
 
         private void ProcessCombatEvents(IReadOnlyList<BattleEvent> events)
@@ -344,6 +380,8 @@ namespace DeckBattle
 
             isCombatAnimating = false;
             combatEventQueue.Clear();
+            activeSimulation = null;
+            activeTickLoop = null;
         }
 
         private void RefreshUnits()

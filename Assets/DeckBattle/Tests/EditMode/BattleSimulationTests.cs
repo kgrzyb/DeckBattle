@@ -17,15 +17,15 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(playerDefinition, BattleSide.Player, new HexCoord(1, 1)),
-                    new UnitSpawnData(enemyDefinition, BattleSide.Enemy, new HexCoord(3, 4))
+                    new UnitSpawnData(7, playerDefinition, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(11, enemyDefinition, BattleSide.Enemy, new HexCoord(3, 4))
                 });
 
             Assert.AreSame(board, simulation.Board);
             Assert.AreEqual(2, simulation.Units.Count);
 
             UnitRuntimeState player = simulation.Units[0];
-            Assert.AreEqual(1, player.UnitId);
+            Assert.AreEqual(7, player.UnitId);
             Assert.AreSame(playerDefinition, player.Definition);
             Assert.AreEqual(BattleSide.Player, player.Side);
             Assert.AreEqual(new HexCoord(1, 1), player.CurrentHex);
@@ -36,8 +36,39 @@ namespace DeckBattle.Tests
 
             UnitRuntimeState enemy;
             Assert.IsTrue(simulation.TryGetUnitAt(new HexCoord(3, 4), out enemy));
-            Assert.AreEqual(2, enemy.UnitId);
+            Assert.AreEqual(11, enemy.UnitId);
             Assert.AreEqual(BattleSide.Enemy, enemy.Side);
+        }
+
+        [Test]
+        public void Create_DetectsDuplicateUnitIds()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
+
+            Assert.Throws<ArgumentException>(
+                () => BattleSimulation.Create(
+                    board,
+                    new[]
+                    {
+                        new UnitSpawnData(1, definition, BattleSide.Player, new HexCoord(1, 1)),
+                        new UnitSpawnData(1, definition, BattleSide.Enemy, new HexCoord(2, 2))
+                    }));
+        }
+
+        [Test]
+        public void Create_DetectsNonPositiveUnitId()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
+
+            Assert.Throws<ArgumentException>(
+                () => BattleSimulation.Create(
+                    board,
+                    new[]
+                    {
+                        new UnitSpawnData(0, definition, BattleSide.Player, new HexCoord(1, 1))
+                    }));
         }
 
         [Test]
@@ -51,8 +82,8 @@ namespace DeckBattle.Tests
                     board,
                     new[]
                     {
-                        new UnitSpawnData(definition, BattleSide.Player, new HexCoord(2, 2)),
-                        new UnitSpawnData(definition, BattleSide.Enemy, new HexCoord(2, 2))
+                        new UnitSpawnData(1, definition, BattleSide.Player, new HexCoord(2, 2)),
+                        new UnitSpawnData(2, definition, BattleSide.Enemy, new HexCoord(2, 2))
                     }));
         }
 
@@ -67,7 +98,7 @@ namespace DeckBattle.Tests
                     board,
                     new[]
                     {
-                        new UnitSpawnData(definition, BattleSide.Player, new HexCoord(5, 0))
+                        new UnitSpawnData(1, definition, BattleSide.Player, new HexCoord(5, 0))
                     }));
         }
 
@@ -83,7 +114,7 @@ namespace DeckBattle.Tests
                     board,
                     new[]
                     {
-                        new UnitSpawnData(definition, BattleSide.Player, new HexCoord(1, 1))
+                        new UnitSpawnData(1, definition, BattleSide.Player, new HexCoord(1, 1))
                     }));
         }
 

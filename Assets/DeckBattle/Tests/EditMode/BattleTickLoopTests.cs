@@ -49,8 +49,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(player, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(enemy, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 1))
                 });
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
@@ -72,9 +72,9 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(CreateUnit("player-front", 6, 2, 1, 1f), BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(CreateUnit("player-ranged", 4, 1, 3, 1f), BattleSide.Player, new HexCoord(0, 1)),
-                    new UnitSpawnData(CreateUnit("enemy-front", 3, 1, 1, 1f), BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, CreateUnit("player-front", 6, 2, 1, 1f), BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, CreateUnit("player-ranged", 4, 1, 3, 1f), BattleSide.Player, new HexCoord(0, 1)),
+                    new UnitSpawnData(3, CreateUnit("enemy-front", 3, 1, 1, 1f), BattleSide.Enemy, new HexCoord(2, 1))
                 });
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
@@ -97,8 +97,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(player, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(enemy, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 1))
                 });
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
@@ -132,8 +132,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(CreateUnit("player-melee", 5, 5, 1, 1f), BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(CreateUnit("enemy-melee", 3, 1, 1, 1f), BattleSide.Enemy, new HexCoord(2, 0))
+                    new UnitSpawnData(1, CreateUnit("player-melee", 5, 5, 1, 1f), BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, CreateUnit("enemy-melee", 3, 1, 1, 1f), BattleSide.Enemy, new HexCoord(2, 0))
                 });
         }
 

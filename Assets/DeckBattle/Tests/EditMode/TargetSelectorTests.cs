@@ -14,9 +14,9 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(4, 5)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(1, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(4, 5)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(1, 1))
                 });
             simulation.Units[1].CurrentHp = 1;
             simulation.Units[2].CurrentHp = 5;
@@ -37,10 +37,10 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(2, 0)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(4, 5)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(3, 4))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 0)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(4, 5)),
+                    new UnitSpawnData(4, melee, BattleSide.Enemy, new HexCoord(3, 4))
                 });
             simulation.Units[1].CurrentHp = 5;
             simulation.Units[2].CurrentHp = 1;
@@ -60,14 +60,14 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(2, 2)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(3, 2)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(2, 3))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(2, 2)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(3, 2)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 3))
                 });
 
             UnitRuntimeState target = TargetSelector.SelectTarget(simulation, simulation.Units[0]);
 
-            Assert.AreSame(simulation.Units[1], target);
+            Assert.AreSame(simulation.Units[2], target);
         }
 
         [Test]
@@ -79,9 +79,9 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(1, 1)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(4, 5))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(1, 1)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(4, 5))
                 });
             simulation.Units[1].IsDefeated = true;
 
@@ -100,8 +100,8 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(2, 0))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 0))
                 });
 
             UnitRuntimeState target = TargetSelector.SelectTarget(simulation, simulation.Units[0]);

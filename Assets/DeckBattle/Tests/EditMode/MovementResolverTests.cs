@@ -13,8 +13,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(ranged, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, ranged, BattleSide.Enemy, new HexCoord(2, 1))
                 });
 
             int moved = MovementResolver.ResolveMovement(simulation);
@@ -32,8 +32,8 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(1, 1)),
-                    new UnitSpawnData(melee, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 1))
                 });
 
             int moved = MovementResolver.ResolveMovement(simulation);
@@ -56,9 +56,9 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 1)),
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(1, 0)),
-                    new UnitSpawnData(ranged, BattleSide.Enemy, new HexCoord(3, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 1)),
+                    new UnitSpawnData(2, melee, BattleSide.Player, new HexCoord(1, 0)),
+                    new UnitSpawnData(3, ranged, BattleSide.Enemy, new HexCoord(3, 1))
                 });
 
             int moved = MovementResolver.ResolveMovement(simulation);
@@ -78,9 +78,9 @@ namespace DeckBattle.Tests
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(1, 0)),
-                    new UnitSpawnData(ranged, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Player, new HexCoord(1, 0)),
+                    new UnitSpawnData(3, ranged, BattleSide.Enemy, new HexCoord(2, 1))
                 });
 
             int moved = MovementResolver.ResolveMovement(simulation);
@@ -101,9 +101,9 @@ namespace DeckBattle.Tests
                 board,
                 new[]
                 {
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(melee, BattleSide.Player, new HexCoord(0, 1)),
-                    new UnitSpawnData(ranged, BattleSide.Enemy, new HexCoord(2, 1))
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Player, new HexCoord(0, 1)),
+                    new UnitSpawnData(3, ranged, BattleSide.Enemy, new HexCoord(2, 1))
                 });
 
             int moved = MovementResolver.ResolveMovement(simulation);
