@@ -7,6 +7,7 @@ namespace DeckBattle
     public sealed class BattleController : MonoBehaviour
     {
         private const int MaxAutomaticFlowSteps = 32;
+        private const int DefaultMaxCombatTicks = 1000;
 
         public event System.Action StateChanged;
 
@@ -23,7 +24,7 @@ namespace DeckBattle
 
         [Header("Combat Timing")]
         [SerializeField] private float combatTickDuration = 0.35f;
-        [SerializeField] private int maxCombatTicks = CombatSimulator.DefaultMaxTicks;
+        [SerializeField] private int maxCombatTicks = DefaultMaxCombatTicks;
         [SerializeField] private float roundResolutionDelay = 0.25f;
 
         private readonly List<UnitView> unitViews = new List<UnitView>(16);

@@ -1,5 +1,8 @@
+using System;
+
 namespace DeckBattle
 {
+    // Persistent match/preparation unit. Realtime combat state lives in UnitRuntimeState.
     public sealed class RuntimeUnit
     {
         public readonly int RuntimeId;
@@ -12,8 +15,13 @@ namespace DeckBattle
 
         public RuntimeUnit(int runtimeId, UnitDefinition definition, BattleSide side, HexCoord formationCoord)
         {
+            if (runtimeId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(runtimeId));
+            }
+
             RuntimeId = runtimeId;
-            Definition = definition;
+            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             Side = side;
             FormationCoord = formationCoord;
             BattleCoord = formationCoord;
