@@ -38,7 +38,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void FillNeighbors_ReturnsExpectedAxialNeighbors_ForInteriorHex()
+        public void FillNeighbors_ReturnsExpectedOffsetRowNeighbors_ForEvenInteriorHex()
         {
             var board = new HexBoard(5, 6, 1f);
             var neighbors = new List<HexCoord>(6);
@@ -49,8 +49,8 @@ namespace DeckBattle.Tests
                 new[]
                 {
                     new HexCoord(3, 2),
-                    new HexCoord(3, 1),
                     new HexCoord(2, 1),
+                    new HexCoord(1, 1),
                     new HexCoord(1, 2),
                     new HexCoord(1, 3),
                     new HexCoord(2, 3)
@@ -59,13 +59,35 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Distance_UsesAxialHexDistance()
+        public void FillNeighbors_ReturnsExpectedOffsetRowNeighbors_ForOddInteriorHex()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var neighbors = new List<HexCoord>(6);
+
+            board.FillNeighbors(new HexCoord(2, 3), neighbors);
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    new HexCoord(3, 3),
+                    new HexCoord(3, 2),
+                    new HexCoord(2, 2),
+                    new HexCoord(1, 3),
+                    new HexCoord(2, 4),
+                    new HexCoord(3, 4)
+                },
+                neighbors);
+        }
+
+        [Test]
+        public void Distance_UsesOffsetRowHexDistance()
         {
             var board = new HexBoard(5, 6, 1f);
 
             Assert.AreEqual(0, board.Distance(new HexCoord(1, 1), new HexCoord(1, 1)));
             Assert.AreEqual(1, board.Distance(new HexCoord(1, 1), new HexCoord(2, 1)));
-            Assert.AreEqual(4, board.Distance(new HexCoord(0, 0), new HexCoord(2, 2)));
+            Assert.AreEqual(3, board.Distance(new HexCoord(0, 0), new HexCoord(2, 2)));
+            Assert.AreEqual(2, board.Distance(new HexCoord(3, 3), new HexCoord(2, 4)));
         }
 
         [Test]
@@ -95,15 +117,15 @@ namespace DeckBattle.Tests
             int count = board.FillHexesInRange(new HexCoord(2, 2), 1, hexes);
 
             Assert.AreEqual(7, count);
-            CollectionAssert.AreEqual(
+            CollectionAssert.AreEquivalent(
                 new[]
                 {
+                    new HexCoord(1, 1),
                     new HexCoord(1, 2),
-                    new HexCoord(1, 3),
                     new HexCoord(2, 1),
                     new HexCoord(2, 2),
                     new HexCoord(2, 3),
-                    new HexCoord(3, 1),
+                    new HexCoord(1, 3),
                     new HexCoord(3, 2)
                 },
                 hexes);
@@ -214,6 +236,30 @@ namespace DeckBattle.Tests
             Assert.That(bottomRight.x - bottomLeft.x, Is.EqualTo(topRight.x - topLeft.x).Within(0.001f));
             Assert.That(Mathf.Abs(bottomLeft.x), Is.EqualTo(Mathf.Abs(topRight.x)).Within(0.001f));
             Assert.That(Mathf.Abs(bottomRight.x), Is.EqualTo(Mathf.Abs(topLeft.x)).Within(0.001f));
+        }
+
+        [Test]
+        public void ToLocalPosition_MatchesOffsetRowNeighborGeometry()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            HexCoord center = new HexCoord(2, 2);
+            var neighbors = new List<HexCoord>(6);
+
+            board.FillNeighbors(center, neighbors);
+
+            float expectedDistance = Vector3.Distance(board.ToLocalPosition(center), board.ToLocalPosition(neighbors[0]));
+            for (int i = 1; i < neighbors.Count; i++)
+            {
+                float distance = Vector3.Distance(board.ToLocalPosition(center), board.ToLocalPosition(neighbors[i]));
+                Assert.That(distance, Is.EqualTo(expectedDistance).Within(0.001f));
+            }
+
+            Assert.That(
+                Vector3.Distance(board.ToLocalPosition(new HexCoord(3, 3)), board.ToLocalPosition(new HexCoord(3, 4))),
+                Is.EqualTo(expectedDistance).Within(0.001f));
+            Assert.That(
+                Vector3.Distance(board.ToLocalPosition(new HexCoord(3, 3)), board.ToLocalPosition(new HexCoord(2, 4))),
+                Is.GreaterThan(expectedDistance));
         }
     }
 }

@@ -69,7 +69,9 @@ namespace DeckBattle
 
             if (statsText != null)
             {
-                statsText.text = definition != null ? "HP " + definition.MaxHp + " / POW " + definition.Power : string.Empty;
+                statsText.text = definition != null
+                    ? "HP " + definition.MaxHp + " / ATK " + definition.Attack + " / RNG " + definition.AttackRange
+                    : string.Empty;
             }
         }
 

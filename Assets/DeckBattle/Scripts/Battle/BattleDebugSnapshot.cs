@@ -41,6 +41,10 @@ namespace DeckBattle
                 if (unit != null && unit.IsAlive)
                 {
                     occupiedHexes[unit.CurrentHex] = unit.UnitId;
+                    if (unit.IsMoving)
+                    {
+                        reservedHexes[unit.MovementDestination] = unit.UnitId;
+                    }
                 }
             }
 

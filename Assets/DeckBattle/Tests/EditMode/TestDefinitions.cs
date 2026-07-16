@@ -39,8 +39,14 @@ namespace DeckBattle.Tests
             unit.Attack = 2;
             unit.Power = 2;
             unit.AttackRange = 1;
-            unit.MoveRange = 1;
+            unit.CritChance = 0f;
+            unit.CritMultiplier = 2f;
             unit.AttackCooldown = 1f;
+            unit.ManaThreshold = 100;
+            unit.ManaPerAttack = 10;
+            unit.ManaPerDamageTaken = 10;
+            unit.Armor = 0f;
+            unit.ArmorPenetration = 0f;
             return unit;
         }
     }

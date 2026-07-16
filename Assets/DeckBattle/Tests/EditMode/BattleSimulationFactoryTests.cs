@@ -19,7 +19,7 @@ namespace DeckBattle.Tests
             state.Player.Units.Add(playerUnit);
             state.Enemy.Units.Add(enemyUnit);
 
-            BattleSimulation simulation = BattleSimulationFactory.Create(state, new BattleRuntimeTuning(1f, 1, 2));
+            BattleSimulation simulation = BattleSimulationFactory.Create(state, new BattleRuntimeTuning(1f, 1));
 
             Assert.AreSame(state.Board, simulation.Board);
             Assert.AreEqual(2, simulation.Units.Count);
@@ -31,7 +31,7 @@ namespace DeckBattle.Tests
             Assert.AreSame(enemyDefinition, simulation.Units[1].Definition);
             Assert.AreEqual(BattleSide.Enemy, simulation.Units[1].Side);
             Assert.AreEqual(new HexCoord(3, 4), simulation.Units[1].CurrentHex);
-            Assert.AreEqual(2, simulation.Tuning.MovementStepsPerTick);
+            Assert.AreEqual(2, simulation.Tuning.GetAttackRange(playerDefinition));
         }
 
         [Test]

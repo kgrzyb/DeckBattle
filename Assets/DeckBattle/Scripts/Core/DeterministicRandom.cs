@@ -22,6 +22,11 @@ namespace DeckBattle
             return minInclusive + (int)(NextUInt() % range);
         }
 
+        public float NextFloat01()
+        {
+            return (NextUInt() & 0x00FFFFFFu) / 16777216f;
+        }
+
         private uint NextUInt()
         {
             uint value = state;

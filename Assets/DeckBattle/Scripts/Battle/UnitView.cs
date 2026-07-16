@@ -4,6 +4,8 @@ namespace DeckBattle
 {
     public sealed class UnitView : MonoBehaviour
     {
+        private const int MaxQueuedMoves = 4;
+
         [SerializeField] private MeshRenderer meshRenderer;
         [SerializeField] private Transform modelRoot;
         [SerializeField] private UnitHealthBarView healthBar;
@@ -24,6 +26,8 @@ namespace DeckBattle
         private Vector3 baseModelScale;
         private Vector3 moveFrom;
         private Vector3 moveTo;
+        private readonly Vector3[] queuedMoveTargets = new Vector3[MaxQueuedMoves];
+        private readonly float[] queuedMoveDurations = new float[MaxQueuedMoves];
         private Vector3 deathStartPosition;
         private Color sideColor;
         private float moveElapsed;
@@ -32,6 +36,8 @@ namespace DeckBattle
         private float damageTimer;
         private float deathTimer;
         private int maxHp = 1;
+        private int queuedMoveHead;
+        private int queuedMoveCount;
         private bool isMoving;
         private bool isDying;
 
@@ -87,16 +93,22 @@ namespace DeckBattle
             moveTo = transform.position;
             moveElapsed = 0f;
             moveDuration = 0f;
+            queuedMoveHead = 0;
+            queuedMoveCount = 0;
             isMoving = false;
         }
 
         public void MoveToWorldPosition(Vector3 worldPosition, float duration)
         {
-            moveFrom = transform.position;
-            moveTo = worldPosition + Vector3.up * groundOffset;
-            moveElapsed = 0f;
-            moveDuration = Mathf.Max(0.01f, duration);
-            isMoving = true;
+            Vector3 target = worldPosition + Vector3.up * groundOffset;
+            float safeDuration = Mathf.Max(0.01f, duration);
+            if (isMoving)
+            {
+                EnqueueMove(target, safeDuration);
+                return;
+            }
+
+            StartMove(target, safeDuration);
         }
 
         public void PlayAttack()
@@ -121,6 +133,9 @@ namespace DeckBattle
             isDying = true;
             deathTimer = Mathf.Max(deathDuration, 0.01f);
             deathStartPosition = transform.position;
+            isMoving = false;
+            queuedMoveHead = 0;
+            queuedMoveCount = 0;
             SetHealth(0, maxHp);
         }
 
@@ -186,8 +201,51 @@ namespace DeckBattle
             if (normalized >= 1f)
             {
                 transform.position = moveTo;
-                isMoving = false;
+                if (!TryStartNextQueuedMove())
+                {
+                    isMoving = false;
+                }
             }
+        }
+
+        private void StartMove(Vector3 target, float duration)
+        {
+            moveFrom = transform.position;
+            moveTo = target;
+            moveElapsed = 0f;
+            moveDuration = duration;
+            isMoving = true;
+        }
+
+        private void EnqueueMove(Vector3 target, float duration)
+        {
+            if (queuedMoveCount >= MaxQueuedMoves)
+            {
+                int lastIndex = (queuedMoveHead + queuedMoveCount - 1) % MaxQueuedMoves;
+                queuedMoveTargets[lastIndex] = target;
+                queuedMoveDurations[lastIndex] = duration;
+                return;
+            }
+
+            int index = (queuedMoveHead + queuedMoveCount) % MaxQueuedMoves;
+            queuedMoveTargets[index] = target;
+            queuedMoveDurations[index] = duration;
+            queuedMoveCount++;
+        }
+
+        private bool TryStartNextQueuedMove()
+        {
+            if (queuedMoveCount <= 0)
+            {
+                return false;
+            }
+
+            Vector3 target = queuedMoveTargets[queuedMoveHead];
+            float duration = queuedMoveDurations[queuedMoveHead];
+            queuedMoveHead = (queuedMoveHead + 1) % MaxQueuedMoves;
+            queuedMoveCount--;
+            StartMove(target, duration);
+            return true;
         }
 
         private void UpdateVisualTimers(float deltaTime)

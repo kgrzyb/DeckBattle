@@ -142,7 +142,6 @@ public sealed class UnitDefinition : ScriptableObject
     public int Attack;
     public int Power;
     public int AttackRange;
-    public int MoveRange;
     public float AttackCooldown;
     public GameObject UnitPrefab;
     public Sprite CardArt;
@@ -288,7 +287,7 @@ Wspolrzedne hexa jako wartosc.
 
 Rekomendacja:
 
-- uzyc axial coordinates: `q`, `r`,
+- uzyc odd-row offset coordinates: `q` jako kolumna, `r` jako rzad,
 - trzymac jako `struct`,
 - nie alokowac list w hot path.
 

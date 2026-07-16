@@ -16,7 +16,7 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
                     new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 0))
                 },
-                new BattleRuntimeTuning(1f, 1, 1));
+                new BattleRuntimeTuning(1f, 1));
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
@@ -39,7 +39,7 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
                     new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 0))
                 },
-                new BattleRuntimeTuning(2f, 0, 1));
+                new BattleRuntimeTuning(2f, 0));
             simulation.Units[0].SetTarget(simulation.Units[1]);
 
             CombatResolver.ResolveCombat(simulation, 1f);
@@ -48,25 +48,23 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void MovementStepsPerTick_AllowsLongerLogicalMove()
+        public void RuntimeAttackCooldownMultiplier_AdjustsCooldownAfterAttack()
         {
-            UnitDefinition player = CreateUnit("player", 5, 1, 1, 1f);
+            UnitDefinition player = CreateUnit("player", 10, 1, 3, 1f);
             UnitDefinition enemy = CreateUnit("enemy", 5, 1, 1, 1f);
             BattleSimulation simulation = BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
                     new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(3, 0))
-                },
-                new BattleRuntimeTuning(1f, 0, 2));
-            var loop = new BattleTickLoop(simulation, 1f);
-            var events = new BattleEventQueue();
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 0))
+                });
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].AttackCooldownMultiplier = 0.5f;
 
-            BattleTickResult result = loop.Tick(simulation, events);
+            CombatResolver.ResolveCombat(simulation, 1f);
 
-            Assert.GreaterOrEqual(result.Moves, 1);
-            Assert.AreEqual(new HexCoord(2, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownRemaining);
         }
 
         private static UnitDefinition CreateUnit(string unitId, int hp, int attack, int attackRange, float attackCooldown)

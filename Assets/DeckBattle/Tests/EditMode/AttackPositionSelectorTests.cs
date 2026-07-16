@@ -67,7 +67,7 @@ namespace DeckBattle.Tests
                 out HexCoord attackPosition);
 
             Assert.IsTrue(found);
-            Assert.AreEqual(new HexCoord(0, 2), attackPosition);
+            Assert.AreEqual(new HexCoord(0, 1), attackPosition);
         }
 
         [Test]
@@ -103,6 +103,7 @@ namespace DeckBattle.Tests
             board.SetWalkable(new HexCoord(2, 2), false);
             board.SetWalkable(new HexCoord(3, 0), false);
             board.SetWalkable(new HexCoord(3, 1), false);
+            board.SetWalkable(new HexCoord(3, 2), false);
 
             UnitDefinition melee = CreateUnit("melee", 1);
             BattleSimulation simulation = BattleSimulation.Create(

@@ -115,6 +115,10 @@ namespace DeckBattle
                 if (unit != null && unit.IsAlive)
                 {
                     occupiedHexes.Add(unit.CurrentHex);
+                    if (unit.IsMoving)
+                    {
+                        occupiedHexes.Add(unit.MovementDestination);
+                    }
                 }
             }
         }

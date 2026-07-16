@@ -14,7 +14,7 @@ namespace DeckBattle
         [SerializeField] private int maxTicksPerFrame = 4;
         [SerializeField] private float attackCooldownMultiplier = 1f;
         [SerializeField] private int attackRangeBonus;
-        [SerializeField] private int movementStepsPerTick = 1;
+        [SerializeField] private float movementStepDuration = 0.4f;
         [SerializeField] private bool startOnAwake;
         [SerializeField] private List<SpawnEntry> initialUnits = new List<SpawnEntry>(8);
 
@@ -80,7 +80,7 @@ namespace DeckBattle
             tickDuration = Mathf.Max(0.01f, tickDuration);
             maxTicksPerFrame = Mathf.Max(1, maxTicksPerFrame);
             attackCooldownMultiplier = Mathf.Max(0.01f, attackCooldownMultiplier);
-            movementStepsPerTick = Mathf.Max(1, movementStepsPerTick);
+            movementStepDuration = Mathf.Max(0.01f, movementStepDuration);
         }
 
         private void Awake()
@@ -321,7 +321,24 @@ namespace DeckBattle
                 return;
             }
 
-            view.MoveToWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To), tickLoop.TickDuration);
+            UnitRuntimeState unit;
+            float duration = simulation != null
+                && simulation.TryGetUnitById(battleEvent.UnitId, out unit)
+                && unit != null
+                ? ResolvePresentationMovementStepDuration(simulation.Tuning.MovementStepDuration)
+                : tickDuration;
+            view.MoveToWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To), duration);
+        }
+
+        private float ResolvePresentationMovementStepDuration(float stepDuration)
+        {
+            float safeDuration = Mathf.Max(0.01f, stepDuration);
+            if (tickLoop == null || tickLoop.TickDuration <= 0f)
+            {
+                return safeDuration;
+            }
+
+            return Mathf.Ceil(safeDuration / tickLoop.TickDuration) * tickLoop.TickDuration;
         }
 
         private void HandleUnitAttackStarted(BattleEvent battleEvent)
@@ -497,7 +514,7 @@ namespace DeckBattle
 
         private BattleRuntimeTuning CreateRuntimeTuning()
         {
-            return new BattleRuntimeTuning(attackCooldownMultiplier, attackRangeBonus, movementStepsPerTick);
+            return new BattleRuntimeTuning(attackCooldownMultiplier, attackRangeBonus, movementStepDuration);
         }
 
         private static void ReleaseCompletedEffects(List<PooledBattleEffect> activeEffects, Stack<PooledBattleEffect> pooledEffects)

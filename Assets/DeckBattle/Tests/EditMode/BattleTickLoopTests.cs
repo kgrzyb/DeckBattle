@@ -20,12 +20,20 @@ namespace DeckBattle.Tests
             Assert.IsFalse(firstTick.BattleEnded);
             Assert.AreEqual(0, firstTick.Attacks);
             Assert.AreEqual(2, firstTick.Moves);
-            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].CurrentHex);
-            Assert.AreEqual(new HexCoord(1, 1), first.Units[1].CurrentHex);
+            Assert.AreEqual(new HexCoord(0, 0), first.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(2, 0), first.Units[1].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].MovementDestination);
+            Assert.AreEqual(new HexCoord(1, 1), first.Units[1].MovementDestination);
             Assert.AreEqual(first.Units[0].CurrentHex, second.Units[0].CurrentHex);
             Assert.AreEqual(first.Units[1].CurrentHex, second.Units[1].CurrentHex);
             Assert.AreEqual(2, firstEvents.Count);
             Assert.AreEqual(BattleEventType.UnitMoved, firstEvents[0].Type);
+
+            BattleTickResult commitTick = firstLoop.Tick(first, firstEvents);
+
+            Assert.IsFalse(commitTick.BattleEnded);
+            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 1), first.Units[1].CurrentHex);
 
             BattleTickResult endTick = firstLoop.Tick(first, firstEvents);
 

@@ -4,17 +4,17 @@ namespace DeckBattle
 {
     public readonly struct BattleRuntimeTuning
     {
-        public static readonly BattleRuntimeTuning Default = new BattleRuntimeTuning(1f, 0, 1);
+        public static readonly BattleRuntimeTuning Default = new BattleRuntimeTuning(1f, 0, 0.4f);
 
         public readonly float AttackCooldownMultiplier;
         public readonly int AttackRangeBonus;
-        public readonly int MovementStepsPerTick;
+        public readonly float MovementStepDuration;
 
-        public BattleRuntimeTuning(float attackCooldownMultiplier, int attackRangeBonus, int movementStepsPerTick)
+        public BattleRuntimeTuning(float attackCooldownMultiplier, int attackRangeBonus, float movementStepDuration = 0.4f)
         {
             AttackCooldownMultiplier = Math.Max(0.01f, attackCooldownMultiplier);
             AttackRangeBonus = attackRangeBonus;
-            MovementStepsPerTick = Math.Max(1, movementStepsPerTick);
+            MovementStepDuration = Math.Max(0.01f, movementStepDuration);
         }
 
         public int GetAttackRange(UnitDefinition definition)
@@ -29,12 +29,18 @@ namespace DeckBattle
 
         public float GetAttackCooldown(UnitDefinition definition)
         {
+            return GetAttackCooldown(definition, null);
+        }
+
+        public float GetAttackCooldown(UnitDefinition definition, UnitRuntimeState runtimeState)
+        {
             if (definition == null)
             {
                 return 0.01f;
             }
 
-            return Math.Max(0.01f, definition.AttackCooldown * AttackCooldownMultiplier);
+            float runtimeMultiplier = runtimeState != null ? runtimeState.AttackCooldownMultiplier : 1f;
+            return Math.Max(0.01f, definition.AttackCooldown * AttackCooldownMultiplier * Math.Max(0.01f, runtimeMultiplier));
         }
     }
 }

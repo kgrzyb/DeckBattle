@@ -6,14 +6,24 @@ namespace DeckBattle
 {
     public sealed class HexBoard
     {
-        private static readonly HexCoord[] Directions =
+        private static readonly HexCoord[] EvenRowDirections =
+        {
+            new HexCoord(1, 0),
+            new HexCoord(0, -1),
+            new HexCoord(-1, -1),
+            new HexCoord(-1, 0),
+            new HexCoord(-1, 1),
+            new HexCoord(0, 1)
+        };
+
+        private static readonly HexCoord[] OddRowDirections =
         {
             new HexCoord(1, 0),
             new HexCoord(1, -1),
             new HexCoord(0, -1),
             new HexCoord(-1, 0),
-            new HexCoord(-1, 1),
-            new HexCoord(0, 1)
+            new HexCoord(0, 1),
+            new HexCoord(1, 1)
         };
 
         public readonly int Width;
@@ -94,7 +104,12 @@ namespace DeckBattle
 
         public int Distance(HexCoord from, HexCoord to)
         {
-            return from.DistanceTo(to);
+            OffsetToCube(from, out int fromX, out int fromY, out int fromZ);
+            OffsetToCube(to, out int toX, out int toY, out int toZ);
+            int dx = Math.Abs(fromX - toX);
+            int dy = Math.Abs(fromY - toY);
+            int dz = Math.Abs(fromZ - toZ);
+            return Math.Max(dx, Math.Max(dy, dz));
         }
 
         public int FillNeighbors(HexCoord coord, IList<HexCoord> results)
@@ -105,9 +120,10 @@ namespace DeckBattle
             }
 
             int added = 0;
-            for (int i = 0; i < Directions.Length; i++)
+            HexCoord[] directions = (coord.R & 1) == 0 ? EvenRowDirections : OddRowDirections;
+            for (int i = 0; i < directions.Length; i++)
             {
-                HexCoord direction = Directions[i];
+                HexCoord direction = directions[i];
                 HexCoord neighbor = new HexCoord(coord.Q + direction.Q, coord.R + direction.R);
                 if (!Contains(neighbor))
                 {
@@ -141,14 +157,12 @@ namespace DeckBattle
             }
 
             int added = 0;
-            for (int dq = -range; dq <= range; dq++)
+            for (int r = 0; r < Height; r++)
             {
-                int minDr = Math.Max(-range, -dq - range);
-                int maxDr = Math.Min(range, -dq + range);
-                for (int dr = minDr; dr <= maxDr; dr++)
+                for (int q = 0; q < Width; q++)
                 {
-                    HexCoord coord = new HexCoord(center.Q + dq, center.R + dr);
-                    if (!Contains(coord))
+                    HexCoord coord = new HexCoord(q, r);
+                    if (Distance(center, coord) > range)
                     {
                         continue;
                     }
@@ -234,11 +248,18 @@ namespace DeckBattle
         public Vector3 ToLocalPosition(HexCoord coord)
         {
             float rowOffset = (coord.R & 1) == 0 ? -0.25f : 0.25f;
-            float centeredQ = coord.Q - (Width - 1) * 0.5f + rowOffset;
-            float x = HexSize * Mathf.Sqrt(3f) * centeredQ;
+            float centeredColumn = coord.Q - (Width - 1) * 0.5f + rowOffset;
+            float x = HexSize * Mathf.Sqrt(3f) * centeredColumn;
             float z = HexSize * 1.5f * coord.R;
             float centerZ = HexSize * 1.5f * (Height - 1) * 0.5f;
             return new Vector3(x, 0f, z - centerZ);
+        }
+
+        private static void OffsetToCube(HexCoord coord, out int x, out int y, out int z)
+        {
+            x = coord.Q - (coord.R - (coord.R & 1)) / 2;
+            z = coord.R;
+            y = -x - z;
         }
 
         private static void BuildPath(

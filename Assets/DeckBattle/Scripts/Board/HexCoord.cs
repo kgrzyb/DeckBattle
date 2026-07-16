@@ -13,17 +13,14 @@ namespace DeckBattle
             R = r;
         }
 
-        public int S
-        {
-            get { return -Q - R; }
-        }
-
         public int DistanceTo(HexCoord other)
         {
-            int dq = Math.Abs(Q - other.Q);
-            int dr = Math.Abs(R - other.R);
-            int ds = Math.Abs(S - other.S);
-            return (dq + dr + ds) / 2;
+            OffsetToCube(this, out int fromX, out int fromY, out int fromZ);
+            OffsetToCube(other, out int toX, out int toY, out int toZ);
+            int dx = Math.Abs(fromX - toX);
+            int dy = Math.Abs(fromY - toY);
+            int dz = Math.Abs(fromZ - toZ);
+            return Math.Max(dx, Math.Max(dy, dz));
         }
 
         public bool Equals(HexCoord other)
@@ -57,6 +54,13 @@ namespace DeckBattle
         public static bool operator !=(HexCoord left, HexCoord right)
         {
             return !left.Equals(right);
+        }
+
+        private static void OffsetToCube(HexCoord coord, out int x, out int y, out int z)
+        {
+            x = coord.Q - (coord.R - (coord.R & 1)) / 2;
+            z = coord.R;
+            y = -x - z;
         }
     }
 }

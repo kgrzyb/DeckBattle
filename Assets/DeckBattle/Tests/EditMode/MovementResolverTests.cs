@@ -20,7 +20,9 @@ namespace DeckBattle.Tests
             int moved = MovementResolver.ResolveMovement(simulation);
 
             Assert.AreEqual(1, moved);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
             Assert.AreEqual(new HexCoord(2, 1), simulation.Units[1].CurrentHex);
         }
 
@@ -64,9 +66,11 @@ namespace DeckBattle.Tests
             int moved = MovementResolver.ResolveMovement(simulation);
 
             Assert.AreEqual(1, moved);
-            Assert.AreEqual(new HexCoord(1, 1), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(0, 1), simulation.Units[0].CurrentHex);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 1), simulation.Units[0].MovementDestination);
             Assert.AreEqual(new HexCoord(1, 0), simulation.Units[1].CurrentHex);
-            Assert.AreNotEqual(simulation.Units[0].CurrentHex, simulation.Units[1].CurrentHex);
+            Assert.AreNotEqual(simulation.Units[0].MovementDestination, simulation.Units[1].CurrentHex);
         }
 
         [Test]
@@ -86,7 +90,7 @@ namespace DeckBattle.Tests
             int moved = MovementResolver.ResolveMovement(simulation);
 
             Assert.AreEqual(1, moved);
-            Assert.AreNotEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
+            Assert.AreNotEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
             Assert.AreNotEqual(simulation.Units[0].CurrentHex, simulation.Units[1].CurrentHex);
         }
 
@@ -110,10 +114,85 @@ namespace DeckBattle.Tests
 
             Assert.AreEqual(1, moved);
             Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
-            Assert.AreEqual(new HexCoord(1, 1), simulation.Units[1].CurrentHex);
+            Assert.IsTrue(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 1), simulation.Units[1].MovementDestination);
             Assert.AreNotEqual(simulation.Units[0].CurrentHex, simulation.Units[1].CurrentHex);
             Assert.IsTrue(simulation.TryGetUnitAt(new HexCoord(0, 0), out UnitRuntimeState occupyingUnit));
             Assert.AreSame(simulation.Units[0], occupyingUnit);
+        }
+
+        [Test]
+        public void ResolveMovement_CommitsMoveAfterGlobalMovementStepDuration()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            UnitDefinition ranged = CreateUnit("ranged", 5);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, ranged, BattleSide.Enemy, new HexCoord(2, 0))
+                },
+                new BattleRuntimeTuning(1f, 0, 0.5f));
+            var workspace = new MovementResolver.Workspace(30, 2);
+
+            MovementResolver.ResolveMovement(simulation, 0.1f, workspace, null);
+            MovementResolver.ResolveMovement(simulation, 0.5f, workspace, null);
+
+            Assert.IsFalse(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
+        }
+
+        [Test]
+        public void ResolveMovement_MovingUnitBlocksCurrentAndDestinationHexes()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            UnitDefinition ranged = CreateUnit("ranged", 5);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(3, ranged, BattleSide.Enemy, new HexCoord(3, 0))
+                },
+                new BattleRuntimeTuning(1f, 0, 1f));
+            simulation.StartUnitMovement(simulation.Units[0], new HexCoord(1, 0));
+
+            int moved = MovementResolver.ResolveMovement(simulation, 0.1f, new MovementResolver.Workspace(30, 3), null);
+
+            Assert.AreEqual(1, moved);
+            Assert.AreEqual(new HexCoord(1, 1), simulation.Units[1].CurrentHex);
+            Assert.IsTrue(simulation.Units[1].IsMoving);
+            Assert.AreNotEqual(new HexCoord(0, 0), simulation.Units[1].MovementDestination);
+            Assert.AreNotEqual(new HexCoord(1, 0), simulation.Units[1].MovementDestination);
+        }
+
+        [Test]
+        public void ResolveMovement_CloserUnitWinsContestedHexWithGlobalMovementSpeed()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            board.SetWalkable(new HexCoord(0, 0), false);
+            board.SetWalkable(new HexCoord(0, 2), false);
+            board.SetWalkable(new HexCoord(2, 0), false);
+            UnitDefinition first = CreateUnit("first", 1);
+            UnitDefinition second = CreateUnit("second", 1);
+            UnitDefinition ranged = CreateUnit("ranged", 5);
+            BattleSimulation simulation = BattleSimulation.Create(
+                board,
+                new[]
+                {
+                    new UnitSpawnData(1, first, BattleSide.Player, new HexCoord(0, 1)),
+                    new UnitSpawnData(2, second, BattleSide.Player, new HexCoord(1, 0)),
+                    new UnitSpawnData(3, ranged, BattleSide.Enemy, new HexCoord(3, 1))
+                });
+
+            int moved = MovementResolver.ResolveMovement(simulation);
+
+            Assert.AreEqual(1, moved);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.IsFalse(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 1), simulation.Units[0].MovementDestination);
         }
 
         private static UnitDefinition CreateUnit(string unitId, int attackRange)

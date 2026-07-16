@@ -631,7 +631,7 @@ MonoBehaviour:
   maxTicksPerFrame: 4
   attackCooldownMultiplier: 1
   attackRangeBonus: 0
-  movementStepsPerTick: 1
+  movementStepDuration: 0.4
   startOnAwake: 0
   initialUnits: []
   boardPresenter: {fileID: 1201968723}

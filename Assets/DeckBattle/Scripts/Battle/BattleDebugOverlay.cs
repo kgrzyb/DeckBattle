@@ -21,6 +21,7 @@ namespace DeckBattle
         [SerializeField] private bool showOccupiedHexes = true;
         [SerializeField] private bool showReservedHexes = true;
         [SerializeField] private bool showLabels = true;
+        [SerializeField] private bool showUnitHexLabels = true;
 
         [Header("Style")]
         [SerializeField] private float markerRadius = 0.18f;
@@ -32,13 +33,14 @@ namespace DeckBattle
         [SerializeField] private Color occupiedColor = new Color(1f, 0.1f, 0.1f, 0.85f);
         [SerializeField] private Color reservedColor = new Color(0.55f, 0.2f, 1f, 0.9f);
         [SerializeField] private Color attackPositionColor = new Color(1f, 1f, 1f, 0.95f);
+        [SerializeField] private Color unitHexLabelColor = new Color(1f, 1f, 1f, 1f);
 
         private readonly List<HexCoord> rangeHexes = new List<HexCoord>(64);
-        private readonly List<HexCoord> path = new List<HexCoord>(64);
+        private readonly Dictionary<int, HexCoord> plannedMovementDestinations = new Dictionary<int, HexCoord>(16);
 
         private TargetSelector.Workspace targetWorkspace;
         private AttackPositionSelector.Workspace attackPositionWorkspace;
-        private HexBoard.PathfindingWorkspace pathfindingWorkspace;
+        private MovementResolver.Workspace movementWorkspace;
         private int workspaceCapacity;
 
         private void OnValidate()
@@ -79,12 +81,26 @@ namespace DeckBattle
                 DrawHexDictionary(simulation, presenter, battleView.DebugSnapshot.ReservedHexes, reservedColor, "R");
             }
 
+            if (showPaths)
+            {
+                MovementResolver.PlanMovementDestinations(simulation, movementWorkspace, plannedMovementDestinations);
+            }
+            else
+            {
+                plannedMovementDestinations.Clear();
+            }
+
             for (int i = 0; i < simulation.Units.Count; i++)
             {
                 UnitRuntimeState unit = simulation.Units[i];
                 if (unit == null || !unit.IsAlive)
                 {
                     continue;
+                }
+
+                if (showLabels && showUnitHexLabels)
+                {
+                    DrawUnitHexLabel(presenter, unit);
                 }
 
                 UnitRuntimeState target = ResolveTarget(simulation, unit);
@@ -110,9 +126,21 @@ namespace DeckBattle
 
                 if (showPaths)
                 {
-                    DrawPathToAttackPosition(simulation, presenter, unit, target);
+                    DrawActualMovementStep(simulation, presenter, unit, target);
                 }
             }
+        }
+
+        private void DrawUnitHexLabel(BoardPresenter presenter, UnitRuntimeState unit)
+        {
+            Vector3 position = presenter.GetWorldPosition(unit.CurrentHex) + Vector3.up * (lineHeight + 0.25f);
+            string label = "U" + unit.UnitId + " hex " + unit.CurrentHex;
+            if (unit.IsMoving)
+            {
+                label += " -> " + unit.MovementDestination;
+            }
+
+            DrawLabel(position, label, unitHexLabelColor);
         }
 
         private BattleSimulation ResolveSimulation()
@@ -145,9 +173,8 @@ namespace DeckBattle
             workspaceCapacity = capacity;
             targetWorkspace = new TargetSelector.Workspace(capacity);
             attackPositionWorkspace = new AttackPositionSelector.Workspace(capacity);
-            pathfindingWorkspace = new HexBoard.PathfindingWorkspace(capacity);
+            movementWorkspace = new MovementResolver.Workspace(capacity, capacity);
             rangeHexes.Capacity = Mathf.Max(rangeHexes.Capacity, capacity);
-            path.Capacity = Mathf.Max(path.Capacity, capacity);
         }
 
         private UnitRuntimeState ResolveTarget(BattleSimulation simulation, UnitRuntimeState unit)
@@ -188,7 +215,7 @@ namespace DeckBattle
             }
         }
 
-        private void DrawPathToAttackPosition(
+        private void DrawActualMovementStep(
             BattleSimulation simulation,
             BoardPresenter presenter,
             UnitRuntimeState unit,
@@ -203,19 +230,21 @@ namespace DeckBattle
             Gizmos.color = attackPositionColor;
             Gizmos.DrawWireSphere(presenter.GetWorldPosition(attackPosition) + Vector3.up * pathHeight, markerRadius * 1.35f);
 
-            path.Clear();
-            if (!simulation.Board.TryFindPath(unit.CurrentHex, attackPosition, path, pathfindingWorkspace) || path.Count < 2)
+            HexCoord destination;
+            if (unit.IsMoving)
+            {
+                destination = unit.MovementDestination;
+            }
+            else if (!plannedMovementDestinations.TryGetValue(unit.UnitId, out destination))
             {
                 return;
             }
 
             Gizmos.color = pathColor;
-            for (int i = 1; i < path.Count; i++)
-            {
-                Vector3 from = presenter.GetWorldPosition(path[i - 1]) + Vector3.up * pathHeight;
-                Vector3 to = presenter.GetWorldPosition(path[i]) + Vector3.up * pathHeight;
-                Gizmos.DrawLine(from, to);
-            }
+            Vector3 from = presenter.GetWorldPosition(unit.CurrentHex) + Vector3.up * pathHeight;
+            Vector3 to = presenter.GetWorldPosition(destination) + Vector3.up * pathHeight;
+            Gizmos.DrawLine(from, to);
+            Gizmos.DrawWireSphere(to, markerRadius * 0.85f);
         }
 
         private void DrawHexDictionary(

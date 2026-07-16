@@ -49,7 +49,7 @@ namespace DeckBattle
             RefreshTargets(simulation);
 
             CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, TickDuration, eventQueue);
-            int moved = MovementResolver.ResolveMovement(simulation, movementWorkspace, eventQueue);
+            int moved = MovementResolver.ResolveMovement(simulation, TickDuration, movementWorkspace, eventQueue);
 
             BattleSide winner;
             bool hasWinner;

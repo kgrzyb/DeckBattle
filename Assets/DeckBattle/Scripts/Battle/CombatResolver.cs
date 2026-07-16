@@ -34,6 +34,11 @@ namespace DeckBattle
                 }
 
                 ReduceCooldown(attacker, tickDuration);
+                UpdateSpecialDuration(attacker, tickDuration);
+                if (attacker.IsMoving)
+                {
+                    continue;
+                }
 
                 UnitRuntimeState target;
                 if (!TryGetLiveTarget(simulation, attacker, out target))
@@ -51,20 +56,31 @@ namespace DeckBattle
                     continue;
                 }
 
-                int damage = Math.Max(0, attacker.Definition.Attack);
+                bool isCritical;
+                int damage = DamageCalculator.CalculateDamage(attacker.Definition, target.Definition, simulation.Random, out isCritical);
                 if (eventQueue != null)
                 {
                     eventQueue.Enqueue(BattleEvent.UnitAttackStarted(attacker.UnitId, target.UnitId));
+                    if (isCritical)
+                    {
+                        eventQueue.Enqueue(BattleEvent.UnitCrit(attacker.UnitId, target.UnitId));
+                    }
                 }
 
                 target.CurrentHp -= damage;
-                attacker.AttackCooldownRemaining = simulation.Tuning.GetAttackCooldown(attacker.Definition);
                 attacks++;
                 totalDamage += damage;
                 if (eventQueue != null)
                 {
                     eventQueue.Enqueue(BattleEvent.UnitDamaged(target.UnitId, damage, Math.Max(0, target.CurrentHp)));
                 }
+
+                AddMana(attacker, attacker.Definition.ManaPerAttack, eventQueue);
+                if (damage > 0)
+                {
+                    AddMana(target, target.Definition.ManaPerDamageTaken, eventQueue);
+                }
+                attacker.AttackCooldownRemaining = simulation.Tuning.GetAttackCooldown(attacker.Definition, attacker);
 
                 if (target.CurrentHp <= 0 && !target.IsDefeated)
                 {
@@ -89,6 +105,49 @@ namespace DeckBattle
             }
 
             unit.AttackCooldownRemaining = Math.Max(0f, unit.AttackCooldownRemaining - tickDuration);
+        }
+
+        private static void UpdateSpecialDuration(UnitRuntimeState unit, float tickDuration)
+        {
+            if (unit.SpecialDurationRemaining <= 0f || tickDuration <= 0f)
+            {
+                return;
+            }
+
+            unit.SpecialDurationRemaining = Math.Max(0f, unit.SpecialDurationRemaining - tickDuration);
+            if (unit.SpecialDurationRemaining <= 0f)
+            {
+                unit.AttackCooldownMultiplier = 1f;
+            }
+        }
+
+        private static void AddMana(UnitRuntimeState unit, int amount, BattleEventQueue eventQueue)
+        {
+            if (unit == null || amount <= 0 || !unit.IsAlive)
+            {
+                return;
+            }
+
+            int threshold = unit.Definition.ManaThreshold;
+            unit.CurrentMana = Math.Max(0, unit.CurrentMana + amount);
+            if (eventQueue != null)
+            {
+                eventQueue.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
+            }
+
+            if (threshold <= 0 || unit.CurrentMana < threshold)
+            {
+                return;
+            }
+
+            unit.CurrentMana = 0;
+            unit.AttackCooldownMultiplier = 0.5f;
+            unit.SpecialDurationRemaining = 5f;
+            if (eventQueue != null)
+            {
+                eventQueue.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
+                eventQueue.Enqueue(BattleEvent.UnitSpecialActivated(unit.UnitId, unit.SpecialDurationRemaining));
+            }
         }
 
         private static bool TryGetLiveTarget(BattleSimulation simulation, UnitRuntimeState attacker, out UnitRuntimeState target)

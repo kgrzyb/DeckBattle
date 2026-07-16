@@ -14,17 +14,20 @@ namespace DeckBattle
             List<UnitRuntimeState> units,
             Dictionary<HexCoord, UnitRuntimeState> unitByHex,
             Dictionary<int, UnitRuntimeState> unitById,
-            BattleRuntimeTuning tuning)
+            BattleRuntimeTuning tuning,
+            DeterministicRandom rng)
         {
             Board = board;
             this.units = units;
             this.unitByHex = unitByHex;
             this.unitById = unitById;
             Tuning = tuning;
+            Random = rng;
         }
 
         public HexBoard Board { get; private set; }
         public BattleRuntimeTuning Tuning { get; private set; }
+        public DeterministicRandom Random { get; private set; }
         public bool IsBattleEnded { get; private set; }
         public bool HasWinner { get; private set; }
         public BattleSide Winner { get; private set; }
@@ -40,6 +43,11 @@ namespace DeckBattle
         }
 
         public static BattleSimulation Create(HexBoard board, IList<UnitSpawnData> spawnData, BattleRuntimeTuning tuning)
+        {
+            return Create(board, spawnData, tuning, 1);
+        }
+
+        public static BattleSimulation Create(HexBoard board, IList<UnitSpawnData> spawnData, BattleRuntimeTuning tuning, int randomSeed)
         {
             if (board == null)
             {
@@ -66,7 +74,7 @@ namespace DeckBattle
                 unitById.Add(spawn.UnitId, unit);
             }
 
-            return new BattleSimulation(board, units, unitByHex, unitById, tuning);
+            return new BattleSimulation(board, units, unitByHex, unitById, tuning, new DeterministicRandom(randomSeed));
         }
 
         public bool TryGetUnitAt(HexCoord hex, out UnitRuntimeState unit)
@@ -102,6 +110,70 @@ namespace DeckBattle
             unitByHex[destination] = unit;
         }
 
+        public void StartUnitMovement(UnitRuntimeState unit, HexCoord destination)
+        {
+            if (unit == null)
+            {
+                throw new ArgumentNullException(nameof(unit));
+            }
+
+            if (!unit.IsAlive)
+            {
+                throw new ArgumentException("Defeated units cannot move.", nameof(unit));
+            }
+
+            if (unit.IsMoving)
+            {
+                throw new InvalidOperationException("Unit is already moving.");
+            }
+
+            if (!Board.IsWalkable(destination))
+            {
+                throw new ArgumentException("Destination is not walkable.", nameof(destination));
+            }
+
+            UnitRuntimeState occupyingUnit;
+            if (unitByHex.TryGetValue(destination, out occupyingUnit) && occupyingUnit != unit)
+            {
+                throw new ArgumentException("Destination is occupied.", nameof(destination));
+            }
+
+            unit.IsMoving = true;
+            unit.MovementDestination = destination;
+            unit.MovementTimeRemaining = Tuning.MovementStepDuration;
+        }
+
+        public void CompleteUnitMovement(UnitRuntimeState unit)
+        {
+            if (unit == null)
+            {
+                throw new ArgumentNullException(nameof(unit));
+            }
+
+            if (!unit.IsMoving)
+            {
+                return;
+            }
+
+            HexCoord destination = unit.MovementDestination;
+            if (!Board.IsWalkable(destination))
+            {
+                throw new InvalidOperationException("Movement destination is no longer walkable.");
+            }
+
+            UnitRuntimeState occupyingUnit;
+            if (unitByHex.TryGetValue(destination, out occupyingUnit) && occupyingUnit != unit)
+            {
+                throw new InvalidOperationException("Movement destination is occupied.");
+            }
+
+            unitByHex.Remove(unit.CurrentHex);
+            unit.CurrentHex = destination;
+            unitByHex[destination] = unit;
+            unit.IsMoving = false;
+            unit.MovementTimeRemaining = 0f;
+        }
+
         public void DefeatUnit(UnitRuntimeState unit)
         {
             if (unit == null)
@@ -112,6 +184,9 @@ namespace DeckBattle
             unit.IsDefeated = true;
             unit.CurrentHp = Math.Min(0, unit.CurrentHp);
             unit.ClearTarget();
+            unit.IsMoving = false;
+            unit.MovementDestination = unit.CurrentHex;
+            unit.MovementTimeRemaining = 0f;
             unitByHex.Remove(unit.CurrentHex);
         }
 

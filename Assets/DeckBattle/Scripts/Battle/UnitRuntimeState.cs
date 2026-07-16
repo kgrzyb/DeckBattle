@@ -14,6 +14,12 @@ namespace DeckBattle
         public HexCoord CurrentHex;
         public int TargetUnitId;
         public float AttackCooldownRemaining;
+        public int CurrentMana;
+        public bool IsMoving;
+        public HexCoord MovementDestination;
+        public float MovementTimeRemaining;
+        public float SpecialDurationRemaining;
+        public float AttackCooldownMultiplier;
         public bool IsDefeated;
 
         public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex)
@@ -30,6 +36,12 @@ namespace DeckBattle
             CurrentHp = definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
             AttackCooldownRemaining = 0f;
+            CurrentMana = 0;
+            IsMoving = false;
+            MovementDestination = startHex;
+            MovementTimeRemaining = 0f;
+            SpecialDurationRemaining = 0f;
+            AttackCooldownMultiplier = 1f;
             IsDefeated = false;
         }
 
@@ -54,6 +66,12 @@ namespace DeckBattle
             CurrentHp = Definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
             AttackCooldownRemaining = 0f;
+            CurrentMana = 0;
+            IsMoving = false;
+            MovementDestination = startHex;
+            MovementTimeRemaining = 0f;
+            SpecialDurationRemaining = 0f;
+            AttackCooldownMultiplier = 1f;
             IsDefeated = false;
         }
     }

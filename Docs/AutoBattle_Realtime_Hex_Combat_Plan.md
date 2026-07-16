@@ -134,21 +134,25 @@ Wazne: animacja ataku i animacja ruchu nie powinny blokowac logiki symulacji, ch
 
 ### Rekomendowane Wspolrzedne
 
-Uzyc axial coordinates:
+Uzyc odd-row offset coordinates:
 
 ```text
 HexCoord
-  q: int
-  r: int
+  q: int // column
+  r: int // row
 ```
 
-Dystans:
+Do obliczania dystansu konwertowac offset-row do cube:
 
 ```text
-dq = abs(a.q - b.q)
-dr = abs(a.r - b.r)
-ds = abs((-a.q - a.r) - (-b.q - b.r))
-distance = max(dq, dr, ds)
+cubeX = q - (r - (r & 1)) / 2
+cubeZ = r
+cubeY = -cubeX - cubeZ
+distance = max(
+    abs(a.cubeX - b.cubeX),
+    abs(a.cubeY - b.cubeY),
+    abs(a.cubeZ - b.cubeZ)
+)
 ```
 
 ### Pathfinding

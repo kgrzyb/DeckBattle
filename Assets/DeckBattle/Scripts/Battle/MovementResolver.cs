@@ -13,15 +13,15 @@ namespace DeckBattle
             }
 
             var workspace = new Workspace(simulation.Board.Width * simulation.Board.Height, simulation.Units.Count);
-            return ResolveMovement(simulation, workspace, null);
+            return ResolveMovement(simulation, 1f, workspace, null);
         }
 
         public static int ResolveMovement(BattleSimulation simulation, Workspace workspace)
         {
-            return ResolveMovement(simulation, workspace, null);
+            return ResolveMovement(simulation, 1f, workspace, null);
         }
 
-        public static int ResolveMovement(BattleSimulation simulation, Workspace workspace, BattleEventQueue eventQueue)
+        public static int ResolveMovement(BattleSimulation simulation, float tickDuration, Workspace workspace, BattleEventQueue eventQueue)
         {
             if (simulation == null)
             {
@@ -34,18 +34,75 @@ namespace DeckBattle
             }
 
             workspace.Clear();
+            AdvanceActiveMovements(simulation, tickDuration);
             FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
-            PlanMovementIntents(simulation, workspace);
+            PlanMovementIntents(simulation, workspace, true);
             return ApplyMovementIntents(simulation, workspace, eventQueue);
         }
 
-        private static void PlanMovementIntents(BattleSimulation simulation, Workspace workspace)
+        public static int ResolveMovement(BattleSimulation simulation, Workspace workspace, BattleEventQueue eventQueue)
+        {
+            return ResolveMovement(simulation, 1f, workspace, eventQueue);
+        }
+
+        public static int PlanMovementDestinations(
+            BattleSimulation simulation,
+            Workspace workspace,
+            Dictionary<int, HexCoord> destinationsByUnitId)
+        {
+            if (simulation == null)
+            {
+                throw new ArgumentNullException(nameof(simulation));
+            }
+
+            if (workspace == null)
+            {
+                throw new ArgumentNullException(nameof(workspace));
+            }
+
+            if (destinationsByUnitId == null)
+            {
+                throw new ArgumentNullException(nameof(destinationsByUnitId));
+            }
+
+            workspace.Clear();
+            destinationsByUnitId.Clear();
+            FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
+            PlanMovementIntents(simulation, workspace, false);
+            return ReservePlannedDestinations(simulation, workspace, destinationsByUnitId);
+        }
+
+        private static void AdvanceActiveMovements(BattleSimulation simulation, float tickDuration)
+        {
+            if (tickDuration <= 0f)
+            {
+                return;
+            }
+
+            IReadOnlyList<UnitRuntimeState> units = simulation.Units;
+            for (int i = 0; i < units.Count; i++)
+            {
+                UnitRuntimeState unit = units[i];
+                if (unit == null || !unit.IsAlive || !unit.IsMoving)
+                {
+                    continue;
+                }
+
+                unit.MovementTimeRemaining = Math.Max(0f, unit.MovementTimeRemaining - tickDuration);
+                if (unit.MovementTimeRemaining <= 0f)
+                {
+                    simulation.CompleteUnitMovement(unit);
+                }
+            }
+        }
+
+        private static void PlanMovementIntents(BattleSimulation simulation, Workspace workspace, bool updateUnitTargets)
         {
             IReadOnlyList<UnitRuntimeState> units = simulation.Units;
             for (int i = 0; i < units.Count; i++)
             {
                 UnitRuntimeState unit = units[i];
-                if (unit == null || !unit.IsAlive)
+                if (unit == null || !unit.IsAlive || unit.IsMoving)
                 {
                     continue;
                 }
@@ -53,11 +110,18 @@ namespace DeckBattle
                 UnitRuntimeState target = TargetSelector.SelectTarget(simulation, unit, workspace.Targeting);
                 if (target == null)
                 {
-                    unit.ClearTarget();
+                    if (updateUnitTargets)
+                    {
+                        unit.ClearTarget();
+                    }
+
                     continue;
                 }
 
-                unit.SetTarget(target);
+                if (updateUnitTargets)
+                {
+                    unit.SetTarget(target);
+                }
 
                 HexCoord attackPosition;
                 if (!AttackPositionSelector.TrySelectAttackPosition(simulation, unit, target, workspace.AttackPosition, out attackPosition))
@@ -80,15 +144,15 @@ namespace DeckBattle
                     continue;
                 }
 
-                int movementSteps = Math.Min(simulation.Tuning.MovementStepsPerTick, workspace.Path.Count - 1);
-                HexCoord destination = workspace.Path[movementSteps];
+                HexCoord destination = workspace.Path[1];
                 if (!CanEndMoveOn(unit, destination, workspace.OccupiedHexes))
                 {
                     continue;
                 }
 
                 int pathStepsToAttackPosition = workspace.Path.Count - 1;
-                workspace.Intents.Add(new MovementIntent(unit, destination, attackPosition, pathStepsToAttackPosition));
+                float arrivalTime = pathStepsToAttackPosition * simulation.Tuning.MovementStepDuration;
+                workspace.Intents.Add(new MovementIntent(unit, destination, attackPosition, pathStepsToAttackPosition, arrivalTime));
             }
 
             workspace.Intents.Sort(CompareIntentPriority);
@@ -117,7 +181,7 @@ namespace DeckBattle
                 HexCoord from = intent.Unit.CurrentHex;
                 workspace.ReservedHexes.Add(destination, intent.Unit.UnitId);
                 workspace.OccupiedHexes.Add(destination);
-                simulation.MoveUnit(intent.Unit, destination);
+                simulation.StartUnitMovement(intent.Unit, destination);
                 if (eventQueue != null)
                 {
                     eventQueue.Enqueue(BattleEvent.UnitMoved(intent.Unit.UnitId, from, destination));
@@ -127,6 +191,38 @@ namespace DeckBattle
             }
 
             return movedCount;
+        }
+
+        private static int ReservePlannedDestinations(
+            BattleSimulation simulation,
+            Workspace workspace,
+            Dictionary<int, HexCoord> destinationsByUnitId)
+        {
+            int plannedCount = 0;
+            for (int i = 0; i < workspace.Intents.Count; i++)
+            {
+                MovementIntent intent = workspace.Intents[i];
+                if (!intent.Unit.IsAlive)
+                {
+                    continue;
+                }
+
+                HexCoord destination = intent.Destination;
+                if (!CanReserveDestination(intent.Unit, destination, workspace.OccupiedHexes, workspace.ReservedHexes))
+                {
+                    if (!TryFindAlternativeStep(simulation, intent, workspace, out destination))
+                    {
+                        continue;
+                    }
+                }
+
+                workspace.ReservedHexes.Add(destination, intent.Unit.UnitId);
+                workspace.OccupiedHexes.Add(destination);
+                destinationsByUnitId[intent.Unit.UnitId] = destination;
+                plannedCount++;
+            }
+
+            return plannedCount;
         }
 
         private static bool TryFindAlternativeStep(
@@ -199,12 +295,22 @@ namespace DeckBattle
                 if (unit != null && unit.IsAlive)
                 {
                     occupiedHexes.Add(unit.CurrentHex);
+                    if (unit.IsMoving)
+                    {
+                        occupiedHexes.Add(unit.MovementDestination);
+                    }
                 }
             }
         }
 
         private static int CompareIntentPriority(MovementIntent left, MovementIntent right)
         {
+            int arrivalCompare = left.ArrivalTime.CompareTo(right.ArrivalTime);
+            if (arrivalCompare != 0)
+            {
+                return arrivalCompare;
+            }
+
             int pathCompare = left.PathStepsToAttackPosition.CompareTo(right.PathStepsToAttackPosition);
             if (pathCompare != 0)
             {
@@ -231,13 +337,15 @@ namespace DeckBattle
             public readonly HexCoord Destination;
             public readonly HexCoord AttackPosition;
             public readonly int PathStepsToAttackPosition;
+            public readonly float ArrivalTime;
 
-            public MovementIntent(UnitRuntimeState unit, HexCoord destination, HexCoord attackPosition, int pathStepsToAttackPosition)
+            public MovementIntent(UnitRuntimeState unit, HexCoord destination, HexCoord attackPosition, int pathStepsToAttackPosition, float arrivalTime)
             {
                 Unit = unit;
                 Destination = destination;
                 AttackPosition = attackPosition;
                 PathStepsToAttackPosition = pathStepsToAttackPosition;
+                ArrivalTime = arrivalTime;
             }
         }
 

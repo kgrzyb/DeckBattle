@@ -21,6 +21,8 @@ namespace DeckBattle.Tests
             Assert.AreEqual(0, result.Deaths);
             Assert.AreEqual(8, simulation.Units[1].CurrentHp);
             Assert.AreEqual(1f, simulation.Units[0].AttackCooldownRemaining);
+            Assert.AreEqual(10, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(10, simulation.Units[1].CurrentMana);
         }
 
         [Test]
@@ -124,7 +126,73 @@ namespace DeckBattle.Tests
 
             Assert.AreEqual(0, combat.Attacks);
             Assert.AreEqual(1, moved);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+        }
+
+        [Test]
+        public void ResolveCombat_ActivatesSpecialAtManaThresholdAndResetsMana()
+        {
+            UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
+            UnitDefinition target = CreateUnit("target", 10, 1, 1, 1f);
+            attacker.ManaThreshold = 10;
+            BattleSimulation simulation = CreateSimulation(
+                attacker,
+                new HexCoord(1, 1),
+                target,
+                new HexCoord(2, 1));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            var events = new BattleEventQueue();
+
+            CombatResolver.ResolveCombat(simulation, 0.25f, events);
+
+            Assert.AreEqual(0, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownMultiplier);
+            Assert.AreEqual(5f, simulation.Units[0].SpecialDurationRemaining);
+            Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownRemaining);
+            AssertEventTypeExists(events, BattleEventType.UnitSpecialActivated);
+        }
+
+        [Test]
+        public void ResolveCombat_SpecialExpiresAfterFiveSeconds()
+        {
+            BattleSimulation simulation = CreateSimulation(
+                CreateUnit("attacker", 10, 2, 1, 1f),
+                new HexCoord(1, 1),
+                CreateUnit("target", 10, 1, 1, 1f),
+                new HexCoord(2, 1));
+            simulation.Units[0].SpecialDurationRemaining = 5f;
+            simulation.Units[0].AttackCooldownMultiplier = 0.5f;
+            simulation.Units[0].AttackCooldownRemaining = 10f;
+
+            CombatResolver.ResolveCombat(simulation, 5f);
+
+            Assert.AreEqual(0f, simulation.Units[0].SpecialDurationRemaining);
+            Assert.AreEqual(1f, simulation.Units[0].AttackCooldownMultiplier);
+        }
+
+        [Test]
+        public void ResolveCombat_MovingUnitCannotAttackButCanBeAttackedOnCommittedHex()
+        {
+            UnitDefinition melee = CreateUnit("melee", 10, 2, 1, 1f);
+            UnitDefinition ranged = CreateUnit("ranged", 10, 3, 2, 1f);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, ranged, BattleSide.Enemy, new HexCoord(3, 1))
+                });
+            simulation.StartUnitMovement(simulation.Units[0], new HexCoord(2, 1));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[1].SetTarget(simulation.Units[0]);
+
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 0.1f);
+
+            Assert.AreEqual(1, result.Attacks);
+            Assert.AreEqual(7, simulation.Units[0].CurrentHp);
+            Assert.AreEqual(10, simulation.Units[1].CurrentHp);
         }
 
         private static BattleSimulation CreateSimulation(
@@ -150,6 +218,19 @@ namespace DeckBattle.Tests
             definition.AttackRange = attackRange;
             definition.AttackCooldown = attackCooldown;
             return definition;
+        }
+
+        private static void AssertEventTypeExists(BattleEventQueue events, BattleEventType type)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == type)
+                {
+                    return;
+                }
+            }
+
+            Assert.Fail("Expected event type was not emitted: " + type);
         }
     }
 }
