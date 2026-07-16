@@ -46,8 +46,6 @@ namespace DeckBattle
                 return;
             }
 
-            PlayerBattleState activePlayer = battleState.GetPlayerState(battleState.ActivePreparationSide);
-            MarkReadyIfNoLegalPlay(battleState, activePlayer);
             AdvanceToNextAvailableSide(battleState);
         }
 
@@ -59,6 +57,7 @@ namespace DeckBattle
             }
 
             battleState.GetPlayerState(battleState.ActivePreparationSide).IsReady = true;
+            battleState.StopPreparationCountdown();
             AdvanceToNextAvailableSide(battleState);
         }
 
@@ -70,11 +69,40 @@ namespace DeckBattle
             }
 
             PlayerBattleState activePlayer = battleState.GetPlayerState(battleState.ActivePreparationSide);
-            MarkReadyIfNoLegalPlay(battleState, activePlayer);
             if (activePlayer.IsReady)
             {
                 AdvanceToNextAvailableSide(battleState);
             }
+        }
+
+        public static bool HasOnlyRepositionActions(BattleState battleState)
+        {
+            if (battleState == null || battleState.Phase != BattlePhase.Preparation)
+            {
+                return false;
+            }
+
+            return !CanPlayAnyUnit(battleState, battleState.Player) && !CanPlayAnyUnit(battleState, battleState.Enemy);
+        }
+
+        public static bool ShouldStartPreparationCountdown(BattleState battleState)
+        {
+            if (battleState == null || battleState.Phase != BattlePhase.Preparation || battleState.PreparationCountdownActive)
+            {
+                return false;
+            }
+
+            if (battleState.Player.IsReady && battleState.Enemy.IsReady)
+            {
+                return false;
+            }
+
+            if (battleState.ActivePreparationSide == BattleSide.Enemy && !battleState.Enemy.IsReady)
+            {
+                return false;
+            }
+
+            return (battleState.Player.IsReady || battleState.Enemy.IsReady) && HasOnlyRepositionActions(battleState);
         }
 
         private static bool CanAdvancePreparation(BattleState battleState)
@@ -99,24 +127,12 @@ namespace DeckBattle
                     continue;
                 }
 
-                MarkReadyIfNoLegalPlay(battleState, nextPlayer);
-                if (!nextPlayer.IsReady)
-                {
-                    return;
-                }
+                return;
             }
 
             if (battleState.Player.IsReady && battleState.Enemy.IsReady)
             {
                 battleState.Phase = BattlePhase.Combat;
-            }
-        }
-
-        private static void MarkReadyIfNoLegalPlay(BattleState battleState, PlayerBattleState player)
-        {
-            if (!CanPlayAnyUnit(battleState, player))
-            {
-                player.IsReady = true;
             }
         }
 

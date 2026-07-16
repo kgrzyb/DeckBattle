@@ -23,3 +23,4 @@ MonoBehaviour:
   DeploymentSlotIncreaseEveryRounds: 2
   BoardWidth: 5
   BoardHeight: 6
+  PreparationCountdownSeconds: 10

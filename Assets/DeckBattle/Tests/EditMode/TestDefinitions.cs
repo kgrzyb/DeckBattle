@@ -18,6 +18,7 @@ namespace DeckBattle.Tests
             config.DeploymentSlotIncreaseEveryRounds = 2;
             config.BoardWidth = 5;
             config.BoardHeight = 6;
+            config.PreparationCountdownSeconds = 10f;
             return config;
         }
 

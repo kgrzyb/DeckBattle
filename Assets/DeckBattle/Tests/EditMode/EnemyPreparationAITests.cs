@@ -97,7 +97,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void ExecuteTurn_WhenPlayerReady_AllowsEnemyToContinueUntilReady()
+        public void ExecuteTurn_WhenNoUnitsCanBePlayed_MarksEnemyReady()
         {
             BattleState state = CreateStateWithEnemyHand(
                 TestDefinitions.CreateUnit("first", 1),
@@ -109,11 +109,16 @@ namespace DeckBattle.Tests
             int turns = 0;
             while (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy && !state.Enemy.IsReady)
             {
-                EnemyPreparationAI.ExecuteTurn(state);
+                EnemyPreparationAIResult result = EnemyPreparationAI.ExecuteTurn(state);
+                if (!result.PlayedUnit && !result.MarkedReady)
+                {
+                    break;
+                }
+
                 turns++;
             }
 
-            Assert.AreEqual(3, turns);
+            Assert.AreEqual(4, turns);
             Assert.AreEqual(3, state.Enemy.Units.Count);
             Assert.IsTrue(state.Enemy.IsReady);
             Assert.AreEqual(BattlePhase.Combat, state.Phase);

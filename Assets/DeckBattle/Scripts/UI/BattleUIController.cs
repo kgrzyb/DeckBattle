@@ -46,6 +46,8 @@ namespace DeckBattle
         private int shownSlots = int.MinValue;
         private BattlePhase shownPhase = BattlePhase.None;
         private BattleSide shownActivePreparationSide = (BattleSide)(-1);
+        private bool shownPreparationCountdownActive;
+        private int shownPreparationCountdownSeconds = int.MinValue;
         private bool shownResultPanelActive;
         private string shownResultText;
 
@@ -163,11 +165,25 @@ namespace DeckBattle
                 slotsText.text = "Sloty " + units + "/" + slots;
             }
 
-            if (phaseText != null && (shownPhase != state.Phase || shownActivePreparationSide != state.ActivePreparationSide))
+            int countdownSeconds = state.PreparationCountdownActive ? Mathf.CeilToInt(state.PreparationCountdownRemaining) : 0;
+            if (phaseText != null
+                && (shownPhase != state.Phase
+                    || shownActivePreparationSide != state.ActivePreparationSide
+                    || shownPreparationCountdownActive != state.PreparationCountdownActive
+                    || shownPreparationCountdownSeconds != countdownSeconds))
             {
                 shownPhase = state.Phase;
                 shownActivePreparationSide = state.ActivePreparationSide;
-                phaseText.text = state.Phase == BattlePhase.Preparation ? state.Phase + " " + state.ActivePreparationSide : state.Phase.ToString();
+                shownPreparationCountdownActive = state.PreparationCountdownActive;
+                shownPreparationCountdownSeconds = countdownSeconds;
+                if (state.PreparationCountdownActive)
+                {
+                    phaseText.text = state.Phase + " " + state.ActivePreparationSide + " " + countdownSeconds + "s";
+                }
+                else
+                {
+                    phaseText.text = state.Phase == BattlePhase.Preparation ? state.Phase + " " + state.ActivePreparationSide : state.Phase.ToString();
+                }
             }
 
             if (readyButton != null)

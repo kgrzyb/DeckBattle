@@ -16,6 +16,7 @@ namespace DeckBattle
         public int DeploymentSlotIncreaseEveryRounds = 2;
         public int BoardWidth = 5;
         public int BoardHeight = 6;
+        public float PreparationCountdownSeconds = 10f;
 
         private void OnValidate()
         {
@@ -30,6 +31,7 @@ namespace DeckBattle
             DeploymentSlotIncreaseEveryRounds = Mathf.Max(1, DeploymentSlotIncreaseEveryRounds);
             BoardWidth = Mathf.Max(1, BoardWidth);
             BoardHeight = Mathf.Max(2, BoardHeight);
+            PreparationCountdownSeconds = Mathf.Max(0f, PreparationCountdownSeconds);
         }
     }
 }

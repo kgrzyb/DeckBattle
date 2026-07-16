@@ -36,6 +36,7 @@ namespace DeckBattle
         private CombatSimulationResult lastCombatResult;
         private RoundResolutionResult lastRoundResolutionResult;
         private Coroutine combatRoutine;
+        private Coroutine preparationCountdownRoutine;
         private bool isCombatAnimating;
 
         public BattleState State
@@ -79,6 +80,7 @@ namespace DeckBattle
             }
 
             StopCombatRoutine();
+            StopPreparationCountdownRoutine();
             ClearUnitViews();
             state = BattleState.Create(battleConfig, playerDeck, enemyDeck, seed);
             lastCombatResult = null;
@@ -105,6 +107,7 @@ namespace DeckBattle
 
             CreateOrUpdateUnitView(result.Unit);
             PreparationTurnService.CompleteActiveSideAction(state);
+            EvaluatePreparationCountdownState();
             ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
@@ -137,6 +140,7 @@ namespace DeckBattle
             }
 
             PreparationTurnService.MarkActiveSideReadyAndAdvance(state);
+            EvaluatePreparationCountdownState();
             ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
@@ -154,13 +158,13 @@ namespace DeckBattle
             while (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy && !state.Enemy.IsReady)
             {
                 EnemyPreparationAIResult aiResult = EnemyPreparationAI.ExecuteTurn(state);
-                progressed = true;
+                progressed = aiResult.PlayedUnit || aiResult.MarkedReady;
                 if (aiResult.PlayedUnit && aiResult.Unit != null)
                 {
                     CreateOrUpdateUnitView(aiResult.Unit);
                 }
 
-                if (!state.Player.IsReady || !aiResult.PlayedUnit)
+                if (!progressed || !state.Player.IsReady || !aiResult.PlayedUnit)
                 {
                     break;
                 }
@@ -205,12 +209,19 @@ namespace DeckBattle
 
             for (int step = 0; step < MaxAutomaticFlowSteps; step++)
             {
+                EvaluatePreparationCountdownState();
+
                 if (isCombatAnimating)
                 {
                     return;
                 }
 
                 if (state.Phase == BattlePhase.MatchEnd)
+                {
+                    return;
+                }
+
+                if (state.PreparationCountdownActive)
                 {
                     return;
                 }
@@ -232,6 +243,7 @@ namespace DeckBattle
 
                 if (!progressed)
                 {
+                    EvaluatePreparationCountdownState();
                     return;
                 }
             }
@@ -383,6 +395,91 @@ namespace DeckBattle
             combatEventQueue.Clear();
             activeSimulation = null;
             activeTickLoop = null;
+        }
+
+        private void EvaluatePreparationCountdownState()
+        {
+            if (state == null || state.Phase != BattlePhase.Preparation)
+            {
+                StopPreparationCountdownRoutine();
+                return;
+            }
+
+            if (state.Player.IsReady && state.Enemy.IsReady)
+            {
+                StopPreparationCountdownRoutine();
+                state.StopPreparationCountdown();
+                state.Phase = BattlePhase.Combat;
+                return;
+            }
+
+            if (!PreparationTurnService.ShouldStartPreparationCountdown(state))
+            {
+                return;
+            }
+
+            float duration = state.Config != null ? state.Config.PreparationCountdownSeconds : 10f;
+            state.StartPreparationCountdown(duration);
+            if (state.PreparationCountdownActive && Application.isPlaying)
+            {
+                if (preparationCountdownRoutine == null)
+                {
+                    preparationCountdownRoutine = StartCoroutine(RunPreparationCountdownRoutine());
+                }
+            }
+            else
+            {
+                CompletePreparationCountdown();
+            }
+        }
+
+        private IEnumerator RunPreparationCountdownRoutine()
+        {
+            while (state != null && state.Phase == BattlePhase.Preparation && state.PreparationCountdownActive)
+            {
+                int previousSeconds = Mathf.CeilToInt(state.PreparationCountdownRemaining);
+                if (state.TickPreparationCountdown(Time.deltaTime))
+                {
+                    preparationCountdownRoutine = null;
+                    CompletePreparationCountdown();
+                    yield break;
+                }
+
+                int currentSeconds = Mathf.CeilToInt(state.PreparationCountdownRemaining);
+                if (currentSeconds != previousSeconds)
+                {
+                    RaiseStateChanged();
+                }
+
+                yield return null;
+            }
+
+            preparationCountdownRoutine = null;
+        }
+
+        private void CompletePreparationCountdown()
+        {
+            StopPreparationCountdownRoutine();
+            if (state == null)
+            {
+                return;
+            }
+
+            state.CompletePreparationCountdown();
+            RefreshUnits();
+            RaiseStateChanged();
+            ProgressAutomaticFlow();
+        }
+
+        private void StopPreparationCountdownRoutine()
+        {
+            if (preparationCountdownRoutine == null)
+            {
+                return;
+            }
+
+            StopCoroutine(preparationCountdownRoutine);
+            preparationCountdownRoutine = null;
         }
 
         private void RefreshUnits()

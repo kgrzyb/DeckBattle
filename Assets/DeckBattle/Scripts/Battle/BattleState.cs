@@ -15,6 +15,8 @@ namespace DeckBattle
         public BattlePhase Phase { get; set; }
         public BattleSide ActivePreparationSide { get; set; }
         public int RoundNumber { get; private set; }
+        public bool PreparationCountdownActive { get; private set; }
+        public float PreparationCountdownRemaining { get; private set; }
 
         private BattleState()
         {
@@ -64,6 +66,7 @@ namespace DeckBattle
             RoundNumber++;
             Phase = BattlePhase.RoundStart;
             ActivePreparationSide = BattleSide.Player;
+            StopPreparationCountdown();
 
             PreparePlayerForNextRound(Player);
             PreparePlayerForNextRound(Enemy);
@@ -77,6 +80,53 @@ namespace DeckBattle
             int id = nextRuntimeUnitId;
             nextRuntimeUnitId++;
             return id;
+        }
+
+        public void StartPreparationCountdown(float duration)
+        {
+            if (Phase != BattlePhase.Preparation)
+            {
+                throw new InvalidOperationException("Preparation countdown can only start during preparation.");
+            }
+
+            PreparationCountdownActive = duration > 0f;
+            PreparationCountdownRemaining = duration > 0f ? duration : 0f;
+        }
+
+        public bool TickPreparationCountdown(float deltaTime)
+        {
+            if (!PreparationCountdownActive)
+            {
+                return false;
+            }
+
+            float safeDeltaTime = deltaTime > 0f ? deltaTime : 0f;
+            PreparationCountdownRemaining -= safeDeltaTime;
+            if (PreparationCountdownRemaining < 0f)
+            {
+                PreparationCountdownRemaining = 0f;
+            }
+
+            return PreparationCountdownRemaining <= 0f;
+        }
+
+        public void StopPreparationCountdown()
+        {
+            PreparationCountdownActive = false;
+            PreparationCountdownRemaining = 0f;
+        }
+
+        public void CompletePreparationCountdown()
+        {
+            if (Phase != BattlePhase.Preparation)
+            {
+                return;
+            }
+
+            Player.IsReady = true;
+            Enemy.IsReady = true;
+            StopPreparationCountdown();
+            Phase = BattlePhase.Combat;
         }
 
         private void PreparePlayerForNextRound(PlayerBattleState player)
