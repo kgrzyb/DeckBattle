@@ -20,6 +20,8 @@ namespace DeckBattle
         public readonly int Height;
         public readonly float HexSize;
 
+        private readonly HashSet<HexCoord> blockedHexes = new HashSet<HexCoord>();
+
         public HexBoard(int width, int height, float hexSize)
         {
             if (width <= 0)
@@ -45,6 +47,33 @@ namespace DeckBattle
         public bool Contains(HexCoord coord)
         {
             return coord.Q >= 0 && coord.Q < Width && coord.R >= 0 && coord.R < Height;
+        }
+
+        public bool IsValidHex(HexCoord coord)
+        {
+            return Contains(coord);
+        }
+
+        public bool IsWalkable(HexCoord coord)
+        {
+            return Contains(coord) && !blockedHexes.Contains(coord);
+        }
+
+        public void SetWalkable(HexCoord coord, bool walkable)
+        {
+            if (!Contains(coord))
+            {
+                throw new ArgumentOutOfRangeException(nameof(coord));
+            }
+
+            if (walkable)
+            {
+                blockedHexes.Remove(coord);
+            }
+            else
+            {
+                blockedHexes.Add(coord);
+            }
         }
 
         public bool IsDeploymentCoord(BattleSide side, HexCoord coord)
@@ -99,6 +128,109 @@ namespace DeckBattle
             return neighbors;
         }
 
+        public int FillHexesInRange(HexCoord center, int range, IList<HexCoord> results)
+        {
+            if (results == null)
+            {
+                throw new ArgumentNullException(nameof(results));
+            }
+
+            if (range < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(range));
+            }
+
+            int added = 0;
+            for (int dq = -range; dq <= range; dq++)
+            {
+                int minDr = Math.Max(-range, -dq - range);
+                int maxDr = Math.Min(range, -dq + range);
+                for (int dr = minDr; dr <= maxDr; dr++)
+                {
+                    HexCoord coord = new HexCoord(center.Q + dq, center.R + dr);
+                    if (!Contains(coord))
+                    {
+                        continue;
+                    }
+
+                    results.Add(coord);
+                    added++;
+                }
+            }
+
+            return added;
+        }
+
+        public List<HexCoord> GetHexesInRange(HexCoord center, int range)
+        {
+            var hexes = new List<HexCoord>();
+            FillHexesInRange(center, range, hexes);
+            return hexes;
+        }
+
+        public bool TryFindPath(HexCoord start, HexCoord goal, IList<HexCoord> path)
+        {
+            var workspace = new PathfindingWorkspace(Width * Height);
+            return TryFindPath(start, goal, path, workspace);
+        }
+
+        public bool TryFindPath(HexCoord start, HexCoord goal, IList<HexCoord> path, PathfindingWorkspace workspace)
+        {
+            if (path == null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            if (workspace == null)
+            {
+                throw new ArgumentNullException(nameof(workspace));
+            }
+
+            path.Clear();
+            workspace.Clear();
+
+            if (!IsWalkable(start) || !IsWalkable(goal))
+            {
+                return false;
+            }
+
+            Dictionary<HexCoord, HexCoord> cameFrom = workspace.CameFrom;
+            List<HexCoord> frontier = workspace.Frontier;
+            List<HexCoord> neighbors = workspace.Neighbors;
+
+            cameFrom.Add(start, start);
+            frontier.Add(start);
+
+            int readIndex = 0;
+            while (readIndex < frontier.Count)
+            {
+                HexCoord current = frontier[readIndex];
+                readIndex++;
+
+                if (current == goal)
+                {
+                    BuildPath(start, goal, path, workspace.ReversedPath, cameFrom);
+                    return true;
+                }
+
+                neighbors.Clear();
+                FillNeighbors(current, neighbors);
+                for (int i = 0; i < neighbors.Count; i++)
+                {
+                    HexCoord neighbor = neighbors[i];
+                    if (!IsWalkable(neighbor) || cameFrom.ContainsKey(neighbor))
+                    {
+                        continue;
+                    }
+
+                    cameFrom.Add(neighbor, current);
+                    frontier.Add(neighbor);
+                }
+            }
+
+            return false;
+        }
+
         public Vector3 ToLocalPosition(HexCoord coord)
         {
             float rowOffset = (coord.R & 1) == 0 ? -0.25f : 0.25f;
@@ -107,6 +239,54 @@ namespace DeckBattle
             float z = HexSize * 1.5f * coord.R;
             float centerZ = HexSize * 1.5f * (Height - 1) * 0.5f;
             return new Vector3(x, 0f, z - centerZ);
+        }
+
+        private static void BuildPath(
+            HexCoord start,
+            HexCoord goal,
+            IList<HexCoord> path,
+            List<HexCoord> reversedPath,
+            Dictionary<HexCoord, HexCoord> cameFrom)
+        {
+            reversedPath.Clear();
+
+            HexCoord current = goal;
+            reversedPath.Add(current);
+            while (current != start)
+            {
+                current = cameFrom[current];
+                reversedPath.Add(current);
+            }
+
+            for (int i = reversedPath.Count - 1; i >= 0; i--)
+            {
+                path.Add(reversedPath[i]);
+            }
+        }
+
+        public sealed class PathfindingWorkspace
+        {
+            internal readonly Dictionary<HexCoord, HexCoord> CameFrom;
+            internal readonly List<HexCoord> Frontier;
+            internal readonly List<HexCoord> Neighbors;
+            internal readonly List<HexCoord> ReversedPath;
+
+            public PathfindingWorkspace(int boardCellCapacity)
+            {
+                int capacity = Math.Max(1, boardCellCapacity);
+                CameFrom = new Dictionary<HexCoord, HexCoord>(capacity);
+                Frontier = new List<HexCoord>(capacity);
+                Neighbors = new List<HexCoord>(6);
+                ReversedPath = new List<HexCoord>(capacity);
+            }
+
+            internal void Clear()
+            {
+                CameFrom.Clear();
+                Frontier.Clear();
+                Neighbors.Clear();
+                ReversedPath.Clear();
+            }
         }
     }
 }

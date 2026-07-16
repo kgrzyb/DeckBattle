@@ -16,6 +16,9 @@ namespace DeckBattle.Tests
             Assert.IsFalse(board.Contains(new HexCoord(-1, 0)));
             Assert.IsFalse(board.Contains(new HexCoord(5, 0)));
             Assert.IsFalse(board.Contains(new HexCoord(0, 6)));
+
+            Assert.IsTrue(board.IsValidHex(new HexCoord(0, 0)));
+            Assert.IsFalse(board.IsValidHex(new HexCoord(0, 6)));
         }
 
         [Test]
@@ -35,6 +38,27 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void FillNeighbors_ReturnsExpectedAxialNeighbors_ForInteriorHex()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var neighbors = new List<HexCoord>(6);
+
+            board.FillNeighbors(new HexCoord(2, 2), neighbors);
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    new HexCoord(3, 2),
+                    new HexCoord(3, 1),
+                    new HexCoord(2, 1),
+                    new HexCoord(1, 2),
+                    new HexCoord(1, 3),
+                    new HexCoord(2, 3)
+                },
+                neighbors);
+        }
+
+        [Test]
         public void Distance_UsesAxialHexDistance()
         {
             var board = new HexBoard(5, 6, 1f);
@@ -42,6 +66,113 @@ namespace DeckBattle.Tests
             Assert.AreEqual(0, board.Distance(new HexCoord(1, 1), new HexCoord(1, 1)));
             Assert.AreEqual(1, board.Distance(new HexCoord(1, 1), new HexCoord(2, 1)));
             Assert.AreEqual(4, board.Distance(new HexCoord(0, 0), new HexCoord(2, 2)));
+        }
+
+        [Test]
+        public void IsWalkable_ReturnsFalse_ForBlockedHex()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            HexCoord blocked = new HexCoord(2, 2);
+
+            Assert.IsTrue(board.IsWalkable(blocked));
+
+            board.SetWalkable(blocked, false);
+
+            Assert.IsFalse(board.IsWalkable(blocked));
+            Assert.IsFalse(board.IsWalkable(new HexCoord(5, 2)));
+
+            board.SetWalkable(blocked, true);
+
+            Assert.IsTrue(board.IsWalkable(blocked));
+        }
+
+        [Test]
+        public void FillHexesInRange_ReturnsValidHexesWithinDistance()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var hexes = new List<HexCoord>(8);
+
+            int count = board.FillHexesInRange(new HexCoord(2, 2), 1, hexes);
+
+            Assert.AreEqual(7, count);
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    new HexCoord(1, 2),
+                    new HexCoord(1, 3),
+                    new HexCoord(2, 1),
+                    new HexCoord(2, 2),
+                    new HexCoord(2, 3),
+                    new HexCoord(3, 1),
+                    new HexCoord(3, 2)
+                },
+                hexes);
+        }
+
+        [Test]
+        public void FillHexesInRange_ClipsToBoardBounds()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var hexes = new List<HexCoord>(4);
+
+            int count = board.FillHexesInRange(new HexCoord(0, 0), 1, hexes);
+
+            Assert.AreEqual(3, count);
+            CollectionAssert.AreEquivalent(
+                new[]
+                {
+                    new HexCoord(0, 0),
+                    new HexCoord(0, 1),
+                    new HexCoord(1, 0)
+                },
+                hexes);
+        }
+
+        [Test]
+        public void TryFindPath_ReturnsShortestPath()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var path = new List<HexCoord>(4);
+
+            bool found = board.TryFindPath(new HexCoord(0, 0), new HexCoord(2, 0), path);
+
+            Assert.IsTrue(found);
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    new HexCoord(0, 0),
+                    new HexCoord(1, 0),
+                    new HexCoord(2, 0)
+                },
+                path);
+        }
+
+        [Test]
+        public void TryFindPath_AvoidsBlockedHexes()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var path = new List<HexCoord>(8);
+            board.SetWalkable(new HexCoord(1, 0), false);
+
+            bool found = board.TryFindPath(new HexCoord(0, 0), new HexCoord(2, 0), path);
+
+            Assert.IsTrue(found);
+            Assert.IsFalse(path.Contains(new HexCoord(1, 0)));
+            Assert.AreEqual(new HexCoord(0, 0), path[0]);
+            Assert.AreEqual(new HexCoord(2, 0), path[path.Count - 1]);
+        }
+
+        [Test]
+        public void TryFindPath_ReturnsFalse_WhenGoalIsNotWalkable()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var path = new List<HexCoord>(4) { new HexCoord(0, 0) };
+            board.SetWalkable(new HexCoord(2, 0), false);
+
+            bool found = board.TryFindPath(new HexCoord(0, 0), new HexCoord(2, 0), path);
+
+            Assert.IsFalse(found);
+            Assert.AreEqual(0, path.Count);
         }
 
         [Test]
