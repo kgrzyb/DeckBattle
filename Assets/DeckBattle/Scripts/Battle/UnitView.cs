@@ -64,7 +64,7 @@ namespace DeckBattle
             RealtimeUnit = null;
             RuntimeId = unit.RuntimeId;
             ResetTransientState(worldPosition);
-            name = unit.Side + "_Unit_" + unit.RuntimeId + "_" + unit.Definition.DisplayName;
+            name = FormatUnitName(unit.Side, unit.RuntimeId, unit.Definition);
             SetHealth(unit.CurrentHp, unit.Definition.MaxHp);
             ApplySideColor(unit.Side);
         }
@@ -75,7 +75,7 @@ namespace DeckBattle
             RealtimeUnit = unit;
             RuntimeId = unit.UnitId;
             ResetTransientState(worldPosition);
-            name = unit.Side + "_RealtimeUnit_" + unit.UnitId + "_" + unit.Definition.DisplayName;
+            name = FormatUnitName(unit.Side, unit.UnitId, unit.Definition);
             SetHealth(unit.CurrentHp, unit.Definition.MaxHp);
             ApplySideColor(unit.Side);
         }
@@ -233,6 +233,12 @@ namespace DeckBattle
                     ApplyColor(sideColor);
                 }
             }
+        }
+
+        private static string FormatUnitName(BattleSide side, int runtimeId, UnitDefinition definition)
+        {
+            string displayName = definition != null ? definition.DisplayName : "Unknown";
+            return side + "_Unit_" + runtimeId + "_" + displayName;
         }
     }
 }

@@ -571,11 +571,15 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 766bebe44508c5d4a8a6144ab367c602, type: 2}
   - {fileID: 11400000, guid: e058364f049f9bd40af93cf15af5b304, type: 2}
   - {fileID: 11400000, guid: c0686eab33d7c8d48a2448c351adc71b, type: 2}
-  seed: 12345
+  seed: 71347134
   boardPresenter: {fileID: 1201968723}
   unitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
     type: 3}
   unitRoot: {fileID: 763315698}
+  battleView: {fileID: 225271485}
+  combatTickDuration: 0.35
+  maxCombatTicks: 1000
+  roundResolutionDelay: 0.25
 --- !u!4 &225271483
 Transform:
   m_ObjectHideFlags: 0
@@ -1128,16 +1132,16 @@ Light:
   m_Type: 1
   m_Shape: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 1.4
+  m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 0
+    m_Type: 1
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 1
+    m_Strength: 0.7
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
@@ -1186,13 +1190,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 670495819}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.40821794, y: -0.23456973, z: 0.10938166, w: 0.8754261}
+  m_LocalRotation: {x: 0.50475335, y: -0.22507398, z: 0.0745883, w: 0.8300617}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 60.637, y: -37.478, z: -12.172}
 --- !u!114 &670495822
 MonoBehaviour:
   m_ObjectHideFlags: 0

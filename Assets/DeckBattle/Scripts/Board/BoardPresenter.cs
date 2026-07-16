@@ -31,6 +31,7 @@ namespace DeckBattle
             }
 
             Transform parent = tileRoot != null ? tileRoot : transform;
+            Quaternion tileRotation = tilePrefab.transform.localRotation;
             for (int r = 0; r < board.Height; r++)
             {
                 for (int q = 0; q < board.Width; q++)
@@ -38,7 +39,7 @@ namespace DeckBattle
                     HexCoord coord = new HexCoord(q, r);
                     HexTileView tile = Instantiate(tilePrefab, parent);
                     tile.transform.localPosition = board.ToLocalPosition(coord);
-                    tile.transform.localRotation = Quaternion.identity;
+                    tile.transform.localRotation = tileRotation;
                     tile.transform.localScale = Vector3.one * hexSize;
                     tile.Initialize(coord, GetDeploymentSide(coord));
                     tiles.Add(tile);

@@ -6,6 +6,8 @@ namespace DeckBattle
 {
     public sealed class BattleView : MonoBehaviour
     {
+        public event Action<BattleTickResult, int> TickProcessed;
+
         [Header("Simulation")]
         [SerializeField] private BattleConfig battleConfig;
         [SerializeField] private float tickDuration = 0.2f;
@@ -26,7 +28,7 @@ namespace DeckBattle
 
         private readonly List<UnitSpawnData> spawnBuffer = new List<UnitSpawnData>(16);
         private readonly List<UnitView> activeUnitViews = new List<UnitView>(16);
-        private readonly Stack<UnitView> pooledUnitViews = new Stack<UnitView>(16);
+        private readonly List<UnitView> unitViewSearchBuffer = new List<UnitView>(16);
         private readonly Dictionary<int, UnitView> unitViewByUnitId = new Dictionary<int, UnitView>(16);
         private readonly BattleEventQueue eventQueue = new BattleEventQueue(32);
         private readonly List<PooledBattleEffect> activeAttackEffects = new List<PooledBattleEffect>(8);
@@ -38,6 +40,10 @@ namespace DeckBattle
         private BattleSimulation simulation;
         private BattleTickLoop tickLoop;
         private float tickAccumulator;
+        private int ticksElapsed;
+        private int maxSimulationTicks = int.MaxValue;
+        private bool maxTicksReached;
+        private BattleTickResult lastTickResult;
 
         public BattleSimulation Simulation
         {
@@ -52,6 +58,21 @@ namespace DeckBattle
         public BattleDebugSnapshot DebugSnapshot
         {
             get { return debugSnapshot; }
+        }
+
+        public int TicksElapsed
+        {
+            get { return ticksElapsed; }
+        }
+
+        public bool MaxTicksReached
+        {
+            get { return maxTicksReached; }
+        }
+
+        public BattleTickResult LastTickResult
+        {
+            get { return lastTickResult; }
         }
 
         private void OnValidate()
@@ -123,6 +144,20 @@ namespace DeckBattle
 
         public void BindSimulation(BattleSimulation nextSimulation)
         {
+            BindSimulation(nextSimulation, tickDuration, int.MaxValue);
+        }
+
+        public void BindSimulation(BattleSimulation nextSimulation, float nextTickDuration, int nextMaxTicks)
+        {
+            BindSimulation(nextSimulation, nextTickDuration, nextMaxTicks, null);
+        }
+
+        public void BindSimulation(
+            BattleSimulation nextSimulation,
+            float nextTickDuration,
+            int nextMaxTicks,
+            IReadOnlyDictionary<int, UnitView> reusableUnitViews)
+        {
             if (nextSimulation == null)
             {
                 throw new ArgumentNullException(nameof(nextSimulation));
@@ -135,30 +170,66 @@ namespace DeckBattle
             }
 
             simulation = nextSimulation;
-            tickLoop = new BattleTickLoop(simulation, Mathf.Max(0.01f, tickDuration));
+            float resolvedTickDuration = Mathf.Max(0.01f, nextTickDuration);
+            tickLoop = new BattleTickLoop(simulation, resolvedTickDuration);
             tickAccumulator = 0f;
+            ticksElapsed = 0;
+            maxSimulationTicks = Mathf.Max(1, nextMaxTicks);
+            maxTicksReached = false;
+            lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
 
             boardPresenter.Build(simulation.Board);
-            ReleaseAllUnitViews();
+            ReleaseAllUnitViews(reusableUnitViews);
             debugSnapshot.Capture(simulation, null);
             for (int i = 0; i < simulation.Units.Count; i++)
             {
                 UnitRuntimeState unit = simulation.Units[i];
                 if (unit != null && unit.IsAlive)
                 {
-                    CreateOrUpdateUnitView(unit);
+                    CreateOrUpdateUnitView(unit, reusableUnitViews);
                 }
             }
         }
 
+        public UnitView DetachUnitView(int unitId)
+        {
+            UnitView view;
+            if (!unitViewByUnitId.TryGetValue(unitId, out view) || view == null)
+            {
+                return null;
+            }
+
+            unitViewByUnitId.Remove(unitId);
+            activeUnitViews.Remove(view);
+            return view;
+        }
+
         public void ClearBattle()
+        {
+            ClearBattle(true);
+        }
+
+        public void ClearBattle(bool releaseUnitViews)
         {
             simulation = null;
             tickLoop = null;
             tickAccumulator = 0f;
+            ticksElapsed = 0;
+            maxSimulationTicks = int.MaxValue;
+            maxTicksReached = false;
+            lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
             eventQueue.Clear();
             debugSnapshot.Capture(null, null);
-            ReleaseAllUnitViews();
+            if (releaseUnitViews)
+            {
+                ReleaseAllUnitViews(null);
+            }
+            else
+            {
+                activeUnitViews.Clear();
+                unitViewByUnitId.Clear();
+            }
+
             ReleaseAllEffects(activeAttackEffects, pooledAttackEffects);
             ReleaseAllEffects(activeDamageEffects, pooledDamageEffects);
         }
@@ -174,9 +245,22 @@ namespace DeckBattle
             int ticksThisFrame = 0;
             while (tickAccumulator >= tickLoop.TickDuration && ticksThisFrame < maxTicksPerFrame)
             {
+                if (ticksElapsed >= maxSimulationTicks)
+                {
+                    StopTickingBecauseMaxTicksReached();
+                    return;
+                }
+
                 BattleTickResult result = tickLoop.Tick(simulation, eventQueue);
+                ticksElapsed++;
+                lastTickResult = result;
                 debugSnapshot.Capture(simulation, eventQueue.Events);
                 ProcessEvents(eventQueue.Events);
+                if (TickProcessed != null)
+                {
+                    TickProcessed.Invoke(result, ticksElapsed);
+                }
+
                 tickAccumulator -= tickLoop.TickDuration;
                 ticksThisFrame++;
 
@@ -185,12 +269,25 @@ namespace DeckBattle
                     tickAccumulator = 0f;
                     return;
                 }
+
+                if (ticksElapsed >= maxSimulationTicks)
+                {
+                    StopTickingBecauseMaxTicksReached();
+                    return;
+                }
             }
 
             if (ticksThisFrame >= maxTicksPerFrame)
             {
                 tickAccumulator = 0f;
             }
+        }
+
+        private void StopTickingBecauseMaxTicksReached()
+        {
+            maxTicksReached = true;
+            tickLoop = null;
+            tickAccumulator = 0f;
         }
 
         private void ProcessEvents(IReadOnlyList<BattleEvent> events)
@@ -266,10 +363,14 @@ namespace DeckBattle
             }
 
             view.PlayDeath();
-            unitViewByUnitId.Remove(battleEvent.UnitId);
         }
 
         private void CreateOrUpdateUnitView(UnitRuntimeState unit)
+        {
+            CreateOrUpdateUnitView(unit, null);
+        }
+
+        private void CreateOrUpdateUnitView(UnitRuntimeState unit, IReadOnlyDictionary<int, UnitView> reusableUnitViews)
         {
             UnitView view;
             if (unitViewByUnitId.TryGetValue(unit.UnitId, out view) && view != null)
@@ -278,7 +379,19 @@ namespace DeckBattle
                 return;
             }
 
-            view = GetUnitView();
+            if (reusableUnitViews != null && reusableUnitViews.TryGetValue(unit.UnitId, out view) && view != null)
+            {
+                RemoveDuplicateSceneUnitViews(unit.UnitId, view);
+            }
+            else if (TryFindReusableUnitView(unit.UnitId, out view))
+            {
+                RemoveDuplicateSceneUnitViews(unit.UnitId, view);
+            }
+            else
+            {
+                view = GetUnitView();
+            }
+
             view.Bind(unit, boardPresenter.GetWorldPosition(unit.CurrentHex));
             activeUnitViews.Add(view);
             unitViewByUnitId.Add(unit.UnitId, view);
@@ -286,16 +399,53 @@ namespace DeckBattle
 
         private UnitView GetUnitView()
         {
-            if (pooledUnitViews.Count > 0)
-            {
-                return pooledUnitViews.Pop();
-            }
-
             Transform parent = unitRoot != null ? unitRoot : transform;
             return Instantiate(unitPrefab, parent);
         }
 
-        private void ReleaseAllUnitViews()
+        private bool TryFindReusableUnitView(int unitId, out UnitView view)
+        {
+            view = null;
+            Transform searchRoot = unitRoot != null ? unitRoot : transform;
+            searchRoot.GetComponentsInChildren(true, unitViewSearchBuffer);
+            for (int i = 0; i < unitViewSearchBuffer.Count; i++)
+            {
+                UnitView candidate = unitViewSearchBuffer[i];
+                if (candidate == null || candidate.RuntimeId != unitId || activeUnitViews.Contains(candidate))
+                {
+                    continue;
+                }
+
+                if (view == null || (!view.gameObject.activeInHierarchy && candidate.gameObject.activeInHierarchy))
+                {
+                    view = candidate;
+                }
+            }
+
+            unitViewSearchBuffer.Clear();
+            return view != null;
+        }
+
+        private void RemoveDuplicateSceneUnitViews(int unitId, UnitView retainedView)
+        {
+            Transform searchRoot = unitRoot != null ? unitRoot : transform;
+            searchRoot.GetComponentsInChildren(true, unitViewSearchBuffer);
+            for (int i = 0; i < unitViewSearchBuffer.Count; i++)
+            {
+                UnitView candidate = unitViewSearchBuffer[i];
+                if (candidate == null || candidate == retainedView || candidate.RuntimeId != unitId)
+                {
+                    continue;
+                }
+
+                candidate.gameObject.SetActive(false);
+                Destroy(candidate.gameObject);
+            }
+
+            unitViewSearchBuffer.Clear();
+        }
+
+        private void ReleaseAllUnitViews(IReadOnlyDictionary<int, UnitView> retainedUnitViews)
         {
             for (int i = activeUnitViews.Count - 1; i >= 0; i--)
             {
@@ -305,12 +455,28 @@ namespace DeckBattle
                     continue;
                 }
 
+                if (IsRetainedUnitView(view, retainedUnitViews))
+                {
+                    continue;
+                }
+
                 view.gameObject.SetActive(false);
-                pooledUnitViews.Push(view);
+                Destroy(view.gameObject);
             }
 
             activeUnitViews.Clear();
             unitViewByUnitId.Clear();
+        }
+
+        private static bool IsRetainedUnitView(UnitView view, IReadOnlyDictionary<int, UnitView> retainedUnitViews)
+        {
+            if (view == null || retainedUnitViews == null)
+            {
+                return false;
+            }
+
+            UnitView retainedView;
+            return retainedUnitViews.TryGetValue(view.RuntimeId, out retainedView) && retainedView == view;
         }
 
         private void SpawnEffect(

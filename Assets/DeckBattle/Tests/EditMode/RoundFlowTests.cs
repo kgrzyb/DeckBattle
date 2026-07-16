@@ -100,6 +100,37 @@ namespace DeckBattle.Tests
             Assert.IsFalse(enemyUnit.IsDefeated);
         }
 
+        [Test]
+        public void ResolveRoundAndStartNext_WhenMatchEnds_ResetsUnitsToFormationWithoutStartingNextRound()
+        {
+            BattleState state = CreateState(0, 0);
+            RuntimeUnit playerUnit = CreateRuntimeUnit(1, BattleSide.Player, new HexCoord(1, 0), 0);
+            RuntimeUnit enemyUnit = CreateRuntimeUnit(2, BattleSide.Enemy, new HexCoord(1, 5), 5);
+            playerUnit.CurrentHp = 0;
+            playerUnit.BattleCoord = new HexCoord(2, 2);
+            playerUnit.IsDefeated = true;
+            enemyUnit.CurrentHp = 1;
+            enemyUnit.BattleCoord = new HexCoord(2, 3);
+            state.Player.Units.Add(playerUnit);
+            state.Enemy.Units.Add(enemyUnit);
+            state.Player.Hp = 2;
+            state.Enemy.Hp = 10;
+            state.Phase = BattlePhase.RoundResolution;
+
+            RoundResolutionResult result = RoundFlowService.ResolveRoundAndStartNext(state);
+
+            Assert.IsTrue(result.MatchEnded);
+            Assert.AreEqual(BattlePhase.MatchEnd, state.Phase);
+            Assert.AreEqual(1, state.RoundNumber);
+            Assert.AreEqual(0, state.Player.Hp);
+            Assert.AreEqual(playerUnit.Definition.MaxHp, playerUnit.CurrentHp);
+            Assert.AreEqual(playerUnit.FormationCoord, playerUnit.BattleCoord);
+            Assert.IsFalse(playerUnit.IsDefeated);
+            Assert.AreEqual(enemyUnit.Definition.MaxHp, enemyUnit.CurrentHp);
+            Assert.AreEqual(enemyUnit.FormationCoord, enemyUnit.BattleCoord);
+            Assert.IsFalse(enemyUnit.IsDefeated);
+        }
+
         private static BattleState CreateState(int playerDeckCount, int enemyDeckCount)
         {
             BattleConfig config = TestDefinitions.CreateConfig();

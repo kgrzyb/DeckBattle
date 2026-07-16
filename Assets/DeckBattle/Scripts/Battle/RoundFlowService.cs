@@ -16,6 +16,11 @@ namespace DeckBattle
             {
                 battleState.StartNextRound();
             }
+            else
+            {
+                FormationService.RestoreFormationAndResetRoundHealth(battleState.Player);
+                FormationService.RestoreFormationAndResetRoundHealth(battleState.Enemy);
+            }
 
             return result;
         }
