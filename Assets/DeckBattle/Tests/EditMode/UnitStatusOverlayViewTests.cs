@@ -29,7 +29,7 @@ namespace DeckBattle.Tests
                 SetPrivateField(view, "manaFillImage", manaImage);
                 SetPrivateField(view, "manaFillTransform", manaFill);
 
-                view.Bind(1, root.transform, 10, 10, 0, 20);
+                view.Bind(1, root.transform, "Swordsman", 10, 10, 0, 20);
                 view.SetHealth(4, 10);
                 view.SetMana(5, 20);
 

@@ -43,8 +43,11 @@ namespace DeckBattle
                 return;
             }
 
-            int maxMana = unit.Definition != null ? unit.Definition.ManaThreshold : 0;
-            Bind(unit.RuntimeId, view.transform, unit.CurrentHp, unit.Definition.MaxHp, 0, maxMana);
+            UnitDefinition definition = unit.Definition;
+            int maxHp = definition != null ? definition.MaxHp : 1;
+            int maxMana = definition != null ? definition.ManaThreshold : 0;
+            string displayName = definition != null ? definition.DisplayName : null;
+            Bind(unit.RuntimeId, view.transform, displayName, unit.CurrentHp, maxHp, 0, maxMana);
         }
 
         public void BindRealtimeUnit(UnitRuntimeState unit, UnitView view)
@@ -54,7 +57,11 @@ namespace DeckBattle
                 return;
             }
 
-            Bind(unit.UnitId, view.transform, unit.CurrentHp, unit.Definition.MaxHp, unit.CurrentMana, unit.Definition.ManaThreshold);
+            UnitDefinition definition = unit.Definition;
+            int maxHp = definition != null ? definition.MaxHp : 1;
+            int maxMana = definition != null ? definition.ManaThreshold : 0;
+            string displayName = definition != null ? definition.DisplayName : null;
+            Bind(unit.UnitId, view.transform, displayName, unit.CurrentHp, maxHp, unit.CurrentMana, maxMana);
         }
 
         public void SetHealth(int unitId, int currentHp, int maxHp)
@@ -101,7 +108,7 @@ namespace DeckBattle
             activeOverlays.Clear();
         }
 
-        private void Bind(int unitId, Transform target, int currentHp, int maxHp, int currentMana, int maxMana)
+        private void Bind(int unitId, Transform target, string displayName, int currentHp, int maxHp, int currentMana, int maxMana)
         {
             TrackedOverlay tracked;
             if (!activeOverlays.TryGetValue(unitId, out tracked) || tracked.View == null)
@@ -113,7 +120,7 @@ namespace DeckBattle
             tracked.Target = target;
             tracked.MaxHp = Mathf.Max(1, maxHp);
             tracked.MaxMana = Mathf.Max(1, maxMana);
-            tracked.View.Bind(unitId, target, currentHp, tracked.MaxHp, currentMana, tracked.MaxMana);
+            tracked.View.Bind(unitId, target, displayName, currentHp, tracked.MaxHp, currentMana, tracked.MaxMana);
         }
 
         private UnitStatusOverlayView GetOverlay()

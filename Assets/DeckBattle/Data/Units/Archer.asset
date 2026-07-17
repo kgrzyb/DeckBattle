@@ -17,13 +17,13 @@ MonoBehaviour:
   UnitType: 1
   Rarity: 0
   ApCost: 2
-  MaxHp: 4
-  Attack: 2
+  MaxHp: 40
+  Attack: 15
   Power: 2
   AttackRange: 3
   CritChance: 0
   CritMultiplier: 2
-  AttackCooldown: 1
+  AttackCooldown: 1.5
   ManaThreshold: 100
   ManaPerAttack: 10
   ManaPerDamageTaken: 10

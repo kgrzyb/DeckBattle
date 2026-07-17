@@ -11,6 +11,7 @@ namespace DeckBattle
         [SerializeField] private RectTransform hpFillTransform;
         [SerializeField] private Image manaFillImage;
         [SerializeField] private RectTransform manaFillTransform;
+        [SerializeField] private TMP_Text unitNameText;
         [SerializeField] private TMP_Text hpText;
         [SerializeField] private TMP_Text manaText;
 
@@ -46,7 +47,7 @@ namespace DeckBattle
             }
         }
 
-        public void Bind(int nextUnitId, Transform target, int currentHp, int maxHp, int currentMana, int maxMana)
+        public void Bind(int nextUnitId, Transform target, string displayName, int currentHp, int maxHp, int currentMana, int maxMana)
         {
             unitId = nextUnitId;
             shownHp = -1;
@@ -54,6 +55,7 @@ namespace DeckBattle
             shownMana = -1;
             shownMaxMana = -1;
 
+            SetUnitName(displayName);
             SetHealth(currentHp, maxHp);
             SetMana(currentMana, maxMana);
             SetVisible(target != null && currentHp > 0);
@@ -138,6 +140,16 @@ namespace DeckBattle
             }
 
             text.SetText("{0}/{1}", current, maximum);
+        }
+
+        private void SetUnitName(string displayName)
+        {
+            if (unitNameText == null)
+            {
+                return;
+            }
+
+            unitNameText.SetText(string.IsNullOrEmpty(displayName) ? "Unit" : displayName);
         }
     }
 }

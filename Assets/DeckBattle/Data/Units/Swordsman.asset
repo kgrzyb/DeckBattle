@@ -17,18 +17,19 @@ MonoBehaviour:
   UnitType: 0
   Rarity: 0
   ApCost: 2
-  MaxHp: 7
-  Attack: 2
+  MaxHp: 70
+  Attack: 15
   Power: 3
   AttackRange: 1
   CritChance: 0
   CritMultiplier: 2
+  AttackCooldown: 1
   ManaThreshold: 100
   ManaPerAttack: 10
   ManaPerDamageTaken: 10
-  Armor: 0
+  Armor: 25
   ArmorPenetration: 0
-  AttackCooldown: 1
+  Projectile: {fileID: 0}
   UnitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
     type: 3}
   CardArt: {fileID: 0}
