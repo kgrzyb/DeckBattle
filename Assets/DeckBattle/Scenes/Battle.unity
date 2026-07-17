@@ -577,6 +577,7 @@ MonoBehaviour:
     type: 3}
   unitRoot: {fileID: 763315698}
   battleView: {fileID: 225271485}
+  statusOverlayController: {fileID: 641749120}
   combatTickDuration: 0.35
   maxCombatTicks: 1000
   roundResolutionDelay: 0.25
@@ -627,7 +628,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battleConfig: {fileID: 11400000, guid: 8108cc2527ed11245b2df1e4663bc2a2, type: 2}
-  tickDuration: 0.2
+  tickDuration: 0.35
   maxTicksPerFrame: 4
   attackCooldownMultiplier: 1
   attackRangeBonus: 0
@@ -638,6 +639,7 @@ MonoBehaviour:
   unitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
     type: 3}
   unitRoot: {fileID: 763315698}
+  statusOverlayController: {fileID: 641749120}
   attackEffectPrefab: {fileID: 0}
   damageEffectPrefab: {fileID: 0}
   effectRoot: {fileID: 763315698}
@@ -662,6 +664,7 @@ MonoBehaviour:
   showOccupiedHexes: 1
   showReservedHexes: 1
   showLabels: 1
+  showUnitHexLabels: 1
   markerRadius: 0.18
   pathHeight: 0.2
   lineHeight: 0.55
@@ -671,6 +674,7 @@ MonoBehaviour:
   occupiedColor: {r: 1, g: 0.1, b: 0.1, a: 0.85}
   reservedColor: {r: 0.55, g: 0.2, b: 1, a: 0.9}
   attackPositionColor: {r: 1, g: 1, b: 1, a: 0.95}
+  unitHexLabelColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1 &408650581
 GameObject:
   m_ObjectHideFlags: 0
@@ -939,6 +943,59 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &641749119
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 641749121}
+  - component: {fileID: 641749120}
+  m_Layer: 0
+  m_Name: UnitStatusOverlayRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &641749120
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 641749119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4566ca8ead7f6ae4a870ebfe98ad57b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  overlayPrefab: {fileID: 5052440811877413568, guid: ebe12c259e075654b85410cfb1945fb4,
+    type: 3}
+  overlayRoot: {fileID: 641749121}
+  worldCamera: {fileID: 1149497570}
+  worldOffset: {x: 0, y: 1.55, z: 0}
+--- !u!224 &641749121
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 641749119}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2012690326}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &658997208
 GameObject:
   m_ObjectHideFlags: 0
@@ -2610,6 +2667,7 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 641749121}
   - {fileID: 658997209}
   - {fileID: 2110472614}
   - {fileID: 1707774253}

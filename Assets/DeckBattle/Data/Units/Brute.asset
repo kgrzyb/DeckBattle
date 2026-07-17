@@ -23,12 +23,12 @@ MonoBehaviour:
   AttackRange: 1
   CritChance: 0
   CritMultiplier: 2
+  AttackCooldown: 1.5
   ManaThreshold: 100
   ManaPerAttack: 10
   ManaPerDamageTaken: 10
-  Armor: 0
+  Armor: 40
   ArmorPenetration: 0
-  AttackCooldown: 1.5
   UnitPrefab: {fileID: 4905233732688456190, guid: c61b7deca06656f42a5fed87dc6f8d34,
     type: 3}
   CardArt: {fileID: 0}

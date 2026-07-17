@@ -8,7 +8,6 @@ namespace DeckBattle
 
         [SerializeField] private MeshRenderer meshRenderer;
         [SerializeField] private Transform modelRoot;
-        [SerializeField] private UnitHealthBarView healthBar;
         [SerializeField] private float groundOffset = 0.65f;
         [SerializeField] private float attackPulseDuration = 0.14f;
         [SerializeField] private float damageFlashDuration = 0.12f;
@@ -35,7 +34,6 @@ namespace DeckBattle
         private float attackTimer;
         private float damageTimer;
         private float deathTimer;
-        private int maxHp = 1;
         private int queuedMoveHead;
         private int queuedMoveCount;
         private bool isMoving;
@@ -71,7 +69,6 @@ namespace DeckBattle
             RuntimeId = unit.RuntimeId;
             ResetTransientState(worldPosition);
             name = FormatUnitName(unit.Side, unit.RuntimeId, unit.Definition);
-            SetHealth(unit.CurrentHp, unit.Definition.MaxHp);
             ApplySideColor(unit.Side);
         }
 
@@ -82,7 +79,6 @@ namespace DeckBattle
             RuntimeId = unit.UnitId;
             ResetTransientState(worldPosition);
             name = FormatUnitName(unit.Side, unit.UnitId, unit.Definition);
-            SetHealth(unit.CurrentHp, unit.Definition.MaxHp);
             ApplySideColor(unit.Side);
         }
 
@@ -118,7 +114,6 @@ namespace DeckBattle
 
         public void PlayDamage(int remainingHp)
         {
-            SetHealth(remainingHp, maxHp);
             damageTimer = Mathf.Max(damageFlashDuration, 0.01f);
             ApplyColor(damageFlashColor);
         }
@@ -136,16 +131,6 @@ namespace DeckBattle
             isMoving = false;
             queuedMoveHead = 0;
             queuedMoveCount = 0;
-            SetHealth(0, maxHp);
-        }
-
-        public void SetHealth(int currentHp, int maximumHp)
-        {
-            maxHp = Mathf.Max(1, maximumHp);
-            if (healthBar != null)
-            {
-                healthBar.SetHealth(currentHp, maxHp);
-            }
         }
 
         private void ApplySideColor(BattleSide side)
@@ -176,11 +161,6 @@ namespace DeckBattle
             if (modelRoot != null)
             {
                 modelRoot.localScale = baseModelScale;
-            }
-
-            if (healthBar != null)
-            {
-                healthBar.ResetScale();
             }
 
             SetWorldPosition(worldPosition);
@@ -278,10 +258,6 @@ namespace DeckBattle
             }
 
             modelRoot.localScale = baseModelScale * pulseScale;
-            if (healthBar != null && healthBar.transform.parent == modelRoot)
-            {
-                healthBar.CompensateParentScale(pulseScale);
-            }
 
             if (damageTimer > 0f)
             {

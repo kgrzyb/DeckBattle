@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   StartingPlayerHp: 30
   StartingEnemyHp: 30
-  StartingAp: 3
+  StartingAp: 5
   MaxAp: 8
-  StartingHandSize: 3
+  StartingHandSize: 7
   DrawPerRound: 2
   StartingDeploymentSlots: 3
   MaxDeploymentSlots: 7

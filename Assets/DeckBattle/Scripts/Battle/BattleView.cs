@@ -10,7 +10,7 @@ namespace DeckBattle
 
         [Header("Simulation")]
         [SerializeField] private BattleConfig battleConfig;
-        [SerializeField] private float tickDuration = 0.2f;
+        [SerializeField] private float tickDuration = BattleTiming.DefaultCombatTickDuration;
         [SerializeField] private int maxTicksPerFrame = 4;
         [SerializeField] private float attackCooldownMultiplier = 1f;
         [SerializeField] private int attackRangeBonus;
@@ -22,6 +22,7 @@ namespace DeckBattle
         [SerializeField] private BoardPresenter boardPresenter;
         [SerializeField] private UnitView unitPrefab;
         [SerializeField] private Transform unitRoot;
+        [SerializeField] private UnitStatusOverlayController statusOverlayController;
         [SerializeField] private PooledBattleEffect attackEffectPrefab;
         [SerializeField] private PooledBattleEffect damageEffectPrefab;
         [SerializeField] private Transform effectRoot;
@@ -77,7 +78,7 @@ namespace DeckBattle
 
         private void OnValidate()
         {
-            tickDuration = Mathf.Max(0.01f, tickDuration);
+            tickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, tickDuration);
             maxTicksPerFrame = Mathf.Max(1, maxTicksPerFrame);
             attackCooldownMultiplier = Mathf.Max(0.01f, attackCooldownMultiplier);
             movementStepDuration = Mathf.Max(0.01f, movementStepDuration);
@@ -170,7 +171,7 @@ namespace DeckBattle
             }
 
             simulation = nextSimulation;
-            float resolvedTickDuration = Mathf.Max(0.01f, nextTickDuration);
+            float resolvedTickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, nextTickDuration);
             tickLoop = new BattleTickLoop(simulation, resolvedTickDuration);
             tickAccumulator = 0f;
             ticksElapsed = 0;
@@ -179,6 +180,11 @@ namespace DeckBattle
             lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
 
             boardPresenter.Build(simulation.Board);
+            if (statusOverlayController != null)
+            {
+                statusOverlayController.ReleaseAll();
+            }
+
             ReleaseAllUnitViews(reusableUnitViews);
             debugSnapshot.Capture(simulation, null);
             for (int i = 0; i < simulation.Units.Count; i++)
@@ -222,6 +228,11 @@ namespace DeckBattle
             debugSnapshot.Capture(null, null);
             if (releaseUnitViews)
             {
+                if (statusOverlayController != null)
+                {
+                    statusOverlayController.ReleaseAll();
+                }
+
                 ReleaseAllUnitViews(null);
             }
             else
@@ -309,6 +320,9 @@ namespace DeckBattle
                     case BattleEventType.UnitDied:
                         HandleUnitDied(battleEvent);
                         break;
+                    case BattleEventType.UnitManaChanged:
+                        HandleUnitManaChanged(battleEvent);
+                        break;
                 }
             }
         }
@@ -367,6 +381,11 @@ namespace DeckBattle
             UnitRuntimeState target;
             if (simulation.TryGetUnitById(battleEvent.UnitId, out target))
             {
+                if (statusOverlayController != null)
+                {
+                    statusOverlayController.SetHealth(target.UnitId, battleEvent.RemainingHp, target.Definition.MaxHp);
+                }
+
                 SpawnEffect(damageEffectPrefab, boardPresenter.GetWorldPosition(target.CurrentHex), activeDamageEffects, pooledDamageEffects);
             }
         }
@@ -380,6 +399,26 @@ namespace DeckBattle
             }
 
             view.PlayDeath();
+            if (statusOverlayController != null)
+            {
+                statusOverlayController.Release(battleEvent.UnitId);
+            }
+        }
+
+        private void HandleUnitManaChanged(BattleEvent battleEvent)
+        {
+            if (statusOverlayController == null || simulation == null)
+            {
+                return;
+            }
+
+            UnitRuntimeState unit;
+            if (!simulation.TryGetUnitById(battleEvent.UnitId, out unit) || unit == null)
+            {
+                return;
+            }
+
+            statusOverlayController.SetMana(unit.UnitId, battleEvent.CurrentMana, unit.Definition.ManaThreshold);
         }
 
         private void CreateOrUpdateUnitView(UnitRuntimeState unit)
@@ -393,6 +432,7 @@ namespace DeckBattle
             if (unitViewByUnitId.TryGetValue(unit.UnitId, out view) && view != null)
             {
                 view.Bind(unit, boardPresenter.GetWorldPosition(unit.CurrentHex));
+                BindStatusOverlay(unit, view);
                 return;
             }
 
@@ -412,6 +452,27 @@ namespace DeckBattle
             view.Bind(unit, boardPresenter.GetWorldPosition(unit.CurrentHex));
             activeUnitViews.Add(view);
             unitViewByUnitId.Add(unit.UnitId, view);
+            BindStatusOverlay(unit, view);
+        }
+
+        private void BindStatusOverlay(UnitRuntimeState unit, UnitView view)
+        {
+            if (statusOverlayController == null)
+            {
+                return;
+            }
+
+            if (unit == null || !unit.IsAlive)
+            {
+                if (unit != null)
+                {
+                    statusOverlayController.Release(unit.UnitId);
+                }
+
+                return;
+            }
+
+            statusOverlayController.BindRealtimeUnit(unit, view);
         }
 
         private UnitView GetUnitView()

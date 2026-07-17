@@ -22,9 +22,10 @@ namespace DeckBattle
         [SerializeField] private UnitView unitPrefab;
         [SerializeField] private Transform unitRoot;
         [SerializeField] private BattleView battleView;
+        [SerializeField] private UnitStatusOverlayController statusOverlayController;
 
         [Header("Combat Timing")]
-        [SerializeField] private float combatTickDuration = 0.35f;
+        [SerializeField] private float combatTickDuration = BattleTiming.DefaultCombatTickDuration;
         [SerializeField] private int maxCombatTicks = DefaultMaxCombatTicks;
         [SerializeField] private float roundResolutionDelay = 0.25f;
 
@@ -61,7 +62,7 @@ namespace DeckBattle
 
         private void OnValidate()
         {
-            combatTickDuration = Mathf.Max(0.05f, combatTickDuration);
+            combatTickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, combatTickDuration);
             maxCombatTicks = Mathf.Max(1, maxCombatTicks);
             roundResolutionDelay = Mathf.Max(0f, roundResolutionDelay);
         }
@@ -273,6 +274,11 @@ namespace DeckBattle
             }
 
             activeSimulation = BattleSimulationFactory.Create(state, BattleRuntimeTuning.Default);
+            if (statusOverlayController != null)
+            {
+                statusOverlayController.ReleaseAll();
+            }
+
             resolvedBattleView.BindSimulation(activeSimulation, combatTickDuration, maxCombatTicks, unitViewByRuntimeId);
             ReleaseUnitViewOwnership();
 
@@ -478,6 +484,7 @@ namespace DeckBattle
             if (unitViewByRuntimeId.TryGetValue(unit.RuntimeId, out view) && view != null)
             {
                 view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
+                BindStatusOverlay(unit, view);
                 return;
             }
 
@@ -490,6 +497,7 @@ namespace DeckBattle
             RemoveDuplicateUnitViews(unit.RuntimeId, view);
             view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
             TrackUnitView(unit.RuntimeId, view);
+            BindStatusOverlay(unit, view);
         }
 
         private void UpdateUnitView(RuntimeUnit unit)
@@ -502,10 +510,16 @@ namespace DeckBattle
             }
 
             view.SetWorldPosition(boardPresenter.GetWorldPosition(unit.BattleCoord));
+            BindStatusOverlay(unit, view);
         }
 
         private void ClearUnitViews()
         {
+            if (statusOverlayController != null)
+            {
+                statusOverlayController.ReleaseAll();
+            }
+
             for (int i = unitViews.Count - 1; i >= 0; i--)
             {
                 if (unitViews[i] != null)
@@ -555,7 +569,28 @@ namespace DeckBattle
                 view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
                 RemoveDuplicateUnitViews(unit.RuntimeId, view);
                 TrackUnitView(unit.RuntimeId, view);
+                BindStatusOverlay(unit, view);
             }
+        }
+
+        private void BindStatusOverlay(RuntimeUnit unit, UnitView view)
+        {
+            if (statusOverlayController == null)
+            {
+                return;
+            }
+
+            if (unit == null || unit.CurrentHp <= 0)
+            {
+                if (unit != null)
+                {
+                    statusOverlayController.Release(unit.RuntimeId);
+                }
+
+                return;
+            }
+
+            statusOverlayController.BindRuntimeUnit(unit, view);
         }
 
         private void TrackUnitView(int runtimeId, UnitView view)

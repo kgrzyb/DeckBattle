@@ -152,6 +152,46 @@ namespace DeckBattle.Tests
             Assert.AreEqual(5f, simulation.Units[0].SpecialDurationRemaining);
             Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownRemaining);
             AssertEventTypeExists(events, BattleEventType.UnitSpecialActivated);
+            AssertManaChangedEventExists(events, 1, 0);
+        }
+
+        [Test]
+        public void ResolveCombat_EmitsManaChangedAfterAttackManaGain()
+        {
+            UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
+            UnitDefinition target = CreateUnit("target", 10, 1, 1, 1f);
+            target.ManaPerDamageTaken = 0;
+            BattleSimulation simulation = CreateSimulation(
+                attacker,
+                new HexCoord(1, 1),
+                target,
+                new HexCoord(2, 1));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            var events = new BattleEventQueue();
+
+            CombatResolver.ResolveCombat(simulation, 0.25f, events);
+
+            AssertManaChangedEventExists(events, 1, 10);
+        }
+
+        [Test]
+        public void ResolveCombat_EmitsManaChangedAfterDamageTakenManaGain()
+        {
+            UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
+            UnitDefinition target = CreateUnit("target", 10, 1, 1, 1f);
+            attacker.ManaPerAttack = 0;
+            target.ManaPerDamageTaken = 7;
+            BattleSimulation simulation = CreateSimulation(
+                attacker,
+                new HexCoord(1, 1),
+                target,
+                new HexCoord(2, 1));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            var events = new BattleEventQueue();
+
+            CombatResolver.ResolveCombat(simulation, 0.25f, events);
+
+            AssertManaChangedEventExists(events, 2, 7);
         }
 
         [Test]
@@ -231,6 +271,22 @@ namespace DeckBattle.Tests
             }
 
             Assert.Fail("Expected event type was not emitted: " + type);
+        }
+
+        private static void AssertManaChangedEventExists(BattleEventQueue events, int unitId, int currentMana)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                BattleEvent battleEvent = events[i];
+                if (battleEvent.Type == BattleEventType.UnitManaChanged
+                    && battleEvent.UnitId == unitId
+                    && battleEvent.CurrentMana == currentMana)
+                {
+                    return;
+                }
+            }
+
+            Assert.Fail("Expected mana event was not emitted for unit " + unitId + " with mana " + currentMana + ".");
         }
     }
 }

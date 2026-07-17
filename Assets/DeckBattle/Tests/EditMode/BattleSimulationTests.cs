@@ -32,6 +32,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(playerDefinition.MaxHp, player.CurrentHp);
             Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, player.TargetUnitId);
             Assert.AreEqual(0f, player.AttackCooldownRemaining);
+            Assert.AreEqual(0, player.CurrentMana);
             Assert.IsTrue(player.IsAlive);
 
             UnitRuntimeState enemy;
@@ -128,6 +129,7 @@ namespace DeckBattle.Tests
             unit.CurrentHp = 1;
             unit.CurrentHex = new HexCoord(2, 2);
             unit.AttackCooldownRemaining = 0.5f;
+            unit.CurrentMana = 25;
             unit.SetTarget(target);
 
             Assert.AreEqual(2, unit.TargetUnitId);
@@ -138,6 +140,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(definition.MaxHp, unit.CurrentHp);
             Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, unit.TargetUnitId);
             Assert.AreEqual(0f, unit.AttackCooldownRemaining);
+            Assert.AreEqual(0, unit.CurrentMana);
             Assert.IsTrue(unit.IsAlive);
         }
 
