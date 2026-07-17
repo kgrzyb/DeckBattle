@@ -19,7 +19,6 @@ namespace DeckBattle
 
         [Header("Presentation")]
         [SerializeField] private BoardPresenter boardPresenter;
-        [SerializeField] private UnitView unitPrefab;
         [SerializeField] private Transform unitRoot;
         [SerializeField] private BattleView battleView;
         [SerializeField] private UnitStatusOverlayController statusOverlayController;
@@ -79,7 +78,7 @@ namespace DeckBattle
 
         public void StartTestBattle()
         {
-            if (battleConfig == null || boardPresenter == null || unitPrefab == null)
+            if (battleConfig == null || boardPresenter == null)
             {
                 Debug.LogError("BattleController is missing required references.", this);
                 return;
@@ -490,8 +489,11 @@ namespace DeckBattle
 
             if (!TryFindExistingUnitView(unit.RuntimeId, out view))
             {
-                Transform parent = unitRoot != null ? unitRoot : transform;
-                view = Instantiate(unitPrefab, parent);
+                view = CreateUnitView(unit.Definition);
+                if (view == null)
+                {
+                    return;
+                }
             }
 
             RemoveDuplicateUnitViews(unit.RuntimeId, view);
@@ -511,6 +513,18 @@ namespace DeckBattle
 
             view.SetWorldPosition(boardPresenter.GetWorldPosition(unit.BattleCoord));
             BindStatusOverlay(unit, view);
+        }
+
+        private UnitView CreateUnitView(UnitDefinition definition)
+        {
+            if (definition == null || definition.UnitPrefab == null)
+            {
+                Debug.LogError("Runtime unit definition is missing UnitPrefab.", this);
+                return null;
+            }
+
+            Transform parent = unitRoot != null ? unitRoot : transform;
+            return Instantiate(definition.UnitPrefab, parent);
         }
 
         private void ClearUnitViews()

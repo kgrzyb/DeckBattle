@@ -29,6 +29,6 @@ MonoBehaviour:
   Armor: 0
   ArmorPenetration: 0
   AttackCooldown: 1
-  UnitPrefab: {fileID: 4905233732688456190, guid: c61b7deca06656f42a5fed87dc6f8d34,
+  UnitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
     type: 3}
   CardArt: {fileID: 0}

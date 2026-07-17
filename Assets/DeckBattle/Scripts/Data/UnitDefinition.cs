@@ -22,7 +22,7 @@ namespace DeckBattle
         public int ManaPerDamageTaken = 10;
         public float Armor = 0f;
         public float ArmorPenetration = 0f;
-        public GameObject UnitPrefab;
+        public UnitView UnitPrefab;
         public Sprite CardArt;
 
         private void OnValidate()

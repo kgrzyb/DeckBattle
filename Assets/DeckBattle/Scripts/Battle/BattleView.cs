@@ -20,7 +20,6 @@ namespace DeckBattle
 
         [Header("Presentation")]
         [SerializeField] private BoardPresenter boardPresenter;
-        [SerializeField] private UnitView unitPrefab;
         [SerializeField] private Transform unitRoot;
         [SerializeField] private UnitStatusOverlayController statusOverlayController;
         [SerializeField] private PooledBattleEffect attackEffectPrefab;
@@ -127,7 +126,7 @@ namespace DeckBattle
 
         public void StartBattle(IList<UnitSpawnData> spawnData)
         {
-            if (battleConfig == null || boardPresenter == null || unitPrefab == null)
+            if (battleConfig == null || boardPresenter == null)
             {
                 Debug.LogError("BattleView is missing required references.", this);
                 return;
@@ -164,7 +163,7 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(nextSimulation));
             }
 
-            if (boardPresenter == null || unitPrefab == null)
+            if (boardPresenter == null)
             {
                 Debug.LogError("BattleView is missing required presentation references.", this);
                 return;
@@ -446,7 +445,11 @@ namespace DeckBattle
             }
             else
             {
-                view = GetUnitView();
+                view = CreateUnitView(unit.Definition);
+                if (view == null)
+                {
+                    return;
+                }
             }
 
             view.Bind(unit, boardPresenter.GetWorldPosition(unit.CurrentHex));
@@ -475,10 +478,16 @@ namespace DeckBattle
             statusOverlayController.BindRealtimeUnit(unit, view);
         }
 
-        private UnitView GetUnitView()
+        private UnitView CreateUnitView(UnitDefinition definition)
         {
+            if (definition == null || definition.UnitPrefab == null)
+            {
+                Debug.LogError("Realtime unit definition is missing UnitPrefab.", this);
+                return null;
+            }
+
             Transform parent = unitRoot != null ? unitRoot : transform;
-            return Instantiate(unitPrefab, parent);
+            return Instantiate(definition.UnitPrefab, parent);
         }
 
         private bool TryFindReusableUnitView(int unitId, out UnitView view)

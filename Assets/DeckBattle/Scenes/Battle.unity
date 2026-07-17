@@ -573,8 +573,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c0686eab33d7c8d48a2448c351adc71b, type: 2}
   seed: 71347134
   boardPresenter: {fileID: 1201968723}
-  unitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
-    type: 3}
   unitRoot: {fileID: 763315698}
   battleView: {fileID: 225271485}
   statusOverlayController: {fileID: 641749120}
@@ -636,8 +634,6 @@ MonoBehaviour:
   startOnAwake: 0
   initialUnits: []
   boardPresenter: {fileID: 1201968723}
-  unitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
-    type: 3}
   unitRoot: {fileID: 763315698}
   statusOverlayController: {fileID: 641749120}
   attackEffectPrefab: {fileID: 0}

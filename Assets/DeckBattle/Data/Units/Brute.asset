@@ -29,6 +29,6 @@ MonoBehaviour:
   ManaPerDamageTaken: 10
   Armor: 40
   ArmorPenetration: 0
-  UnitPrefab: {fileID: 4905233732688456190, guid: c61b7deca06656f42a5fed87dc6f8d34,
+  UnitPrefab: {fileID: 7506552908754966910, guid: 2450455a188ee904c8b0e83b91ac7496,
     type: 3}
   CardArt: {fileID: 0}
