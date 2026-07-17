@@ -200,7 +200,7 @@ namespace DeckBattle.Tests
 
         private static ProjectileDefinition CreateProjectile(string projectileId, float speed)
         {
-            ProjectileDefinition definition = ScriptableObject.CreateInstance<ProjectileDefinition>();
+            ProjectileDefinition definition = TestDefinitions.Track(ScriptableObject.CreateInstance<ProjectileDefinition>());
             definition.ProjectileId = projectileId;
             definition.Speed = speed;
             return definition;

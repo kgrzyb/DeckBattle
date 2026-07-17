@@ -99,6 +99,7 @@ namespace DeckBattle.Tests
         [Test]
         public void ExecuteTurn_WhenNoUnitsCanBePlayed_MarksEnemyReady()
         {
+            const int MaxEnemyTurns = 8;
             BattleState state = CreateStateWithEnemyHand(
                 TestDefinitions.CreateUnit("first", 1),
                 TestDefinitions.CreateUnit("second", 1),
@@ -109,6 +110,8 @@ namespace DeckBattle.Tests
             int turns = 0;
             while (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy && !state.Enemy.IsReady)
             {
+                Assert.Less(turns, MaxEnemyTurns, "Enemy preparation AI did not finish within the expected turn limit.");
+
                 EnemyPreparationAIResult result = EnemyPreparationAI.ExecuteTurn(state);
                 if (!result.PlayedUnit && !result.MarkedReady)
                 {
