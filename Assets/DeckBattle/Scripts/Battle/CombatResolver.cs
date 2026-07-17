@@ -61,28 +61,49 @@ namespace DeckBattle
                 if (eventQueue != null)
                 {
                     eventQueue.Enqueue(BattleEvent.UnitAttackStarted(attacker.UnitId, target.UnitId));
-                    if (isCritical)
+                }
+
+                attacks++;
+                ProjectileDefinition projectileDefinition = attacker.Definition.Projectile;
+                bool useProjectile = attacker.Definition.UnitType == UnitType.Range && projectileDefinition != null;
+                if (useProjectile)
+                {
+                    ProjectileRuntimeState projectile = simulation.SpawnProjectile(attacker, target, projectileDefinition, damage, isCritical);
+                    if (eventQueue != null)
+                    {
+                        eventQueue.Enqueue(BattleEvent.ProjectileLaunched(
+                            projectile.ProjectileId,
+                            attacker.UnitId,
+                            target.UnitId,
+                            projectile.FromHex,
+                            projectile.LastKnownTargetHex,
+                            projectile.TravelDuration));
+                    }
+                }
+                else
+                {
+                    if (eventQueue != null && isCritical)
                     {
                         eventQueue.Enqueue(BattleEvent.UnitCrit(attacker.UnitId, target.UnitId));
                     }
-                }
 
-                target.CurrentHp -= damage;
-                attacks++;
-                totalDamage += damage;
-                if (eventQueue != null)
-                {
-                    eventQueue.Enqueue(BattleEvent.UnitDamaged(target.UnitId, damage, Math.Max(0, target.CurrentHp)));
+                    target.CurrentHp -= damage;
+                    totalDamage += damage;
+                    if (eventQueue != null)
+                    {
+                        eventQueue.Enqueue(BattleEvent.UnitDamaged(target.UnitId, damage, Math.Max(0, target.CurrentHp)));
+                    }
+
+                    if (damage > 0)
+                    {
+                        AddMana(target, target.Definition.ManaPerDamageTaken, eventQueue);
+                    }
                 }
 
                 AddMana(attacker, attacker.Definition.ManaPerAttack, eventQueue);
-                if (damage > 0)
-                {
-                    AddMana(target, target.Definition.ManaPerDamageTaken, eventQueue);
-                }
                 attacker.AttackCooldownRemaining = simulation.Tuning.GetAttackCooldown(attacker.Definition, attacker);
 
-                if (target.CurrentHp <= 0 && !target.IsDefeated)
+                if (!useProjectile && target.CurrentHp <= 0 && !target.IsDefeated)
                 {
                     simulation.DefeatUnit(target);
                     if (eventQueue != null)
@@ -121,7 +142,7 @@ namespace DeckBattle
             }
         }
 
-        private static void AddMana(UnitRuntimeState unit, int amount, BattleEventQueue eventQueue)
+        internal static void AddMana(UnitRuntimeState unit, int amount, BattleEventQueue eventQueue)
         {
             if (unit == null || amount <= 0 || !unit.IsAlive)
             {

@@ -22,6 +22,7 @@ namespace DeckBattle
         public int ManaPerDamageTaken = 10;
         public float Armor = 0f;
         public float ArmorPenetration = 0f;
+        public ProjectileDefinition Projectile;
         public UnitView UnitPrefab;
         public Sprite CardArt;
 

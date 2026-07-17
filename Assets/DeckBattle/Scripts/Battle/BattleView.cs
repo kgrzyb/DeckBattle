@@ -35,6 +35,8 @@ namespace DeckBattle
         private readonly List<PooledBattleEffect> activeDamageEffects = new List<PooledBattleEffect>(8);
         private readonly Stack<PooledBattleEffect> pooledAttackEffects = new Stack<PooledBattleEffect>(8);
         private readonly Stack<PooledBattleEffect> pooledDamageEffects = new Stack<PooledBattleEffect>(8);
+        private readonly List<ProjectileView> activeProjectileViews = new List<ProjectileView>(8);
+        private readonly Dictionary<ProjectileView, Stack<ProjectileView>> pooledProjectileViews = new Dictionary<ProjectileView, Stack<ProjectileView>>(4);
         private readonly BattleDebugSnapshot debugSnapshot = new BattleDebugSnapshot(16);
 
         private BattleSimulation simulation;
@@ -96,6 +98,7 @@ namespace DeckBattle
             UpdateSimulation(Time.deltaTime);
             ReleaseCompletedEffects(activeAttackEffects, pooledAttackEffects);
             ReleaseCompletedEffects(activeDamageEffects, pooledDamageEffects);
+            ReleaseCompletedProjectiles();
         }
 
         public void StartConfiguredBattle()
@@ -242,6 +245,7 @@ namespace DeckBattle
 
             ReleaseAllEffects(activeAttackEffects, pooledAttackEffects);
             ReleaseAllEffects(activeDamageEffects, pooledDamageEffects);
+            ReleaseAllProjectiles();
         }
 
         private void UpdateSimulation(float deltaTime)
@@ -321,6 +325,9 @@ namespace DeckBattle
                         break;
                     case BattleEventType.UnitManaChanged:
                         HandleUnitManaChanged(battleEvent);
+                        break;
+                    case BattleEventType.ProjectileLaunched:
+                        HandleProjectileLaunched(battleEvent);
                         break;
                 }
             }
@@ -418,6 +425,40 @@ namespace DeckBattle
             }
 
             statusOverlayController.SetMana(unit.UnitId, battleEvent.CurrentMana, unit.Definition.ManaThreshold);
+        }
+
+        private void HandleProjectileLaunched(BattleEvent battleEvent)
+        {
+            if (simulation == null || boardPresenter == null)
+            {
+                return;
+            }
+
+            UnitRuntimeState attacker;
+            if (!simulation.TryGetUnitById(battleEvent.UnitId, out attacker) || attacker == null)
+            {
+                return;
+            }
+
+            ProjectileDefinition projectileDefinition = attacker.Definition.Projectile;
+            if (projectileDefinition == null || projectileDefinition.ProjectilePrefab == null)
+            {
+                return;
+            }
+
+            Vector3 from = boardPresenter.GetWorldPosition(battleEvent.From);
+            from.y += projectileDefinition.SpawnHeight;
+            Vector3 fallbackTarget = boardPresenter.GetWorldPosition(battleEvent.To);
+            fallbackTarget.y += projectileDefinition.HitHeight;
+
+            UnitView targetView;
+            Transform targetTransform = unitViewByUnitId.TryGetValue(battleEvent.TargetUnitId, out targetView) && targetView != null
+                ? targetView.transform
+                : null;
+
+            ProjectileView projectileView = GetProjectileView(projectileDefinition.ProjectilePrefab);
+            projectileView.Play(from, targetTransform, fallbackTarget, battleEvent.Duration);
+            activeProjectileViews.Add(projectileView);
         }
 
         private void CreateOrUpdateUnitView(UnitRuntimeState unit)
@@ -582,6 +623,20 @@ namespace DeckBattle
             activeEffects.Add(effect);
         }
 
+        private ProjectileView GetProjectileView(ProjectileView prefab)
+        {
+            Stack<ProjectileView> pool;
+            if (!pooledProjectileViews.TryGetValue(prefab, out pool))
+            {
+                pool = new Stack<ProjectileView>(4);
+                pooledProjectileViews.Add(prefab, pool);
+            }
+
+            ProjectileView view = pool.Count > 0 ? pool.Pop() : Instantiate(prefab, effectRoot != null ? effectRoot : transform);
+            view.SetPoolPrefab(prefab);
+            return view;
+        }
+
         private BattleRuntimeTuning CreateRuntimeTuning()
         {
             return new BattleRuntimeTuning(attackCooldownMultiplier, attackRangeBonus, movementStepDuration);
@@ -622,6 +677,62 @@ namespace DeckBattle
             }
 
             activeEffects.Clear();
+        }
+
+        private void ReleaseCompletedProjectiles()
+        {
+            for (int i = activeProjectileViews.Count - 1; i >= 0; i--)
+            {
+                ProjectileView projectileView = activeProjectileViews[i];
+                if (projectileView != null && projectileView.IsPlaying)
+                {
+                    continue;
+                }
+
+                if (projectileView != null)
+                {
+                    projectileView.Release();
+                    ReturnProjectileViewToPool(projectileView);
+                }
+
+                activeProjectileViews.RemoveAt(i);
+            }
+        }
+
+        private void ReleaseAllProjectiles()
+        {
+            for (int i = activeProjectileViews.Count - 1; i >= 0; i--)
+            {
+                ProjectileView projectileView = activeProjectileViews[i];
+                if (projectileView == null)
+                {
+                    continue;
+                }
+
+                projectileView.Release();
+                ReturnProjectileViewToPool(projectileView);
+            }
+
+            activeProjectileViews.Clear();
+        }
+
+        private void ReturnProjectileViewToPool(ProjectileView projectileView)
+        {
+            ProjectileView prefab = projectileView.PoolPrefab;
+            if (prefab == null)
+            {
+                Destroy(projectileView.gameObject);
+                return;
+            }
+
+            Stack<ProjectileView> pool;
+            if (!pooledProjectileViews.TryGetValue(prefab, out pool))
+            {
+                pool = new Stack<ProjectileView>(4);
+                pooledProjectileViews.Add(prefab, pool);
+            }
+
+            pool.Push(projectileView);
         }
 
         [Serializable]

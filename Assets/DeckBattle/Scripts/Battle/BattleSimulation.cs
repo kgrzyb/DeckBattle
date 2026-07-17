@@ -6,12 +6,15 @@ namespace DeckBattle
     public sealed class BattleSimulation
     {
         private readonly List<UnitRuntimeState> units;
+        private readonly List<ProjectileRuntimeState> projectiles;
         private readonly Dictionary<HexCoord, UnitRuntimeState> unitByHex;
         private readonly Dictionary<int, UnitRuntimeState> unitById;
+        private int nextProjectileId;
 
         private BattleSimulation(
             HexBoard board,
             List<UnitRuntimeState> units,
+            List<ProjectileRuntimeState> projectiles,
             Dictionary<HexCoord, UnitRuntimeState> unitByHex,
             Dictionary<int, UnitRuntimeState> unitById,
             BattleRuntimeTuning tuning,
@@ -19,10 +22,12 @@ namespace DeckBattle
         {
             Board = board;
             this.units = units;
+            this.projectiles = projectiles;
             this.unitByHex = unitByHex;
             this.unitById = unitById;
             Tuning = tuning;
             Random = rng;
+            nextProjectileId = 1;
         }
 
         public HexBoard Board { get; private set; }
@@ -35,6 +40,11 @@ namespace DeckBattle
         public IReadOnlyList<UnitRuntimeState> Units
         {
             get { return units; }
+        }
+
+        public IReadOnlyList<ProjectileRuntimeState> Projectiles
+        {
+            get { return projectiles; }
         }
 
         public static BattleSimulation Create(HexBoard board, IList<UnitSpawnData> spawnData)
@@ -74,7 +84,7 @@ namespace DeckBattle
                 unitById.Add(spawn.UnitId, unit);
             }
 
-            return new BattleSimulation(board, units, unitByHex, unitById, tuning, new DeterministicRandom(randomSeed));
+            return new BattleSimulation(board, units, new List<ProjectileRuntimeState>(4), unitByHex, unitById, tuning, new DeterministicRandom(randomSeed));
         }
 
         public bool TryGetUnitAt(HexCoord hex, out UnitRuntimeState unit)
@@ -188,6 +198,56 @@ namespace DeckBattle
             unit.MovementDestination = unit.CurrentHex;
             unit.MovementTimeRemaining = 0f;
             unitByHex.Remove(unit.CurrentHex);
+        }
+
+        public ProjectileRuntimeState SpawnProjectile(
+            UnitRuntimeState attacker,
+            UnitRuntimeState target,
+            ProjectileDefinition projectileDefinition,
+            int damage,
+            bool isCritical)
+        {
+            if (attacker == null)
+            {
+                throw new ArgumentNullException(nameof(attacker));
+            }
+
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+
+            if (projectileDefinition == null)
+            {
+                throw new ArgumentNullException(nameof(projectileDefinition));
+            }
+
+            float distance = Board.Distance(attacker.CurrentHex, target.CurrentHex) * Board.HexSize;
+            float travelDuration = distance / projectileDefinition.Speed;
+            var projectile = new ProjectileRuntimeState(
+                nextProjectileId,
+                attacker.UnitId,
+                target.UnitId,
+                attacker.Definition,
+                projectileDefinition,
+                attacker.CurrentHex,
+                target.CurrentHex,
+                travelDuration,
+                damage,
+                isCritical);
+            nextProjectileId++;
+            projectiles.Add(projectile);
+            return projectile;
+        }
+
+        public void RemoveProjectileAt(int index)
+        {
+            if (index < 0 || index >= projectiles.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            projectiles.RemoveAt(index);
         }
 
         public void CompleteBattle(BattleSide winner, bool hasWinner)

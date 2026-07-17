@@ -48,6 +48,7 @@ namespace DeckBattle
 
             RefreshTargets(simulation);
 
+            ProjectileResolver.ResolveProjectiles(simulation, TickDuration, eventQueue);
             CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, TickDuration, eventQueue);
             int moved = MovementResolver.ResolveMovement(simulation, TickDuration, movementWorkspace, eventQueue);
 
@@ -102,6 +103,13 @@ namespace DeckBattle
             }
 
             if (playerAlive && enemyAlive)
+            {
+                winner = BattleSide.Player;
+                hasWinner = false;
+                return false;
+            }
+
+            if (simulation.Projectiles.Count > 0)
             {
                 winner = BattleSide.Player;
                 hasWinner = false;
