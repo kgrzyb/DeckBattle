@@ -25,10 +25,10 @@ Priorytetem sa czytelnosc, stabilna wydajnosc i prosta architektura.
 2. Gracz buduje deck z unikalnych jednostek.
 3. Gracz rozpoczyna mecz przeciwko AI.
 4. W kazdej rundzie dobiera jednostki na reke.
-5. Gracz zagrywa nowe jednostki za AP.
-6. Gracz ustawia lub przestawia jednostki na swojej czesci planszy.
-7. AI wykonuje swoje wystawienie.
-8. Rozpoczyna sie auto-battle.
+5. Gracz zagrywa nowe jednostki za AP i ustawia formacje.
+6. AI rownolegle przygotowuje swoja formacje.
+7. Gracz nie widzi dokladnego ustawienia jednostek AI podczas fazy przygotowania.
+8. Po kliknieciu `Ready` rozpoczyna sie auto-battle i jednostki AI zostaja ujawnione.
 9. Ocalale jednostki zadaja obrazenia przeciwnikowi.
 10. Jednostki wracaja na zapisane pozycje formacji.
 11. Mecz trwa do utraty calego HP przez jedna ze stron.
@@ -74,16 +74,20 @@ AP sluzy wylacznie do zagrywania nowych jednostek z reki. Przesuwanie jednostek 
 
 ## 6. Faza Przygotowania
 
+Faza przygotowania nie jest podzielona na naprzemienne tury. Gracz i AI przygotowuja swoje strony rownolegle.
+
 W fazie przygotowania gracz moze:
 
-- zagrac nowa jednostke z reki, jesli ma wystarczajaco AP,
+- zagrac dowolna liczbe nowych jednostek z reki, jesli ma wystarczajaco AP i wolne sloty,
 - wybrac wolne pole formacji dla nowej jednostki,
 - przesunac wczesniej zagrane jednostki na inne dozwolone pola,
 - zakonczyc przygotowanie przyciskiem `Ready`.
 
 Jednostka zagrana z reki musi zostac ustawiona na planszy. Jesli gracz nie ma wolnego slotu jednostki, nie moze zagrac kolejnej jednostki.
 
-AI wykonuje podobne akcje wedlug prostych zasad.
+AI wykonuje podobne akcje wedlug prostych zasad w tym samym czasie co gracz. Dokladne pozycje jednostek AI pozostaja ukryte do rozpoczecia auto-battle.
+
+Klikniecie `Ready` konczy faze przygotowania gracza. Jesli AI zakonczylo swoje przygotowanie, walka rozpoczyna sie od razu. Jesli AI nadal przygotowuje formacje, walka rozpoczyna sie po zakonczeniu przygotowania AI albo po uplywie limitu czasu fazy przygotowania.
 
 ## 7. Plansza
 
@@ -94,6 +98,8 @@ Parametry MVP:
 - Rozmiar: 5x6 lub 5x7 hexow.
 - Gracz wystawia jednostki na dolnych rzedach.
 - AI wystawia jednostki na gornych rzedach.
+- Podczas fazy przygotowania czesc planszy przeciwnika jest ukryta przed graczem.
+- Jednostki AI pojawiaja sie na swoich polach dopiero na poczatku auto-battle.
 - Kamera jest stala.
 - Brak obracania kamery w MVP.
 - Pola musza byc duze i czytelne na ekranie telefonu.
@@ -116,6 +122,8 @@ Zasady:
 ## 9. Auto-Battle
 
 Po fazie przygotowania rozpoczyna sie automatyczna walka.
+
+Na starcie auto-battle gra ujawnia jednostki AI na wyznaczonych pozycjach formacji. Od tego momentu obie strony sa widoczne, a walka przebiega wedlug tych samych zasad dla gracza i AI.
 
 Podstawowe zasady AI jednostek:
 
@@ -236,6 +244,8 @@ Zasady:
 - AI zagrywa jednostki, jesli ma AP.
 - AI ustawia melee blizej frontu.
 - AI ustawia range dalej od frontu.
+- AI przygotowuje formacje rownolegle z graczem.
+- Pozycje jednostek AI sa ukryte przed graczem do startu auto-battle.
 - AI nie musi miec zaawansowanej strategii w MVP.
 
 Celem AI jest umozliwienie testowania podstawowej petli gry, nie stworzenie docelowego przeciwnika.
@@ -340,7 +350,11 @@ Hexy, jednostki i karty musza byc latwe do dotkniecia i rozroznienia na malym ek
 
 ### Dlugosc Fazy Przygotowania
 
-Turowe wystawianie moze spowolnic mecz. MVP powinno testowac, czy liczba decyzji na runde nie jest zbyt duza.
+Rownolegla faza przygotowania powinna przyspieszyc mecz, ale moze zwiekszyc presje decyzyjna. MVP powinno testowac, czy gracz ma wystarczajaco czasu na zagrywanie jednostek, przestawianie formacji i klikniecie `Ready` na ekranie telefonu.
+
+### Ukryte Ustawienie Przeciwnika
+
+Ukrycie czesci planszy AI moze zwiekszyc napiecie i replayability, ale moze tez oslabic poczucie kontroli. MVP powinno sprawdzic, czy gracz rozumie, dlaczego walka zaczela sie w dany sposob po ujawnieniu jednostek przeciwnika.
 
 ### Determinizm Walki
 
