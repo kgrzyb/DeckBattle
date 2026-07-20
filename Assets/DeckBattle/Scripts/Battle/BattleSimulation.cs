@@ -79,6 +79,7 @@ namespace DeckBattle
                 ValidateSpawn(board, spawn, unitByHex, unitById);
 
                 var unit = new UnitRuntimeState(spawn.UnitId, spawn.Definition, spawn.Side, spawn.StartHex);
+                unit.AttackCooldownRemaining = tuning.GetAttackCooldown(spawn.Definition, unit);
                 units.Add(unit);
                 unitByHex.Add(spawn.StartHex, unit);
                 unitById.Add(spawn.UnitId, unit);

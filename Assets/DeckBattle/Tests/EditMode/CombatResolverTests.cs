@@ -5,7 +5,7 @@ namespace DeckBattle.Tests
     public sealed class CombatResolverTests
     {
         [Test]
-        public void ResolveCombat_AttacksLiveTargetInRangeAndResetsCooldown()
+        public void ResolveCombat_WaitsInitialCooldownBeforeAttacking()
         {
             BattleSimulation simulation = CreateSimulation(
                 CreateUnit("attacker", 10, 2, 1, 1f),
@@ -14,11 +14,21 @@ namespace DeckBattle.Tests
                 new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 0.25f);
+            CombatResolutionResult beforeCooldown = CombatResolver.ResolveCombat(simulation, 0.25f);
 
-            Assert.AreEqual(1, result.Attacks);
-            Assert.AreEqual(2, result.TotalDamage);
-            Assert.AreEqual(0, result.Deaths);
+            Assert.AreEqual(0, beforeCooldown.Attacks);
+            Assert.AreEqual(0, beforeCooldown.TotalDamage);
+            Assert.AreEqual(0, beforeCooldown.Deaths);
+            Assert.AreEqual(10, simulation.Units[1].CurrentHp);
+            Assert.AreEqual(0.75f, simulation.Units[0].AttackCooldownRemaining);
+            Assert.AreEqual(0, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(0, simulation.Units[1].CurrentMana);
+
+            CombatResolutionResult afterCooldown = CombatResolver.ResolveCombat(simulation, 0.75f);
+
+            Assert.AreEqual(1, afterCooldown.Attacks);
+            Assert.AreEqual(2, afterCooldown.TotalDamage);
+            Assert.AreEqual(0, afterCooldown.Deaths);
             Assert.AreEqual(8, simulation.Units[1].CurrentHp);
             Assert.AreEqual(1f, simulation.Units[0].AttackCooldownRemaining);
             Assert.AreEqual(10, simulation.Units[0].CurrentMana);
@@ -145,7 +155,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(simulation, 0.25f, events);
+            CombatResolver.ResolveCombat(simulation, 1f, events);
 
             Assert.AreEqual(0, simulation.Units[0].CurrentMana);
             Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownMultiplier);
@@ -169,7 +179,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(simulation, 0.25f, events);
+            CombatResolver.ResolveCombat(simulation, 1f, events);
 
             AssertManaChangedEventExists(events, 1, 10);
         }
@@ -189,7 +199,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(simulation, 0.25f, events);
+            CombatResolver.ResolveCombat(simulation, 1f, events);
 
             AssertManaChangedEventExists(events, 2, 7);
         }
@@ -228,7 +238,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[1].SetTarget(simulation.Units[0]);
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 0.1f);
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f);
 
             Assert.AreEqual(1, result.Attacks);
             Assert.AreEqual(7, simulation.Units[0].CurrentHp);

@@ -14,7 +14,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             var events = new BattleEventQueue();
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 0.25f, events);
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f, events);
 
             Assert.AreEqual(1, result.Attacks);
             Assert.AreEqual(0, result.TotalDamage);
@@ -88,7 +88,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(simulation, 0.1f, events);
+            CombatResolver.ResolveCombat(simulation, 1f, events);
 
             AssertEventTypeDoesNotExist(events, BattleEventType.UnitCrit);
             Assert.AreEqual(0, simulation.Units[1].CurrentMana);
@@ -155,7 +155,7 @@ namespace DeckBattle.Tests
                 new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 0.25f);
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f);
 
             Assert.AreEqual(1, result.Attacks);
             Assert.AreEqual(3, result.TotalDamage);
@@ -169,7 +169,7 @@ namespace DeckBattle.Tests
             attacker.Projectile = CreateProjectile("arrow", projectileSpeed);
             BattleSimulation simulation = CreateSimulation(attacker, new HexCoord(1, 1), CreateUnit("target", 10, 1, 1, 1f, UnitType.Melee), new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
-            CombatResolver.ResolveCombat(simulation, 0.1f);
+            CombatResolver.ResolveCombat(simulation, 1f);
             return simulation;
         }
 

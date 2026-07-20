@@ -35,7 +35,7 @@ namespace DeckBattle
             CurrentHex = startHex;
             CurrentHp = definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
-            AttackCooldownRemaining = 0f;
+            AttackCooldownRemaining = Math.Max(0.01f, definition.AttackCooldown);
             CurrentMana = 0;
             IsMoving = false;
             MovementDestination = startHex;
@@ -65,7 +65,7 @@ namespace DeckBattle
             CurrentHex = startHex;
             CurrentHp = Definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
-            AttackCooldownRemaining = 0f;
+            AttackCooldownRemaining = Math.Max(0.01f, Definition.AttackCooldown);
             CurrentMana = 0;
             IsMoving = false;
             MovementDestination = startHex;

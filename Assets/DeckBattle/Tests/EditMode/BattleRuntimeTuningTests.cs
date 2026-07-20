@@ -42,7 +42,7 @@ namespace DeckBattle.Tests
                 new BattleRuntimeTuning(2f, 0));
             simulation.Units[0].SetTarget(simulation.Units[1]);
 
-            CombatResolver.ResolveCombat(simulation, 1f);
+            CombatResolver.ResolveCombat(simulation, 2f);
 
             Assert.AreEqual(2f, simulation.Units[0].AttackCooldownRemaining);
         }
