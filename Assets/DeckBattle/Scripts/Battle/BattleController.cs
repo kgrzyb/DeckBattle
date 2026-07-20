@@ -99,7 +99,7 @@ namespace DeckBattle
 
         public bool TryPlayPlayerCard(CardRuntimeState card, HexCoord coord)
         {
-            if (state == null || state.Phase != BattlePhase.Preparation || state.ActivePreparationSide != BattleSide.Player || state.Player.IsReady)
+            if (!PreparationTurnService.CanPlayerPrepare(state))
             {
                 return false;
             }
@@ -111,7 +111,6 @@ namespace DeckBattle
             }
 
             CreateOrUpdateUnitView(result.Unit);
-            PreparationTurnService.CompleteActiveSideAction(state);
             EvaluatePreparationCountdownState();
             ProgressAutomaticFlow();
             RefreshUnits();
@@ -121,7 +120,7 @@ namespace DeckBattle
 
         public bool TryMovePlayerUnit(RuntimeUnit unit, HexCoord coord)
         {
-            if (state == null || state.Phase != BattlePhase.Preparation || state.ActivePreparationSide != BattleSide.Player || state.Player.IsReady)
+            if (!PreparationTurnService.CanPlayerPrepare(state))
             {
                 return false;
             }
@@ -139,12 +138,12 @@ namespace DeckBattle
 
         public bool ConfirmReady()
         {
-            if (state == null || state.Phase != BattlePhase.Preparation || state.ActivePreparationSide != BattleSide.Player || state.Player.IsReady)
+            if (!PreparationTurnService.CanPlayerPrepare(state))
             {
                 return false;
             }
 
-            PreparationTurnService.MarkActiveSideReadyAndAdvance(state);
+            PreparationTurnService.MarkPlayerReady(state);
             EvaluatePreparationCountdownState();
             ProgressAutomaticFlow();
             RefreshUnits();
@@ -152,30 +151,15 @@ namespace DeckBattle
             return true;
         }
 
-        private bool ExecuteEnemyPreparationTurns()
+        private bool ExecuteEnemyPreparation()
         {
-            if (state == null)
+            if (!PreparationTurnService.CanEnemyPrepare(state))
             {
                 return false;
             }
 
-            bool progressed = false;
-            while (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy && !state.Enemy.IsReady)
-            {
-                EnemyPreparationAIResult aiResult = EnemyPreparationAI.ExecuteTurn(state);
-                progressed = aiResult.PlayedUnit || aiResult.MarkedReady;
-                if (aiResult.PlayedUnit && aiResult.Unit != null)
-                {
-                    CreateOrUpdateUnitView(aiResult.Unit);
-                }
-
-                if (!progressed || !state.Player.IsReady || !aiResult.PlayedUnit)
-                {
-                    break;
-                }
-            }
-
-            return progressed;
+            EnemyPreparationAIResult aiResult = EnemyPreparationAI.PrepareFormation(state);
+            return aiResult.PlayedUnit || aiResult.MarkedReady;
         }
 
         private bool ResolveCombatAndRoundIfReady()
@@ -189,6 +173,8 @@ namespace DeckBattle
             {
                 return false;
             }
+
+            EnsureCombatUnitViews();
 
             if (Application.isPlaying)
             {
@@ -231,17 +217,22 @@ namespace DeckBattle
                     return;
                 }
 
-                if (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Player && !state.Player.IsReady)
+                bool progressed = false;
+                if (state.Phase == BattlePhase.Preparation)
                 {
-                    return;
+                    if (!state.Enemy.IsReady)
+                    {
+                        progressed = ExecuteEnemyPreparation();
+                        EvaluatePreparationCountdownState();
+                    }
+
+                    if (state.Phase == BattlePhase.Preparation && !state.Player.IsReady)
+                    {
+                        return;
+                    }
                 }
 
-                bool progressed = false;
-                if (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy)
-                {
-                    progressed = ExecuteEnemyPreparationTurns();
-                }
-                else if (state.Phase == BattlePhase.Combat)
+                if (!progressed && state.Phase == BattlePhase.Combat)
                 {
                     progressed = ResolveCombatAndRoundIfReady();
                 }
@@ -383,8 +374,7 @@ namespace DeckBattle
             if (state.Player.IsReady && state.Enemy.IsReady)
             {
                 StopPreparationCountdownRoutine();
-                state.StopPreparationCountdown();
-                state.Phase = BattlePhase.Combat;
+                PreparationTurnService.TryStartCombatIfReady(state);
                 return;
             }
 
@@ -466,7 +456,14 @@ namespace DeckBattle
             }
 
             SyncUnitViews(state.Player.Units);
-            SyncUnitViews(state.Enemy.Units);
+            if (state.Phase == BattlePhase.Preparation)
+            {
+                HideEnemyUnitViews();
+            }
+            else
+            {
+                SyncUnitViews(state.Enemy.Units);
+            }
         }
 
         private void SyncUnitViews(List<RuntimeUnit> units)
@@ -513,6 +510,53 @@ namespace DeckBattle
 
             view.SetWorldPosition(boardPresenter.GetWorldPosition(unit.BattleCoord));
             BindStatusOverlay(unit, view);
+        }
+
+        private void EnsureCombatUnitViews()
+        {
+            if (state == null || state.Phase != BattlePhase.Combat)
+            {
+                return;
+            }
+
+            SyncUnitViews(state.Player.Units);
+            SyncUnitViews(state.Enemy.Units);
+        }
+
+        private void HideEnemyUnitViews()
+        {
+            if (state == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < state.Enemy.Units.Count; i++)
+            {
+                RuntimeUnit unit = state.Enemy.Units[i];
+                if (unit == null)
+                {
+                    continue;
+                }
+
+                UnitView view;
+                if (!unitViewByRuntimeId.TryGetValue(unit.RuntimeId, out view))
+                {
+                    continue;
+                }
+
+                unitViewByRuntimeId.Remove(unit.RuntimeId);
+                if (view != null)
+                {
+                    unitViews.Remove(view);
+                    if (statusOverlayController != null)
+                    {
+                        statusOverlayController.Release(unit.RuntimeId);
+                    }
+
+                    view.gameObject.SetActive(false);
+                    Destroy(view.gameObject);
+                }
+            }
         }
 
         private UnitView CreateUnitView(UnitDefinition definition)

@@ -45,9 +45,9 @@ namespace DeckBattle
         private int shownUnits = int.MinValue;
         private int shownSlots = int.MinValue;
         private BattlePhase shownPhase = BattlePhase.None;
-        private BattleSide shownActivePreparationSide = (BattleSide)(-1);
         private bool shownPreparationCountdownActive;
         private int shownPreparationCountdownSeconds = int.MinValue;
+        private bool shownPlayerReady;
         private bool shownResultPanelActive;
         private string shownResultText;
 
@@ -168,27 +168,31 @@ namespace DeckBattle
             int countdownSeconds = state.PreparationCountdownActive ? Mathf.CeilToInt(state.PreparationCountdownRemaining) : 0;
             if (phaseText != null
                 && (shownPhase != state.Phase
-                    || shownActivePreparationSide != state.ActivePreparationSide
                     || shownPreparationCountdownActive != state.PreparationCountdownActive
-                    || shownPreparationCountdownSeconds != countdownSeconds))
+                    || shownPreparationCountdownSeconds != countdownSeconds
+                    || shownPlayerReady != state.Player.IsReady))
             {
                 shownPhase = state.Phase;
-                shownActivePreparationSide = state.ActivePreparationSide;
                 shownPreparationCountdownActive = state.PreparationCountdownActive;
                 shownPreparationCountdownSeconds = countdownSeconds;
+                shownPlayerReady = state.Player.IsReady;
                 if (state.PreparationCountdownActive)
                 {
-                    phaseText.text = state.Phase + " " + state.ActivePreparationSide + " " + countdownSeconds + "s";
+                    phaseText.text = state.Phase + " " + countdownSeconds + "s";
+                }
+                else if (state.Phase == BattlePhase.Preparation && state.Player.IsReady)
+                {
+                    phaseText.text = "Preparation Ready";
                 }
                 else
                 {
-                    phaseText.text = state.Phase == BattlePhase.Preparation ? state.Phase + " " + state.ActivePreparationSide : state.Phase.ToString();
+                    phaseText.text = state.Phase.ToString();
                 }
             }
 
             if (readyButton != null)
             {
-                readyButton.interactable = state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Player && !state.Player.IsReady;
+                readyButton.interactable = PreparationTurnService.CanPlayerPrepare(state);
             }
         }
 

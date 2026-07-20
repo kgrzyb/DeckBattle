@@ -6,7 +6,7 @@ namespace DeckBattle.Tests
     public sealed class PreparationTurnServiceTests
     {
         [Test]
-        public void CreateState_StartsPreparationWithPlayerActive()
+        public void CreateState_StartsPreparationWithBothSidesUnready()
         {
             BattleState state = CreateState();
 
@@ -14,91 +14,79 @@ namespace DeckBattle.Tests
             Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
             Assert.IsFalse(state.Player.IsReady);
             Assert.IsFalse(state.Enemy.IsReady);
+            Assert.IsTrue(PreparationTurnService.CanPlayerPrepare(state));
+            Assert.IsTrue(PreparationTurnService.CanEnemyPrepare(state));
         }
 
         [Test]
-        public void CompleteActiveSideAction_AfterPlayerPlay_AdvancesToEnemy()
+        public void PlayUnit_DoesNotMarkPlayerReadyOrAdvanceActiveSide()
         {
             BattleState state = CreateState();
 
             UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
-            PreparationTurnService.CompleteActiveSideAction(state);
-
-            Assert.AreEqual(BattlePhase.Preparation, state.Phase);
-            Assert.AreEqual(BattleSide.Enemy, state.ActivePreparationSide);
-        }
-
-        [Test]
-        public void CompleteActiveSideAction_WhenPlayerCannotPlayMore_DoesNotMarkPlayerReady()
-        {
-            BattleState state = CreateState();
-            state.Player.Ap = 1;
-
-            UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
-            PreparationTurnService.CompleteActiveSideAction(state);
 
             Assert.IsFalse(state.Player.IsReady);
-            Assert.AreEqual(BattleSide.Enemy, state.ActivePreparationSide);
+            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
             Assert.AreEqual(BattlePhase.Preparation, state.Phase);
         }
 
         [Test]
-        public void MarkActiveSideReadyAndAdvance_MarksPlayerReadyAndPassesTurn()
+        public void PlayerCanPlayMultipleUnitsInSinglePreparationPhase()
         {
             BattleState state = CreateState();
 
-            PreparationTurnService.MarkActiveSideReadyAndAdvance(state);
+            PlayUnitResult first = UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
+            PlayUnitResult second = UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(1, 0));
 
-            Assert.IsTrue(state.Player.IsReady);
-            Assert.AreEqual(BattleSide.Enemy, state.ActivePreparationSide);
+            Assert.IsTrue(first.Success);
+            Assert.IsTrue(second.Success);
+            Assert.AreEqual(2, state.Player.Units.Count);
+            Assert.IsFalse(state.Player.IsReady);
             Assert.AreEqual(BattlePhase.Preparation, state.Phase);
         }
 
         [Test]
-        public void MarkActiveSideReadyAndAdvance_WhenEnemyCannotAct_WaitsForEnemyAi()
+        public void MarkPlayerReady_WhenEnemyIsNotReady_StaysInPreparation()
         {
             BattleState state = CreateState();
-            state.Enemy.Ap = 0;
 
-            PreparationTurnService.MarkActiveSideReadyAndAdvance(state);
+            PreparationTurnService.MarkPlayerReady(state);
 
             Assert.IsTrue(state.Player.IsReady);
             Assert.IsFalse(state.Enemy.IsReady);
-            Assert.AreEqual(BattleSide.Enemy, state.ActivePreparationSide);
+            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
             Assert.AreEqual(BattlePhase.Preparation, state.Phase);
-            Assert.IsFalse(PreparationTurnService.ShouldStartPreparationCountdown(state));
+            Assert.IsFalse(PreparationTurnService.CanPlayerPrepare(state));
         }
 
         [Test]
-        public void CompleteActiveSideAction_WhenOpponentReady_ReturnsTurnToPlayer()
+        public void MarkPlayerReady_BlocksFurtherUnitPlays()
         {
             BattleState state = CreateState();
-            state.Enemy.IsReady = true;
+            PreparationTurnService.MarkPlayerReady(state);
 
-            UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
-            PreparationTurnService.CompleteActiveSideAction(state);
+            PlayUnitFailReason reason = UnitPlayService.ValidatePlay(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
 
-            Assert.AreEqual(BattlePhase.Preparation, state.Phase);
-            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
+            Assert.AreEqual(PlayUnitFailReason.PlayerReady, reason);
         }
 
         [Test]
-        public void CreateState_WhenNeitherSideCanPlay_StaysInPreparation()
+        public void TryStartCombatIfReady_RequiresBothSidesReady()
         {
-            BattleConfig config = TestDefinitions.CreateConfig();
-            config.StartingAp = 0;
+            BattleState state = CreateState();
 
-            BattleState state = BattleState.Create(config, CreateDeck("player"), CreateDeck("enemy"), 42);
+            PreparationTurnService.MarkPlayerReady(state);
+            bool startedBeforeEnemyReady = PreparationTurnService.TryStartCombatIfReady(state);
+            PreparationTurnService.MarkEnemyReady(state);
 
-            Assert.IsFalse(state.Player.IsReady);
-            Assert.IsFalse(state.Enemy.IsReady);
-            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
-            Assert.AreEqual(BattlePhase.Preparation, state.Phase);
-            Assert.IsFalse(PreparationTurnService.ShouldStartPreparationCountdown(state));
+            Assert.IsFalse(startedBeforeEnemyReady);
+            Assert.IsTrue(state.Player.IsReady);
+            Assert.IsTrue(state.Enemy.IsReady);
+            Assert.AreEqual(BattlePhase.Combat, state.Phase);
         }
 
         [Test]
-        public void ShouldStartPreparationCountdown_WhenEnemyReadyAndOnlyPlayerRepositionActionsRemain_ReturnsTrue()
+        public void ShouldStartPreparationCountdown_WhenOneSideReadyAndOnlyRepositionActionsRemain_ReturnsTrue()
         {
             BattleConfig config = TestDefinitions.CreateConfig();
             config.StartingAp = 0;
@@ -106,7 +94,6 @@ namespace DeckBattle.Tests
 
             state.Enemy.IsReady = true;
 
-            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
             Assert.IsTrue(PreparationTurnService.HasOnlyRepositionActions(state));
             Assert.IsTrue(PreparationTurnService.ShouldStartPreparationCountdown(state));
         }
@@ -117,7 +104,7 @@ namespace DeckBattle.Tests
             BattleConfig config = TestDefinitions.CreateConfig();
             config.StartingAp = 0;
             BattleState state = BattleState.Create(config, CreateDeck("player"), CreateDeck("enemy"), 42);
-            PreparationTurnService.MarkActiveSideReadyAndAdvance(state);
+            PreparationTurnService.MarkPlayerReady(state);
             state.StartPreparationCountdown(10f);
 
             bool elapsed = state.TickPreparationCountdown(10f);

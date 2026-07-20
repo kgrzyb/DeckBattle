@@ -4,6 +4,16 @@ namespace DeckBattle
 {
     public static class PreparationTurnService
     {
+        public static bool CanPlayerPrepare(BattleState battleState)
+        {
+            return CanSidePrepare(battleState, BattleSide.Player);
+        }
+
+        public static bool CanEnemyPrepare(BattleState battleState)
+        {
+            return CanSidePrepare(battleState, BattleSide.Enemy);
+        }
+
         public static bool CanPlayAnyUnit(BattleState battleState, PlayerBattleState player)
         {
             if (battleState == null)
@@ -39,14 +49,36 @@ namespace DeckBattle
             return false;
         }
 
-        public static void CompleteActiveSideAction(BattleState battleState)
+        public static void MarkPlayerReady(BattleState battleState)
+        {
+            MarkReady(battleState, BattleSide.Player);
+        }
+
+        public static void MarkEnemyReady(BattleState battleState)
+        {
+            MarkReady(battleState, BattleSide.Enemy);
+        }
+
+        public static bool TryStartCombatIfReady(BattleState battleState)
         {
             if (!CanAdvancePreparation(battleState))
             {
-                return;
+                return false;
             }
 
-            AdvanceToNextAvailableSide(battleState);
+            if (!battleState.Player.IsReady || !battleState.Enemy.IsReady)
+            {
+                return false;
+            }
+
+            battleState.StopPreparationCountdown();
+            battleState.Phase = BattlePhase.Combat;
+            return true;
+        }
+
+        public static void CompleteActiveSideAction(BattleState battleState)
+        {
+            TryStartCombatIfReady(battleState);
         }
 
         public static void MarkActiveSideReadyAndAdvance(BattleState battleState)
@@ -56,23 +88,12 @@ namespace DeckBattle
                 return;
             }
 
-            battleState.GetPlayerState(battleState.ActivePreparationSide).IsReady = true;
-            battleState.StopPreparationCountdown();
-            AdvanceToNextAvailableSide(battleState);
+            MarkReady(battleState, battleState.ActivePreparationSide);
         }
 
         public static void EnsureActiveSideCanAct(BattleState battleState)
         {
-            if (!CanAdvancePreparation(battleState))
-            {
-                return;
-            }
-
-            PlayerBattleState activePlayer = battleState.GetPlayerState(battleState.ActivePreparationSide);
-            if (activePlayer.IsReady)
-            {
-                AdvanceToNextAvailableSide(battleState);
-            }
+            TryStartCombatIfReady(battleState);
         }
 
         public static bool HasOnlyRepositionActions(BattleState battleState)
@@ -97,48 +118,34 @@ namespace DeckBattle
                 return false;
             }
 
-            if (battleState.ActivePreparationSide == BattleSide.Enemy && !battleState.Enemy.IsReady)
+            return (battleState.Player.IsReady || battleState.Enemy.IsReady) && HasOnlyRepositionActions(battleState);
+        }
+
+        private static bool CanSidePrepare(BattleState battleState, BattleSide side)
+        {
+            if (battleState == null || battleState.Phase != BattlePhase.Preparation)
             {
                 return false;
             }
 
-            return (battleState.Player.IsReady || battleState.Enemy.IsReady) && HasOnlyRepositionActions(battleState);
+            return !battleState.GetPlayerState(side).IsReady;
+        }
+
+        private static void MarkReady(BattleState battleState, BattleSide side)
+        {
+            if (!CanSidePrepare(battleState, side))
+            {
+                return;
+            }
+
+            battleState.GetPlayerState(side).IsReady = true;
+            battleState.StopPreparationCountdown();
+            TryStartCombatIfReady(battleState);
         }
 
         private static bool CanAdvancePreparation(BattleState battleState)
         {
             return battleState != null && battleState.Phase == BattlePhase.Preparation;
-        }
-
-        private static void AdvanceToNextAvailableSide(BattleState battleState)
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                if (battleState.Player.IsReady && battleState.Enemy.IsReady)
-                {
-                    battleState.Phase = BattlePhase.Combat;
-                    return;
-                }
-
-                battleState.ActivePreparationSide = GetOppositeSide(battleState.ActivePreparationSide);
-                PlayerBattleState nextPlayer = battleState.GetPlayerState(battleState.ActivePreparationSide);
-                if (nextPlayer.IsReady)
-                {
-                    continue;
-                }
-
-                return;
-            }
-
-            if (battleState.Player.IsReady && battleState.Enemy.IsReady)
-            {
-                battleState.Phase = BattlePhase.Combat;
-            }
-        }
-
-        private static BattleSide GetOppositeSide(BattleSide side)
-        {
-            return side == BattleSide.Player ? BattleSide.Enemy : BattleSide.Player;
         }
     }
 }

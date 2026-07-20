@@ -16,6 +16,16 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(player));
             }
 
+            if (battleState.Phase != BattlePhase.Preparation)
+            {
+                return FormationMoveResult.Failed(FormationMoveFailReason.NotInPreparation);
+            }
+
+            if (player.IsReady)
+            {
+                return FormationMoveResult.Failed(FormationMoveFailReason.PlayerReady);
+            }
+
             if (unit == null || !player.Units.Contains(unit))
             {
                 return FormationMoveResult.Failed(FormationMoveFailReason.UnitMissing);

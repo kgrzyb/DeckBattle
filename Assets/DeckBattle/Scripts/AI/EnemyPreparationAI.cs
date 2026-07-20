@@ -4,6 +4,38 @@ namespace DeckBattle
 {
     public static class EnemyPreparationAI
     {
+        public static EnemyPreparationAIResult PrepareFormation(BattleState battleState)
+        {
+            if (battleState == null)
+            {
+                throw new ArgumentNullException(nameof(battleState));
+            }
+
+            if (!PreparationTurnService.CanEnemyPrepare(battleState))
+            {
+                return EnemyPreparationAIResult.NoAction();
+            }
+
+            int playedUnitCount = 0;
+            RuntimeUnit lastPlayedUnit = null;
+            CardRuntimeState selectedCard;
+            HexCoord selectedCoord;
+            while (TryFindPlay(battleState, out selectedCard, out selectedCoord))
+            {
+                PlayUnitResult playResult = UnitPlayService.PlayUnit(battleState, battleState.Enemy, selectedCard, selectedCoord);
+                if (!playResult.Success)
+                {
+                    break;
+                }
+
+                playedUnitCount++;
+                lastPlayedUnit = playResult.Unit;
+            }
+
+            PreparationTurnService.MarkEnemyReady(battleState);
+            return EnemyPreparationAIResult.Prepared(playedUnitCount, lastPlayedUnit);
+        }
+
         public static EnemyPreparationAIResult ExecuteTurn(BattleState battleState)
         {
             if (battleState == null)
@@ -11,7 +43,7 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(battleState));
             }
 
-            if (battleState.Phase != BattlePhase.Preparation || battleState.ActivePreparationSide != BattleSide.Enemy || battleState.Enemy.IsReady)
+            if (!PreparationTurnService.CanEnemyPrepare(battleState))
             {
                 return EnemyPreparationAIResult.NoAction();
             }
@@ -26,11 +58,10 @@ namespace DeckBattle
                     return EnemyPreparationAIResult.NoAction();
                 }
 
-                PreparationTurnService.CompleteActiveSideAction(battleState);
                 return EnemyPreparationAIResult.Played(playResult.Unit);
             }
 
-            PreparationTurnService.MarkActiveSideReadyAndAdvance(battleState);
+            PreparationTurnService.MarkEnemyReady(battleState);
             return EnemyPreparationAIResult.Passed();
         }
 
@@ -107,28 +138,35 @@ namespace DeckBattle
     {
         public readonly bool PlayedUnit;
         public readonly bool MarkedReady;
+        public readonly int PlayedUnitCount;
         public readonly RuntimeUnit Unit;
 
-        private EnemyPreparationAIResult(bool playedUnit, bool markedReady, RuntimeUnit unit)
+        private EnemyPreparationAIResult(bool playedUnit, bool markedReady, int playedUnitCount, RuntimeUnit unit)
         {
             PlayedUnit = playedUnit;
             MarkedReady = markedReady;
+            PlayedUnitCount = playedUnitCount;
             Unit = unit;
+        }
+
+        public static EnemyPreparationAIResult Prepared(int playedUnitCount, RuntimeUnit lastUnit)
+        {
+            return new EnemyPreparationAIResult(playedUnitCount > 0, true, playedUnitCount, lastUnit);
         }
 
         public static EnemyPreparationAIResult Played(RuntimeUnit unit)
         {
-            return new EnemyPreparationAIResult(true, false, unit);
+            return new EnemyPreparationAIResult(true, false, 1, unit);
         }
 
         public static EnemyPreparationAIResult Passed()
         {
-            return new EnemyPreparationAIResult(false, true, null);
+            return new EnemyPreparationAIResult(false, true, 0, null);
         }
 
         public static EnemyPreparationAIResult NoAction()
         {
-            return new EnemyPreparationAIResult(false, false, null);
+            return new EnemyPreparationAIResult(false, false, 0, null);
         }
     }
 }

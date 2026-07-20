@@ -34,6 +34,16 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(player));
             }
 
+            if (battleState.Phase != BattlePhase.Preparation)
+            {
+                return PlayUnitFailReason.NotInPreparation;
+            }
+
+            if (player.IsReady)
+            {
+                return PlayUnitFailReason.PlayerReady;
+            }
+
             if (!HandService.IsInHand(player, card))
             {
                 return card != null && card.Location == CardLocation.Played ? PlayUnitFailReason.UnitAlreadyPlayed : PlayUnitFailReason.CardNotInHand;

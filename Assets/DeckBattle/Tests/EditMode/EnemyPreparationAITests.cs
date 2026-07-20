@@ -6,44 +6,47 @@ namespace DeckBattle.Tests
     public sealed class EnemyPreparationAITests
     {
         [Test]
-        public void ExecuteTurn_PlaysOneUnitAndReturnsTurnToPlayer()
+        public void PrepareFormation_PlaysMultipleUnitsAndMarksEnemyReady()
         {
-            BattleState state = CreateState();
-            state.ActivePreparationSide = BattleSide.Enemy;
+            BattleState state = CreateStateWithEnemyHand(
+                TestDefinitions.CreateUnit("first", 1),
+                TestDefinitions.CreateUnit("second", 1),
+                TestDefinitions.CreateUnit("third", 1));
 
-            EnemyPreparationAIResult result = EnemyPreparationAI.ExecuteTurn(state);
+            EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
 
             Assert.IsTrue(result.PlayedUnit);
-            Assert.IsNotNull(result.Unit);
-            Assert.AreEqual(1, state.Enemy.Units.Count);
+            Assert.IsTrue(result.MarkedReady);
+            Assert.AreEqual(3, result.PlayedUnitCount);
+            Assert.AreEqual(3, state.Enemy.Units.Count);
+            Assert.IsTrue(state.Enemy.IsReady);
             Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
             Assert.AreEqual(BattlePhase.Preparation, state.Phase);
         }
 
         [Test]
-        public void ExecuteTurn_DoesNotSpendMoreThanAvailableAp()
+        public void PrepareFormation_DoesNotSpendMoreThanAvailableAp()
         {
             BattleState state = CreateStateWithEnemyHand(
                 TestDefinitions.CreateUnit("expensive", 4),
                 TestDefinitions.CreateUnit("cheap", 2));
             state.Enemy.Ap = 2;
-            state.ActivePreparationSide = BattleSide.Enemy;
 
-            EnemyPreparationAI.ExecuteTurn(state);
+            EnemyPreparationAI.PrepareFormation(state);
 
             Assert.AreEqual(1, state.Enemy.Units.Count);
             Assert.AreEqual("cheap", state.Enemy.Units[0].Definition.UnitId);
             Assert.AreEqual(0, state.Enemy.Ap);
+            Assert.IsTrue(state.Enemy.IsReady);
         }
 
         [Test]
-        public void ExecuteTurn_RespectsDeploymentSlots()
+        public void PrepareFormation_RespectsDeploymentSlots()
         {
             BattleState state = CreateState();
             state.Enemy.DeploymentSlots = 0;
-            state.ActivePreparationSide = BattleSide.Enemy;
 
-            EnemyPreparationAIResult result = EnemyPreparationAI.ExecuteTurn(state);
+            EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
 
             Assert.IsFalse(result.PlayedUnit);
             Assert.IsTrue(result.MarkedReady);
@@ -52,78 +55,59 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void ExecuteTurn_PlacesUnitOnlyInEnemyDeploymentZone()
+        public void PrepareFormation_PlacesUnitsOnlyInEnemyDeploymentZone()
         {
             BattleState state = CreateState();
-            state.ActivePreparationSide = BattleSide.Enemy;
 
-            EnemyPreparationAI.ExecuteTurn(state);
+            EnemyPreparationAI.PrepareFormation(state);
 
-            Assert.AreEqual(1, state.Enemy.Units.Count);
-            Assert.IsTrue(state.Board.IsDeploymentCoord(BattleSide.Enemy, state.Enemy.Units[0].FormationCoord));
+            for (int i = 0; i < state.Enemy.Units.Count; i++)
+            {
+                Assert.IsTrue(state.Board.IsDeploymentCoord(BattleSide.Enemy, state.Enemy.Units[i].FormationCoord));
+            }
         }
 
         [Test]
-        public void ExecuteTurn_PlacesMeleeCloserToFrontThanRange()
+        public void PrepareFormation_PlacesMeleeCloserToFrontThanRange()
         {
             BattleState meleeState = CreateStateWithEnemyHand(TestDefinitions.CreateUnit("melee", 1, UnitType.Melee));
-            meleeState.ActivePreparationSide = BattleSide.Enemy;
-
             BattleState rangeState = CreateStateWithEnemyHand(TestDefinitions.CreateUnit("range", 1, UnitType.Range));
-            rangeState.ActivePreparationSide = BattleSide.Enemy;
 
-            EnemyPreparationAI.ExecuteTurn(meleeState);
-            EnemyPreparationAI.ExecuteTurn(rangeState);
+            EnemyPreparationAI.PrepareFormation(meleeState);
+            EnemyPreparationAI.PrepareFormation(rangeState);
 
             Assert.Less(meleeState.Enemy.Units[0].FormationCoord.R, rangeState.Enemy.Units[0].FormationCoord.R);
         }
 
         [Test]
-        public void ExecuteTurn_IsDeterministicForSameSeed()
+        public void PrepareFormation_IsDeterministicForSameSeed()
         {
             BattleState first = CreateState();
-            first.ActivePreparationSide = BattleSide.Enemy;
-
             BattleState second = CreateState();
-            second.ActivePreparationSide = BattleSide.Enemy;
 
-            EnemyPreparationAI.ExecuteTurn(first);
-            EnemyPreparationAI.ExecuteTurn(second);
+            EnemyPreparationAI.PrepareFormation(first);
+            EnemyPreparationAI.PrepareFormation(second);
 
             Assert.AreEqual(first.Enemy.Units.Count, second.Enemy.Units.Count);
             Assert.AreEqual(first.Enemy.Units[0].Definition.UnitId, second.Enemy.Units[0].Definition.UnitId);
             Assert.AreEqual(first.Enemy.Units[0].FormationCoord, second.Enemy.Units[0].FormationCoord);
             Assert.AreEqual(first.Enemy.Ap, second.Enemy.Ap);
+            Assert.IsTrue(first.Enemy.IsReady);
+            Assert.IsTrue(second.Enemy.IsReady);
         }
 
         [Test]
-        public void ExecuteTurn_WhenNoUnitsCanBePlayed_MarksEnemyReady()
+        public void PrepareFormation_WhenPlayerAlreadyReady_StartsCombat()
         {
-            const int MaxEnemyTurns = 8;
             BattleState state = CreateStateWithEnemyHand(
                 TestDefinitions.CreateUnit("first", 1),
-                TestDefinitions.CreateUnit("second", 1),
-                TestDefinitions.CreateUnit("third", 1));
+                TestDefinitions.CreateUnit("second", 1));
             state.Player.IsReady = true;
-            state.ActivePreparationSide = BattleSide.Enemy;
 
-            int turns = 0;
-            while (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Enemy && !state.Enemy.IsReady)
-            {
-                Assert.Less(turns, MaxEnemyTurns, "Enemy preparation AI did not finish within the expected turn limit.");
+            EnemyPreparationAI.PrepareFormation(state);
 
-                EnemyPreparationAIResult result = EnemyPreparationAI.ExecuteTurn(state);
-                if (!result.PlayedUnit && !result.MarkedReady)
-                {
-                    break;
-                }
-
-                turns++;
-            }
-
-            Assert.AreEqual(4, turns);
-            Assert.AreEqual(3, state.Enemy.Units.Count);
             Assert.IsTrue(state.Enemy.IsReady);
+            Assert.AreEqual(2, state.Enemy.Units.Count);
             Assert.AreEqual(BattlePhase.Combat, state.Phase);
         }
 

@@ -8,6 +8,8 @@ namespace DeckBattle
         NoDeploymentSlot = 3,
         InvalidTile = 4,
         TileOccupied = 5,
-        UnitAlreadyPlayed = 6
+        UnitAlreadyPlayed = 6,
+        NotInPreparation = 7,
+        PlayerReady = 8
     }
 }
