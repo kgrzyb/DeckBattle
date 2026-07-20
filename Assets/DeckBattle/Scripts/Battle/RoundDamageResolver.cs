@@ -16,8 +16,8 @@ namespace DeckBattle
                 throw new InvalidOperationException("Round damage can only be resolved during RoundResolution.");
             }
 
-            int playerDamage = CalculateSurvivorPower(battleState.Player);
-            int enemyDamage = CalculateSurvivorPower(battleState.Enemy);
+            int playerDamage = CalculateRoundDamage(battleState.Player);
+            int enemyDamage = CalculateRoundDamage(battleState.Enemy);
 
             battleState.Enemy.Hp = Math.Max(0, battleState.Enemy.Hp - playerDamage);
             battleState.Player.Hp = Math.Max(0, battleState.Player.Hp - enemyDamage);
@@ -41,6 +41,11 @@ namespace DeckBattle
                 matchEnded,
                 hasWinner,
                 winner);
+        }
+
+        private static int CalculateRoundDamage(PlayerBattleState player)
+        {
+            return CalculateSurvivorPower(player) + Math.Max(0, player.RoundDamageBonus);
         }
 
         private static int CalculateSurvivorPower(PlayerBattleState player)

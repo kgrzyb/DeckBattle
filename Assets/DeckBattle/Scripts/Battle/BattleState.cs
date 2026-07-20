@@ -33,8 +33,18 @@ namespace DeckBattle
             {
                 Config = config,
                 Board = new HexBoard(config.BoardWidth, config.BoardHeight, 1f),
-                Player = new PlayerBattleState(BattleSide.Player, config.StartingPlayerHp, config.StartingAp, config.StartingDeploymentSlots),
-                Enemy = new PlayerBattleState(BattleSide.Enemy, config.StartingEnemyHp, config.StartingAp, config.StartingDeploymentSlots),
+                Player = new PlayerBattleState(
+                    BattleSide.Player,
+                    config.StartingPlayerHp,
+                    config.StartingAp,
+                    config.StartingDeploymentSlots,
+                    config.StartingRoundDamageBonus),
+                Enemy = new PlayerBattleState(
+                    BattleSide.Enemy,
+                    config.StartingEnemyHp,
+                    config.StartingAp,
+                    config.StartingDeploymentSlots,
+                    config.StartingRoundDamageBonus),
                 Phase = BattlePhase.Preparation,
                 ActivePreparationSide = BattleSide.Player,
                 RoundNumber = 1
@@ -45,8 +55,8 @@ namespace DeckBattle
             DeckService.CreateDeck(enemyDeck, state.Enemy.Deck, ref state.nextRuntimeCardId);
             DeckService.Shuffle(state.Player.Deck, rng);
             DeckService.Shuffle(state.Enemy.Deck, rng);
-            DeckService.DrawCards(state.Player, config.StartingHandSize);
-            DeckService.DrawCards(state.Enemy, config.StartingHandSize);
+            DeckService.DrawCards(state.Player, config.StartingHandSize, config.MaxHandSize);
+            DeckService.DrawCards(state.Enemy, config.StartingHandSize, config.MaxHandSize);
             PreparationTurnService.EnsureActiveSideCanAct(state);
             return state;
         }
@@ -134,21 +144,46 @@ namespace DeckBattle
             player.IsReady = false;
             player.Ap = CalculateRoundAp();
             player.DeploymentSlots = CalculateDeploymentSlots();
+            player.RoundDamageBonus = CalculateRoundDamageBonus();
             FormationService.RestoreFormationAndResetRoundHealth(player);
-            DeckService.DrawCards(player, Config.DrawPerRound);
+            DeckService.DrawCards(player, Config.DrawPerRound, Config.MaxHandSize);
         }
 
         private int CalculateRoundAp()
         {
-            int roundAp = Config.StartingAp + RoundNumber - 1;
-            return Math.Min(Config.MaxAp, roundAp);
+            return CalculateProgressionValue(
+                Config.StartingAp,
+                Config.ApIncreasePerStep,
+                Config.ApIncreaseEveryRounds,
+                Config.MaxAp);
         }
 
         private int CalculateDeploymentSlots()
         {
-            int slotIncreases = (RoundNumber - 1) / Config.DeploymentSlotIncreaseEveryRounds;
-            int deploymentSlots = Config.StartingDeploymentSlots + slotIncreases;
-            return Math.Min(Config.MaxDeploymentSlots, deploymentSlots);
+            return CalculateProgressionValue(
+                Config.StartingDeploymentSlots,
+                Config.DeploymentSlotIncreasePerStep,
+                Config.DeploymentSlotIncreaseEveryRounds,
+                Config.MaxDeploymentSlots);
+        }
+
+        private int CalculateRoundDamageBonus()
+        {
+            return CalculateProgressionValue(
+                Config.StartingRoundDamageBonus,
+                Config.RoundDamageBonusIncreasePerStep,
+                Config.RoundDamageBonusIncreaseEveryRounds,
+                Config.MaxRoundDamageBonus);
+        }
+
+        private int CalculateProgressionValue(int startingValue, int increasePerStep, int increaseEveryRounds, int maxValue)
+        {
+            int safeStartingValue = Math.Max(0, startingValue);
+            int safeIncreaseEveryRounds = Math.Max(1, increaseEveryRounds);
+            int safeMaxValue = Math.Max(safeStartingValue, maxValue);
+            int steps = (RoundNumber - 1) / safeIncreaseEveryRounds;
+            int value = safeStartingValue + steps * Math.Max(0, increasePerStep);
+            return Math.Min(safeMaxValue, value);
         }
     }
 }

@@ -15,12 +15,20 @@ MonoBehaviour:
   StartingPlayerHp: 30
   StartingEnemyHp: 30
   StartingAp: 5
+  ApIncreasePerStep: 1
+  ApIncreaseEveryRounds: 1
   MaxAp: 8
-  StartingHandSize: 7
+  StartingHandSize: 3
+  MaxHandSize: 5
   DrawPerRound: 2
   StartingDeploymentSlots: 3
+  DeploymentSlotIncreasePerStep: 1
   MaxDeploymentSlots: 7
-  DeploymentSlotIncreaseEveryRounds: 2
+  DeploymentSlotIncreaseEveryRounds: 1
+  StartingRoundDamageBonus: 0
+  RoundDamageBonusIncreasePerStep: 0
+  RoundDamageBonusIncreaseEveryRounds: 1
+  MaxRoundDamageBonus: 0
   BoardWidth: 5
   BoardHeight: 6
   PreparationCountdownSeconds: 10

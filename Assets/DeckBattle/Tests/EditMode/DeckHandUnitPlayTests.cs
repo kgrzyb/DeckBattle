@@ -21,6 +21,20 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void DrawCards_DoesNotDrawPastMaxHandSize()
+        {
+            BattleState state = CreateState();
+            int beforeDeck = state.Player.Deck.Count;
+            int beforeHand = state.Player.Hand.Count;
+
+            int drawn = DeckService.DrawCards(state.Player, 1, beforeHand);
+
+            Assert.AreEqual(0, drawn);
+            Assert.AreEqual(beforeDeck, state.Player.Deck.Count);
+            Assert.AreEqual(beforeHand, state.Player.Hand.Count);
+        }
+
+        [Test]
         public void PlayUnit_OnLegalTile_SpendsApAndCreatesUnit()
         {
             BattleState state = CreateState();

@@ -8,18 +8,20 @@ namespace DeckBattle
         public int Hp;
         public int Ap;
         public int DeploymentSlots;
+        public int RoundDamageBonus;
         public bool IsReady;
         public readonly List<CardRuntimeState> Deck = new List<CardRuntimeState>(16);
         public readonly List<CardRuntimeState> Hand = new List<CardRuntimeState>(8);
         public readonly List<CardRuntimeState> PlayedCards = new List<CardRuntimeState>(8);
         public readonly List<RuntimeUnit> Units = new List<RuntimeUnit>(8);
 
-        public PlayerBattleState(BattleSide side, int hp, int ap, int deploymentSlots)
+        public PlayerBattleState(BattleSide side, int hp, int ap, int deploymentSlots, int roundDamageBonus)
         {
             Side = side;
             Hp = hp;
             Ap = ap;
             DeploymentSlots = deploymentSlots;
+            RoundDamageBonus = roundDamageBonus;
         }
     }
 }

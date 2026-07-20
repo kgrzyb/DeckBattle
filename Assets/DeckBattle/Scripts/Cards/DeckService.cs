@@ -46,15 +46,16 @@ namespace DeckBattle
             }
         }
 
-        public static int DrawCards(PlayerBattleState player, int count)
+        public static int DrawCards(PlayerBattleState player, int count, int maxHandSize = int.MaxValue)
         {
             if (player == null)
             {
                 throw new ArgumentNullException(nameof(player));
             }
 
+            int safeMaxHandSize = Math.Max(0, maxHandSize);
             int drawn = 0;
-            for (int i = 0; i < count && player.Deck.Count > 0; i++)
+            for (int i = 0; i < count && player.Deck.Count > 0 && player.Hand.Count < safeMaxHandSize; i++)
             {
                 int lastIndex = player.Deck.Count - 1;
                 CardRuntimeState card = player.Deck[lastIndex];
