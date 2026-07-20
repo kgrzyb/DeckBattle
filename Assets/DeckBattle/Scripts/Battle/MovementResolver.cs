@@ -107,7 +107,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                UnitRuntimeState target = TargetSelector.SelectTarget(simulation, unit, workspace.Targeting);
+                UnitRuntimeState target = TargetSelector.SelectTargetOrRetainCurrent(simulation, unit, workspace.Targeting);
                 if (target == null)
                 {
                     if (updateUnitTargets)

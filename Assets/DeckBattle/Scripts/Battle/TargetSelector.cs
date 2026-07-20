@@ -50,6 +50,49 @@ namespace DeckBattle
 
             workspace.Clear();
             FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
+            return SelectNewTarget(simulation, attacker, workspace);
+        }
+
+        public static UnitRuntimeState SelectTargetOrRetainCurrent(BattleSimulation simulation, UnitRuntimeState attacker, Workspace workspace)
+        {
+            if (simulation == null)
+            {
+                throw new ArgumentNullException(nameof(simulation));
+            }
+
+            if (attacker == null)
+            {
+                throw new ArgumentNullException(nameof(attacker));
+            }
+
+            if (workspace == null)
+            {
+                throw new ArgumentNullException(nameof(workspace));
+            }
+
+            if (!attacker.IsAlive)
+            {
+                return null;
+            }
+
+            workspace.Clear();
+            FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
+
+            UnitRuntimeState retainedTarget;
+            if (TryGetReachableCurrentTarget(simulation, attacker, workspace, out retainedTarget))
+            {
+                return retainedTarget;
+            }
+
+            return SelectNewTarget(simulation, attacker, workspace);
+        }
+
+        private static UnitRuntimeState SelectNewTarget(BattleSimulation simulation, UnitRuntimeState attacker, Workspace workspace)
+        {
+            if (!attacker.IsAlive)
+            {
+                return null;
+            }
 
             UnitRuntimeState nearestEnemy = null;
             int nearestEnemyDistance = int.MaxValue;
@@ -100,6 +143,33 @@ namespace DeckBattle
             }
 
             return lowestHpReachable;
+        }
+
+        private static bool TryGetReachableCurrentTarget(
+            BattleSimulation simulation,
+            UnitRuntimeState attacker,
+            Workspace workspace,
+            out UnitRuntimeState target)
+        {
+            target = null;
+            if (attacker.TargetUnitId == UnitRuntimeState.NoTargetUnitId)
+            {
+                return false;
+            }
+
+            if (!simulation.TryGetUnitById(attacker.TargetUnitId, out target) || !IsLiveEnemy(attacker, target))
+            {
+                target = null;
+                return false;
+            }
+
+            if (!HasReachableAttackPosition(simulation, attacker, target, workspace))
+            {
+                target = null;
+                return false;
+            }
+
+            return true;
         }
 
         private static bool IsLiveEnemy(UnitRuntimeState attacker, UnitRuntimeState candidate)

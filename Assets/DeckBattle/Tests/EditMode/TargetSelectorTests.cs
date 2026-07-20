@@ -91,6 +91,56 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void SelectTargetOrRetainCurrent_KeepsReachableCurrentTarget()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            UnitDefinition melee = CreateUnit("melee", 5, 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                board,
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(4, 5)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(0, 1))
+                });
+            simulation.Units[1].CurrentHp = 5;
+            simulation.Units[2].CurrentHp = 1;
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+
+            UnitRuntimeState target = TargetSelector.SelectTargetOrRetainCurrent(
+                simulation,
+                simulation.Units[0],
+                new TargetSelector.Workspace(board.Width * board.Height));
+
+            Assert.AreSame(simulation.Units[1], target);
+        }
+
+        [Test]
+        public void SelectTargetOrRetainCurrent_SelectsNewTarget_WhenCurrentTargetCannotBeReached()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            BlockAttackRing(board, new HexCoord(2, 0), 1);
+
+            UnitDefinition melee = CreateUnit("melee", 5, 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                board,
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 0)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(4, 5))
+                });
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+
+            UnitRuntimeState target = TargetSelector.SelectTargetOrRetainCurrent(
+                simulation,
+                simulation.Units[0],
+                new TargetSelector.Workspace(board.Width * board.Height));
+
+            Assert.AreSame(simulation.Units[2], target);
+        }
+
+        [Test]
         public void SelectTarget_ReturnsNull_WhenNoReachableEnemyExists()
         {
             var board = new HexBoard(5, 6, 1f);

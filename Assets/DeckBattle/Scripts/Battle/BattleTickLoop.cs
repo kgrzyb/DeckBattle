@@ -74,7 +74,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                UnitRuntimeState target = TargetSelector.SelectTarget(simulation, unit, targetWorkspace);
+                UnitRuntimeState target = TargetSelector.SelectTargetOrRetainCurrent(simulation, unit, targetWorkspace);
                 unit.SetTarget(target);
             }
         }

@@ -46,6 +46,27 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void ResolveMovement_ChasesReachableCurrentTarget_WhenAnotherEnemyIsInRange()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(4, 0)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(0, 1))
+                });
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+
+            MovementResolver.ResolveMovement(simulation);
+
+            Assert.AreEqual(2, simulation.Units[0].TargetUnitId);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+        }
+
+        [Test]
         public void ResolveMovement_ResolvesSameHexConflictDeterministically()
         {
             var board = new HexBoard(5, 6, 1f);

@@ -74,6 +74,35 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Tick_DoesNotAttackCloserEnemy_WhenCurrentTargetIsReachable()
+        {
+            UnitDefinition player = CreateUnit("player-melee", 5, 5, 1, 1f);
+            UnitDefinition enemy = CreateUnit("enemy-melee", 5, 1, 1, 1f);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(4, 0)),
+                    new UnitSpawnData(3, enemy, BattleSide.Enemy, new HexCoord(0, 1))
+                });
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[1].AttackCooldownRemaining = 10f;
+            simulation.Units[2].AttackCooldownRemaining = 10f;
+            var loop = new BattleTickLoop(simulation, 1f);
+            var events = new BattleEventQueue();
+
+            BattleTickResult result = loop.Tick(simulation, events);
+
+            Assert.IsFalse(result.BattleEnded);
+            Assert.AreEqual(0, result.Attacks);
+            Assert.AreEqual(2, simulation.Units[0].TargetUnitId);
+            Assert.AreEqual(5, simulation.Units[2].CurrentHp);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+        }
+
+        [Test]
         public void Tick_MultipleUnits_ProducesStableBattleOutcome()
         {
             BattleSimulation simulation = BattleSimulation.Create(
