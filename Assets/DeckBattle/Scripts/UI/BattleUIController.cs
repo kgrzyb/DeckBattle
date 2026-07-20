@@ -40,6 +40,7 @@ namespace DeckBattle
 
         private readonly List<CardView> cardViews = new List<CardView>(8);
         private readonly List<CardRuntimeState> shownHand = new List<CardRuntimeState>(8);
+        private CardRuntimeState selectedCard;
 
         private int shownPlayerHp = int.MinValue;
         private int shownEnemyHp = int.MinValue;
@@ -166,6 +167,19 @@ namespace DeckBattle
             }
         }
 
+        public void SetSelectedCard(CardRuntimeState card)
+        {
+            selectedCard = card;
+            for (int i = 0; i < cardViews.Count; i++)
+            {
+                CardView view = cardViews[i];
+                if (view != null)
+                {
+                    view.SetSelected(card != null && view.Card == card);
+                }
+            }
+        }
+
         private void RefreshHud(BattleState state)
         {
             PlayerBattleState player = state.Player;
@@ -266,6 +280,7 @@ namespace DeckBattle
             }
 
             HideCardDetailsIfMissingFromHand(hand);
+            ClearSelectedCardIfMissingFromHand(hand);
 
             EnsureCardViewCount(hand.Count);
             shownHand.Clear();
@@ -276,12 +291,14 @@ namespace DeckBattle
                 cardViews[i].gameObject.SetActive(active);
                 if (!active)
                 {
+                    cardViews[i].SetSelected(false);
                     continue;
                 }
 
                 CardRuntimeState card = hand[i];
                 shownHand.Add(card);
                 cardViews[i].Bind(card, inputController);
+                cardViews[i].SetSelected(card == selectedCard);
             }
         }
 
@@ -301,6 +318,34 @@ namespace DeckBattle
             }
 
             HideCardDetails();
+        }
+
+        private void ClearSelectedCardIfMissingFromHand(List<CardRuntimeState> hand)
+        {
+            if (selectedCard == null || ContainsCard(hand, selectedCard))
+            {
+                return;
+            }
+
+            SetSelectedCard(null);
+        }
+
+        private static bool ContainsCard(List<CardRuntimeState> hand, CardRuntimeState card)
+        {
+            if (hand == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < hand.Count; i++)
+            {
+                if (hand[i] == card)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool IsSameHand(List<CardRuntimeState> hand)

@@ -12,6 +12,7 @@ namespace DeckBattle
         [SerializeField] private TextMeshProUGUI statsText;
         [SerializeField] private Image background;
         [SerializeField] private Color normalColor = new Color(0.16f, 0.18f, 0.20f, 0.96f);
+        [SerializeField] private Color selectedColor = new Color(0.88f, 0.66f, 0.22f, 0.96f);
         [SerializeField] private Color draggingColor = new Color(0.24f, 0.30f, 0.34f, 0.96f);
         [SerializeField] private float holdToDragSeconds = 0.18f;
         [SerializeField] private float tapMoveThresholdPixels = 18f;
@@ -20,6 +21,7 @@ namespace DeckBattle
         private CardRuntimeState card;
         private bool pointerHeld;
         private bool dragging;
+        private bool selected;
         private int pointerId;
         private Vector2 pointerDownScreenPosition;
         private Vector2 lastScreenPosition;
@@ -56,7 +58,8 @@ namespace DeckBattle
             inputController = sourceInputController;
             dragging = false;
             pointerHeld = false;
-            ApplyColor(normalColor);
+            selected = false;
+            ApplyRestingColor();
 
             UnitDefinition definition = card != null ? card.Definition : null;
             if (nameText != null)
@@ -122,11 +125,20 @@ namespace DeckBattle
             }
             else if (IsTap(eventData.position) && inputController != null)
             {
-                inputController.ShowCardDetails(card);
+                inputController.HandleCardTap(card);
             }
 
             dragging = false;
-            ApplyColor(normalColor);
+            ApplyRestingColor();
+        }
+
+        public void SetSelected(bool isSelected)
+        {
+            selected = isSelected;
+            if (!dragging)
+            {
+                ApplyRestingColor();
+            }
         }
 
         private void BeginDrag(Vector2 screenPosition)
@@ -141,6 +153,11 @@ namespace DeckBattle
             {
                 ApplyColor(draggingColor);
             }
+        }
+
+        private void ApplyRestingColor()
+        {
+            ApplyColor(selected ? selectedColor : normalColor);
         }
 
         private void ApplyColor(Color color)

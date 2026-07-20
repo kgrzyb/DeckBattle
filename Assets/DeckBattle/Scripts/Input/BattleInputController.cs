@@ -9,6 +9,7 @@ namespace DeckBattle
         {
             Idle,
             DraggingCard,
+            SelectedCard,
             SelectedUnit
         }
 
@@ -25,6 +26,7 @@ namespace DeckBattle
         private CardView draggedCardView;
         private HexTileView currentDragTile;
         private bool currentDragTileLegal;
+        private CardRuntimeState selectedCard;
         private RuntimeUnit selectedUnit;
 
         private void Awake()
@@ -32,6 +34,22 @@ namespace DeckBattle
             if (battleCamera == null)
             {
                 battleCamera = Camera.main;
+            }
+        }
+
+        private void OnEnable()
+        {
+            if (battleController != null)
+            {
+                battleController.StateChanged += HandleBattleStateChanged;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (battleController != null)
+            {
+                battleController.StateChanged -= HandleBattleStateChanged;
             }
         }
 
@@ -133,36 +151,65 @@ namespace DeckBattle
             ClearSelection();
         }
 
-        public void ShowCardDetails(CardRuntimeState card)
+        public void HandleCardTap(CardRuntimeState card)
         {
             BattleState state = battleController != null ? battleController.State : null;
-            if (!PreparationTurnService.CanPlayerPrepare(state) || card == null)
+            if (card == null)
             {
                 return;
             }
 
-            ClearSelection();
+            bool canSelectForPlay = PreparationTurnService.CanPlayerPrepare(state);
+            ClearSelection(false);
+
+            selectedCard = card;
+            mode = canSelectForPlay ? InputMode.SelectedCard : InputMode.Idle;
+
             if (uiController != null)
             {
                 uiController.ShowCardDetails(card);
+                uiController.SetSelectedCard(card);
+            }
+
+            if (canSelectForPlay)
+            {
+                HighlightSelectedCardPlayableTiles();
+            }
+            else
+            {
+                BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
+                if (boardPresenter != null)
+                {
+                    boardPresenter.ClearAllHighlights();
+                }
             }
         }
 
         public void HideCardDetails()
         {
-            if (uiController != null)
-            {
-                uiController.HideCardDetails();
-            }
+            ClearSelection();
         }
 
         private void HandleBoardTap(Vector2 screenPosition)
         {
-            HideCardDetails();
+            if (mode == InputMode.SelectedCard && selectedCard != null)
+            {
+                HandleSelectedCardBoardTap(screenPosition);
+                return;
+            }
+
+            if (selectedCard != null)
+            {
+                ClearSelection();
+                return;
+            }
+
+            HideShownCardDetails();
 
             UnitView unitView = RaycastForUnit(screenPosition);
             if (unitView != null && unitView.Unit != null && unitView.Unit.Side == BattleSide.Player)
             {
+                ClearSelection();
                 SelectUnit(unitView.Unit);
                 return;
             }
@@ -200,21 +247,113 @@ namespace DeckBattle
             }
         }
 
-        private void ClearSelection()
+        private void HandleSelectedCardBoardTap(Vector2 screenPosition)
         {
-            HideCardDetails();
+            BattleState state = battleController != null ? battleController.State : null;
+            if (!PreparationTurnService.CanPlayerPrepare(state))
+            {
+                ClearSelection();
+                return;
+            }
+
+            HexTileView tile = RaycastForTile(screenPosition);
+            if (tile == null)
+            {
+                ClearSelection();
+                return;
+            }
+
+            bool played = battleController != null && battleController.TryPlayPlayerCard(selectedCard, tile.Coord);
+            if (played)
+            {
+                ClearSelection();
+                return;
+            }
+
+            HighlightSelectedCardPlayableTiles();
+        }
+
+        private void HighlightSelectedCardPlayableTiles()
+        {
+            BattleState state = battleController != null ? battleController.State : null;
+            BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
+            if (boardPresenter != null)
+            {
+                boardPresenter.HighlightPlayableTiles(state, state != null ? state.Player : null, selectedCard);
+            }
+        }
+
+        private void HandleBattleStateChanged()
+        {
+            BattleState state = battleController != null ? battleController.State : null;
+            if (selectedCard != null && !IsCardInPlayerHand(state, selectedCard))
+            {
+                ClearSelection();
+                return;
+            }
+
+            if (mode == InputMode.SelectedCard && !PreparationTurnService.CanPlayerPrepare(state))
+            {
+                ClearSelection();
+                return;
+            }
+
+            if (mode == InputMode.SelectedCard)
+            {
+                HighlightSelectedCardPlayableTiles();
+            }
+        }
+
+        private bool IsCardInPlayerHand(BattleState state, CardRuntimeState card)
+        {
+            if (state == null || state.Player == null || card == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < state.Player.Hand.Count; i++)
+            {
+                if (state.Player.Hand[i] == card)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void ClearSelection(bool hideCardDetails = true)
+        {
+            if (hideCardDetails)
+            {
+                HideShownCardDetails();
+            }
 
             mode = InputMode.Idle;
             draggedCard = null;
             draggedCardView = null;
             currentDragTile = null;
             currentDragTileLegal = false;
+            selectedCard = null;
             selectedUnit = null;
+
+            if (uiController != null)
+            {
+                uiController.SetSelectedCard(null);
+            }
 
             BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
             if (boardPresenter != null)
             {
                 boardPresenter.ClearAllHighlights();
+            }
+        }
+
+        private void HideShownCardDetails()
+        {
+            if (uiController != null)
+            {
+                uiController.HideCardDetails();
             }
         }
 

@@ -132,6 +132,30 @@ namespace DeckBattle
             }
         }
 
+        public void HighlightPlayableTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
+        {
+            ClearHoverHighlight();
+
+            if (state == null || player == null || selectedCard == null || board == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < tiles.Count; i++)
+            {
+                HexTileView tile = tiles[i];
+                bool legal = UnitPlayService.ValidatePlay(state, player, selectedCard, tile.Coord) == PlayUnitFailReason.None;
+                if (legal)
+                {
+                    tile.SetLegalHighlight();
+                }
+                else
+                {
+                    tile.ClearHighlight();
+                }
+            }
+        }
+
         public void ClearAllHighlights()
         {
             highlightedTile = null;
