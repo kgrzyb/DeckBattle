@@ -32,4 +32,4 @@ MonoBehaviour:
   Projectile: {fileID: 0}
   UnitPrefab: {fileID: 7506552908754966910, guid: b3716b717c4f54541bff7b52c30556e1,
     type: 3}
-  CardArt: {fileID: 0}
+  CardArt: {fileID: 21300000, guid: 16bdca8a69ade9d4490104204728b3c0, type: 3}
