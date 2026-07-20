@@ -1785,11 +1785,11 @@ MonoBehaviour:
   contentRoot: {fileID: 752130577}
   canvasGroup: {fileID: 752130576}
   messageText: {fileID: 1260601832}
-  roundStartFadeInSeconds: 0.18
-  roundStartHoldSeconds: 1
-  roundStartFadeOutSeconds: 0.18
+  roundStartFadeInSeconds: 0.2
+  roundStartHoldSeconds: 0.7
+  roundStartFadeOutSeconds: 0.2
   roundResultFadeInSeconds: 0.16
-  roundResultHoldSeconds: 0.85
+  roundResultHoldSeconds: 1
   roundResultFadeOutSeconds: 0.18
   startScale: 0.88
   shownScale: 1
