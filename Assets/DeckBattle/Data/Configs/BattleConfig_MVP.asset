@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   StartingPlayerHp: 30
   StartingEnemyHp: 30
-  StartingAp: 5
+  StartingAp: 3
   ApIncreasePerStep: 1
   ApIncreaseEveryRounds: 1
   MaxAp: 99
