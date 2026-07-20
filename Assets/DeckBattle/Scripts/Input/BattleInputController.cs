@@ -72,6 +72,7 @@ namespace DeckBattle
 
             if (uiController != null)
             {
+                uiController.ShowCardDetails(card);
                 uiController.ShowCardGhost(card, screenPosition);
             }
 
@@ -126,13 +127,39 @@ namespace DeckBattle
             if (uiController != null)
             {
                 uiController.HideCardGhost();
+                uiController.HideCardDetails();
             }
 
             ClearSelection();
         }
 
+        public void ShowCardDetails(CardRuntimeState card)
+        {
+            BattleState state = battleController != null ? battleController.State : null;
+            if (!PreparationTurnService.CanPlayerPrepare(state) || card == null)
+            {
+                return;
+            }
+
+            ClearSelection();
+            if (uiController != null)
+            {
+                uiController.ShowCardDetails(card);
+            }
+        }
+
+        public void HideCardDetails()
+        {
+            if (uiController != null)
+            {
+                uiController.HideCardDetails();
+            }
+        }
+
         private void HandleBoardTap(Vector2 screenPosition)
         {
+            HideCardDetails();
+
             UnitView unitView = RaycastForUnit(screenPosition);
             if (unitView != null && unitView.Unit != null && unitView.Unit.Side == BattleSide.Player)
             {
@@ -175,6 +202,8 @@ namespace DeckBattle
 
         private void ClearSelection()
         {
+            HideCardDetails();
+
             mode = InputMode.Idle;
             draggedCard = null;
             draggedCardView = null;

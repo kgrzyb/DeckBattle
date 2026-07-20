@@ -14,12 +14,14 @@ namespace DeckBattle
         [SerializeField] private Color normalColor = new Color(0.16f, 0.18f, 0.20f, 0.96f);
         [SerializeField] private Color draggingColor = new Color(0.24f, 0.30f, 0.34f, 0.96f);
         [SerializeField] private float holdToDragSeconds = 0.18f;
+        [SerializeField] private float tapMoveThresholdPixels = 18f;
 
         private BattleInputController inputController;
         private CardRuntimeState card;
         private bool pointerHeld;
         private bool dragging;
         private int pointerId;
+        private Vector2 pointerDownScreenPosition;
         private Vector2 lastScreenPosition;
         private float pointerDownTime;
 
@@ -81,6 +83,7 @@ namespace DeckBattle
             dragging = false;
             pointerId = eventData.pointerId;
             pointerDownTime = Time.unscaledTime;
+            pointerDownScreenPosition = eventData.position;
             lastScreenPosition = eventData.position;
         }
 
@@ -117,6 +120,10 @@ namespace DeckBattle
             {
                 inputController.EndCardDrag(this, lastScreenPosition);
             }
+            else if (IsTap(eventData.position) && inputController != null)
+            {
+                inputController.ShowCardDetails(card);
+            }
 
             dragging = false;
             ApplyColor(normalColor);
@@ -142,6 +149,12 @@ namespace DeckBattle
             {
                 background.color = color;
             }
+        }
+
+        private bool IsTap(Vector2 pointerUpPosition)
+        {
+            float threshold = tapMoveThresholdPixels * tapMoveThresholdPixels;
+            return (pointerUpPosition - pointerDownScreenPosition).sqrMagnitude <= threshold;
         }
     }
 }

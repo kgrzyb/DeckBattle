@@ -29,6 +29,9 @@ namespace DeckBattle
         [SerializeField] private RectTransform handRoot;
         [SerializeField] private CardView cardViewPrefab;
 
+        [Header("Card Details")]
+        [SerializeField] private CardDetailsPopupView cardDetailsPopup;
+
         [Header("Drag Ghost")]
         [SerializeField] private RectTransform cardGhostRoot;
         [SerializeField] private TextMeshProUGUI ghostNameText;
@@ -64,6 +67,7 @@ namespace DeckBattle
             }
 
             HideCardGhost();
+            HideCardDetails();
         }
 
         private void OnEnable()
@@ -143,6 +147,22 @@ namespace DeckBattle
             if (cardGhostRoot != null)
             {
                 cardGhostRoot.gameObject.SetActive(false);
+            }
+        }
+
+        public void ShowCardDetails(CardRuntimeState card)
+        {
+            if (cardDetailsPopup != null)
+            {
+                cardDetailsPopup.Show(card);
+            }
+        }
+
+        public void HideCardDetails()
+        {
+            if (cardDetailsPopup != null)
+            {
+                cardDetailsPopup.Hide();
             }
         }
 
@@ -245,6 +265,8 @@ namespace DeckBattle
                 return;
             }
 
+            HideCardDetailsIfMissingFromHand(hand);
+
             EnsureCardViewCount(hand.Count);
             shownHand.Clear();
 
@@ -261,6 +283,24 @@ namespace DeckBattle
                 shownHand.Add(card);
                 cardViews[i].Bind(card, inputController);
             }
+        }
+
+        private void HideCardDetailsIfMissingFromHand(List<CardRuntimeState> hand)
+        {
+            if (cardDetailsPopup == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < hand.Count; i++)
+            {
+                if (cardDetailsPopup.IsShownFor(hand[i]))
+                {
+                    return;
+                }
+            }
+
+            HideCardDetails();
         }
 
         private bool IsSameHand(List<CardRuntimeState> hand)
