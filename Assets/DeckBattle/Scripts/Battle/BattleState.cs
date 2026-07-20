@@ -66,6 +66,29 @@ namespace DeckBattle
             return side == BattleSide.Player ? Player : Enemy;
         }
 
+        public void BeginRoundStart()
+        {
+            if (Phase != BattlePhase.Preparation)
+            {
+                throw new InvalidOperationException("Round start can only be entered before preparation.");
+            }
+
+            StopPreparationCountdown();
+            Phase = BattlePhase.RoundStart;
+        }
+
+        public void BeginPreparationAfterRoundStart()
+        {
+            if (Phase != BattlePhase.RoundStart)
+            {
+                throw new InvalidOperationException("Preparation can only begin after round start.");
+            }
+
+            Phase = BattlePhase.Preparation;
+            ActivePreparationSide = BattleSide.Player;
+            PreparationTurnService.EnsureActiveSideCanAct(this);
+        }
+
         public void StartNextRound()
         {
             if (Phase != BattlePhase.RoundResolution)
@@ -80,9 +103,6 @@ namespace DeckBattle
 
             PreparePlayerForNextRound(Player);
             PreparePlayerForNextRound(Enemy);
-
-            Phase = BattlePhase.Preparation;
-            PreparationTurnService.EnsureActiveSideCanAct(this);
         }
 
         public int AllocateRuntimeUnitId()

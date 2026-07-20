@@ -38,7 +38,7 @@ namespace DeckBattle.Tests
             Assert.IsFalse(round.MatchEnded);
             Assert.AreEqual(4, round.PlayerDamageDealt);
             Assert.AreEqual(0, round.EnemyDamageDealt);
-            Assert.AreEqual(BattlePhase.Preparation, state.Phase);
+            Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
             Assert.AreEqual(new HexCoord(0, 0), playerUnit.BattleCoord);
             Assert.IsFalse(playerUnit.IsDefeated);
         }

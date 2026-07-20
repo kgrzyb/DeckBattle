@@ -104,7 +104,7 @@ namespace DeckBattle.Tests
 
             Assert.IsFalse(result.MatchEnded);
             Assert.AreEqual(2, state.RoundNumber);
-            Assert.AreEqual(BattlePhase.Preparation, state.Phase);
+            Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
             Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
             Assert.AreEqual(4, state.Player.Ap);
             Assert.AreEqual(4, state.Enemy.Ap);
@@ -120,6 +120,11 @@ namespace DeckBattle.Tests
             Assert.AreEqual(enemyUnit.Definition.MaxHp, enemyUnit.CurrentHp);
             Assert.AreEqual(enemyUnit.FormationCoord, enemyUnit.BattleCoord);
             Assert.IsFalse(enemyUnit.IsDefeated);
+
+            state.BeginPreparationAfterRoundStart();
+
+            Assert.AreEqual(BattlePhase.Preparation, state.Phase);
+            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
         }
 
         [Test]
@@ -150,6 +155,8 @@ namespace DeckBattle.Tests
             AdvanceRound(state);
 
             Assert.AreEqual(2, state.RoundNumber);
+            Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
+            state.BeginPreparationAfterRoundStart();
             Assert.AreEqual(2, state.Player.Ap);
             Assert.AreEqual(2, state.Player.DeploymentSlots);
             Assert.AreEqual(1, state.Player.RoundDamageBonus);
@@ -157,6 +164,8 @@ namespace DeckBattle.Tests
             AdvanceRound(state);
 
             Assert.AreEqual(3, state.RoundNumber);
+            Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
+            state.BeginPreparationAfterRoundStart();
             Assert.AreEqual(4, state.Player.Ap);
             Assert.AreEqual(3, state.Player.DeploymentSlots);
             Assert.AreEqual(1, state.Player.RoundDamageBonus);
@@ -164,6 +173,7 @@ namespace DeckBattle.Tests
             AdvanceRound(state);
 
             Assert.AreEqual(4, state.RoundNumber);
+            Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
             Assert.AreEqual(4, state.Player.Ap);
             Assert.AreEqual(3, state.Player.DeploymentSlots);
             Assert.AreEqual(4, state.Player.RoundDamageBonus);

@@ -96,7 +96,7 @@ namespace DeckBattle.Tests
             RoundResolutionResult result = RoundFlowService.ResolveRoundAndStartNext(state);
 
             Assert.IsFalse(result.MatchEnded);
-            Assert.AreEqual(BattlePhase.Preparation, state.Phase);
+            Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
             Assert.AreEqual(playerDefinition.MaxHp, playerUnit.CurrentHp);
             Assert.AreEqual(new HexCoord(0, 0), playerUnit.BattleCoord);
             Assert.AreEqual(new HexCoord(0, 0), playerUnit.FormationCoord);

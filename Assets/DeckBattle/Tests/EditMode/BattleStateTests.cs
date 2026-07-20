@@ -46,6 +46,22 @@ namespace DeckBattle.Tests
             Assert.AreEqual(3, state.Enemy.Deck.Count);
         }
 
+        [Test]
+        public void BeginRoundStartAndPreparationAfterRoundStart_GatesPreparationExplicitly()
+        {
+            BattleConfig config = TestDefinitions.CreateConfig();
+            BattleState state = BattleState.Create(config, CreateDeck(1), CreateDeck(1), 123);
+
+            state.BeginRoundStart();
+
+            Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
+
+            state.BeginPreparationAfterRoundStart();
+
+            Assert.AreEqual(BattlePhase.Preparation, state.Phase);
+            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
+        }
+
         private static List<UnitDefinition> CreateDeck(int count)
         {
             var deck = new List<UnitDefinition>(count);
