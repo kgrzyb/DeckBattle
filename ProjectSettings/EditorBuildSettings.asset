@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/DeckBattle/Scenes/MainMenu.unity
+    guid: cfc6194f90bc3d84a8ccbff98c1d42e9
+  - enabled: 1
     path: Assets/DeckBattle/Scenes/Battle.unity
     guid: 8b7632357aeb30f42b38688a9c33dc57
   m_configObjects: {}
