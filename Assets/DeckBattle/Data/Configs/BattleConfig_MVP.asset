@@ -17,18 +17,18 @@ MonoBehaviour:
   StartingAp: 5
   ApIncreasePerStep: 1
   ApIncreaseEveryRounds: 1
-  MaxAp: 8
+  MaxAp: 99
   StartingHandSize: 3
   MaxHandSize: 5
   DrawPerRound: 2
-  StartingDeploymentSlots: 3
+  StartingDeploymentSlots: 2
   DeploymentSlotIncreasePerStep: 1
-  MaxDeploymentSlots: 7
+  MaxDeploymentSlots: 6
   DeploymentSlotIncreaseEveryRounds: 1
-  StartingRoundDamageBonus: 0
-  RoundDamageBonusIncreasePerStep: 0
+  StartingRoundDamageBonus: 1
+  RoundDamageBonusIncreasePerStep: 1
   RoundDamageBonusIncreaseEveryRounds: 1
-  MaxRoundDamageBonus: 0
+  MaxRoundDamageBonus: 99
   BoardWidth: 5
   BoardHeight: 6
   PreparationCountdownSeconds: 10
