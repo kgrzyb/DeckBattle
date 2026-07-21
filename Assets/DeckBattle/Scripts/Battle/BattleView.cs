@@ -373,10 +373,18 @@ namespace DeckBattle
                     attackerView.FaceWorldPosition(boardPresenter.GetWorldPosition(target.CurrentHex));
                 }
 
-                attackerView.PlayAttack();
                 UnitRuntimeState attacker;
                 if (simulation.TryGetUnitById(battleEvent.UnitId, out attacker))
                 {
+                    if (attacker.Definition != null && attacker.Definition.UnitType == UnitType.Melee)
+                    {
+                        attackerView.PlayMeleeAttack();
+                    }
+                    else
+                    {
+                        attackerView.PlayAttack();
+                    }
+
                     SpawnEffect(attackEffectPrefab, boardPresenter.GetWorldPosition(attacker.CurrentHex), activeAttackEffects, pooledAttackEffects);
                 }
             }

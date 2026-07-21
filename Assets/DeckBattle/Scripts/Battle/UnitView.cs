@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 namespace DeckBattle
@@ -10,6 +11,9 @@ namespace DeckBattle
         [SerializeField] private Transform modelRoot;
         [SerializeField] private float groundOffset = 0.65f;
         [SerializeField] private float attackPulseDuration = 0.14f;
+        [SerializeField] private float meleeAttackDuration = 0.3f;
+        [SerializeField] private float meleeAttackLeanBackAngle = -7f;
+        [SerializeField] private float meleeAttackStrikeAngle = 14f;
         [SerializeField] private float damageFlashDuration = 0.12f;
         [SerializeField] private float deathDuration = 0.25f;
         [SerializeField] private float deathSinkDistance = 0.25f;
@@ -39,6 +43,7 @@ namespace DeckBattle
         private int queuedMoveCount;
         private bool isMoving;
         private bool isDying;
+        private Sequence meleeAttackSequence;
 
         private void Awake()
         {
@@ -62,6 +67,16 @@ namespace DeckBattle
             float deltaTime = Time.deltaTime;
             UpdateMovement(deltaTime);
             UpdateVisualTimers(deltaTime);
+        }
+
+        private void OnDisable()
+        {
+            KillMeleeAttackSequence();
+        }
+
+        private void OnDestroy()
+        {
+            KillMeleeAttackSequence();
         }
 
         public void Bind(RuntimeUnit unit, Vector3 worldPosition)
@@ -114,6 +129,28 @@ namespace DeckBattle
             attackTimer = Mathf.Max(attackPulseDuration, 0.01f);
         }
 
+        public void PlayMeleeAttack()
+        {
+            if (modelRoot == null)
+            {
+                return;
+            }
+
+            KillMeleeAttackSequence();
+
+            Quaternion startRotation = modelRoot.localRotation;
+            Quaternion leanBackRotation = startRotation * Quaternion.Euler(meleeAttackLeanBackAngle, 0f, 0f);
+            Quaternion strikeRotation = startRotation * Quaternion.Euler(meleeAttackStrikeAngle, 0f, 0f);
+            float duration = Mathf.Max(0.01f, meleeAttackDuration);
+
+            meleeAttackSequence = DOTween.Sequence()
+                .SetTarget(modelRoot)
+                .Append(modelRoot.DOLocalRotateQuaternion(leanBackRotation, duration * 0.25f).SetEase(Ease.OutQuad))
+                .Append(modelRoot.DOLocalRotateQuaternion(strikeRotation, duration * 0.35f).SetEase(Ease.InQuad))
+                .Append(modelRoot.DOLocalRotateQuaternion(startRotation, duration * 0.4f).SetEase(Ease.OutQuad))
+                .OnKill(() => meleeAttackSequence = null);
+        }
+
         public void FaceWorldPosition(Vector3 worldPosition)
         {
             if (modelRoot == null)
@@ -144,6 +181,7 @@ namespace DeckBattle
                 return;
             }
 
+            KillMeleeAttackSequence();
             isDying = true;
             deathTimer = Mathf.Max(deathDuration, 0.01f);
             deathStartPosition = transform.position;
@@ -177,6 +215,7 @@ namespace DeckBattle
             attackTimer = 0f;
             damageTimer = 0f;
             deathTimer = 0f;
+            KillMeleeAttackSequence();
             if (modelRoot != null)
             {
                 modelRoot.localScale = baseModelScale;
@@ -273,6 +312,7 @@ namespace DeckBattle
 
                 if (deathTimer <= 0f)
                 {
+                    KillMeleeAttackSequence();
                     gameObject.SetActive(false);
                     return;
                 }
@@ -294,6 +334,17 @@ namespace DeckBattle
         {
             string displayName = definition != null ? definition.DisplayName : "Unknown";
             return side + "_Unit_" + runtimeId + "_" + displayName;
+        }
+
+        private void KillMeleeAttackSequence()
+        {
+            if (meleeAttackSequence == null)
+            {
+                return;
+            }
+
+            meleeAttackSequence.Kill();
+            meleeAttackSequence = null;
         }
     }
 }

@@ -124,6 +124,9 @@ MonoBehaviour:
   modelRoot: {fileID: 0}
   groundOffset: 0.65
   attackPulseDuration: 0.14
+  meleeAttackDuration: 0.3
+  meleeAttackLeanBackAngle: -7
+  meleeAttackStrikeAngle: 14
   damageFlashDuration: 0.12
   deathDuration: 0.25
   deathSinkDistance: 0.25
