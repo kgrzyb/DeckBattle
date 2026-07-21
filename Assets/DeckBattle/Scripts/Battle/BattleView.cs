@@ -272,6 +272,7 @@ namespace DeckBattle
                 lastTickResult = result;
                 debugSnapshot.Capture(simulation, eventQueue.Events);
                 ProcessEvents(eventQueue.Events);
+                FaceIdleUnitsTowardTargets();
                 if (TickProcessed != null)
                 {
                     TickProcessed.Invoke(result, ticksElapsed);
@@ -332,6 +333,41 @@ namespace DeckBattle
                         HandleProjectileLaunched(battleEvent);
                         break;
                 }
+            }
+        }
+
+        private void FaceIdleUnitsTowardTargets()
+        {
+            if (simulation == null || boardPresenter == null)
+            {
+                return;
+            }
+
+            IReadOnlyList<UnitRuntimeState> units = simulation.Units;
+            for (int i = 0; i < units.Count; i++)
+            {
+                UnitRuntimeState unit = units[i];
+                if (unit == null
+                    || !unit.IsAlive
+                    || unit.IsMoving
+                    || unit.TargetUnitId == UnitRuntimeState.NoTargetUnitId)
+                {
+                    continue;
+                }
+
+                UnitRuntimeState target;
+                if (!simulation.TryGetUnitById(unit.TargetUnitId, out target) || target == null || !target.IsAlive)
+                {
+                    continue;
+                }
+
+                UnitView view;
+                if (!unitViewByUnitId.TryGetValue(unit.UnitId, out view) || view == null)
+                {
+                    continue;
+                }
+
+                view.FaceWorldPosition(boardPresenter.GetWorldPosition(target.CurrentHex));
             }
         }
 

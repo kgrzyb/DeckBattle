@@ -47,14 +47,18 @@ namespace DeckBattle
 
         private void Awake()
         {
-            if (meshRenderer == null)
-            {
-                meshRenderer = GetComponentInChildren<MeshRenderer>();
-            }
-
             if (modelRoot == null)
             {
-                modelRoot = transform;
+                modelRoot = transform.childCount > 0 ? transform.GetChild(0) : transform;
+            }
+
+            if (meshRenderer == null || meshRenderer.sharedMaterial == null)
+            {
+                meshRenderer = modelRoot.GetComponentInChildren<MeshRenderer>();
+                if (meshRenderer == null)
+                {
+                    meshRenderer = GetComponentInChildren<MeshRenderer>();
+                }
             }
 
             baseModelScale = modelRoot.localScale;
@@ -253,6 +257,7 @@ namespace DeckBattle
             moveTo = target;
             moveElapsed = 0f;
             moveDuration = duration;
+            KillMeleeAttackSequence();
             FaceWorldPosition(target);
             isMoving = true;
         }

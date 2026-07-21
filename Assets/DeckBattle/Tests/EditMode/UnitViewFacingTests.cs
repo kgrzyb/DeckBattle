@@ -54,6 +54,52 @@ namespace DeckBattle.Tests
             }
         }
 
+        [Test]
+        public void FaceWorldPosition_WhenModelRootNotAssigned_RotatesChildModel()
+        {
+            GameObject unitObject = new GameObject("Unit", typeof(UnitView));
+            GameObject modelObject = new GameObject("Model");
+            try
+            {
+                modelObject.transform.SetParent(unitObject.transform);
+                UnitView view = unitObject.GetComponent<UnitView>();
+                InvokePrivateMethod(view, "Awake");
+
+                unitObject.transform.position = Vector3.zero;
+                view.FaceWorldPosition(new Vector3(1f, 0f, 0f));
+
+                Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.right), Is.GreaterThan(0.999f));
+                Assert.That(Quaternion.Angle(Quaternion.identity, unitObject.transform.rotation), Is.LessThan(0.01f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(unitObject);
+            }
+        }
+
+        [Test]
+        public void MoveToWorldPosition_RotatesModelTowardMovementTarget()
+        {
+            GameObject unitObject = new GameObject("Unit", typeof(UnitView));
+            GameObject modelObject = new GameObject("Model");
+            try
+            {
+                modelObject.transform.SetParent(unitObject.transform);
+                UnitView view = unitObject.GetComponent<UnitView>();
+                SetPrivateField(view, "modelRoot", modelObject.transform);
+                InvokePrivateMethod(view, "Awake");
+
+                view.SetWorldPosition(Vector3.zero);
+                view.MoveToWorldPosition(new Vector3(0f, 0f, 1f), 0.25f);
+
+                Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.forward), Is.GreaterThan(0.999f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(unitObject);
+            }
+        }
+
         private static void SetPrivateField(object target, string fieldName, object value)
         {
             target.GetType()
