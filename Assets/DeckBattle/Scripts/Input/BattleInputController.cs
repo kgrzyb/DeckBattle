@@ -25,6 +25,7 @@ namespace DeckBattle
         private CardRuntimeState draggedCard;
         private CardView draggedCardView;
         private HexTileView currentDragTile;
+        private RuntimeUnit currentDragSpellTargetUnit;
         private bool currentDragTileLegal;
         private CardRuntimeState selectedCard;
         private RuntimeUnit selectedUnit;
@@ -78,7 +79,7 @@ namespace DeckBattle
         public bool BeginCardDrag(CardView cardView, CardRuntimeState card, Vector2 screenPosition)
         {
             BattleState state = battleController != null ? battleController.State : null;
-            if (!PreparationTurnService.CanPlayerPrepare(state) || card == null)
+            if (!CanPreparePlayableCard(state, card))
             {
                 return false;
             }
@@ -112,19 +113,30 @@ namespace DeckBattle
 
             HexTileView tile = RaycastForTile(screenPosition);
             bool legal = false;
+            RuntimeUnit spellTargetUnit = null;
             BattleState state = battleController != null ? battleController.State : null;
             if (tile != null && state != null)
             {
-                legal = UnitPlayService.ValidatePlay(state, state.Player, draggedCard, tile.Coord) == PlayUnitFailReason.None;
+                legal = IsCardDragTargetLegal(state, draggedCard, tile, out spellTargetUnit);
             }
 
             currentDragTile = tile;
+            currentDragSpellTargetUnit = spellTargetUnit;
             currentDragTileLegal = legal;
 
             BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
             if (boardPresenter != null)
             {
-                boardPresenter.HighlightSingleTile(tile, legal);
+                if (draggedCard != null
+                    && draggedCard.SpellDefinition != null
+                    && draggedCard.SpellDefinition.TargetingKind == SpellTargetingKind.None)
+                {
+                    boardPresenter.ClearHoverHighlight();
+                }
+                else
+                {
+                    boardPresenter.HighlightSingleTile(tile, legal);
+                }
             }
         }
 
@@ -139,7 +151,7 @@ namespace DeckBattle
 
             if (currentDragTile != null && currentDragTileLegal && battleController != null)
             {
-                battleController.TryPlayPlayerCard(draggedCard, currentDragTile.Coord);
+                PlayDraggedCard();
             }
 
             if (uiController != null)
@@ -159,7 +171,7 @@ namespace DeckBattle
                 return;
             }
 
-            bool canSelectForPlay = PreparationTurnService.CanPlayerPrepare(state);
+            bool canSelectForPlay = CanPreparePlayableCard(state, card);
             ClearSelection(false);
 
             selectedCard = card;
@@ -263,7 +275,7 @@ namespace DeckBattle
                 return;
             }
 
-            bool played = battleController != null && battleController.TryPlayPlayerCard(selectedCard, tile.Coord);
+            bool played = TryPlaySelectedCardAtTile(state, tile);
             if (played)
             {
                 ClearSelection();
@@ -279,8 +291,124 @@ namespace DeckBattle
             BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
             if (boardPresenter != null)
             {
-                boardPresenter.HighlightPlayableTiles(state, state != null ? state.Player : null, selectedCard);
+                boardPresenter.HighlightCardPlayableTiles(state, state != null ? state.Player : null, selectedCard);
             }
+        }
+
+        private bool TryPlaySelectedCardAtTile(BattleState state, HexTileView tile)
+        {
+            if (battleController == null || state == null || tile == null || selectedCard == null)
+            {
+                return false;
+            }
+
+            if (selectedCard.UnitDefinition != null && selectedCard.Definition.CardKind == CardKind.Unit)
+            {
+                return battleController.TryPlayPlayerCard(selectedCard, tile.Coord);
+            }
+
+            SpellDefinition spellDefinition = selectedCard.SpellDefinition;
+            if (spellDefinition == null || selectedCard.Definition.CardKind != CardKind.Spell)
+            {
+                return false;
+            }
+
+            if (spellDefinition.TargetingKind == SpellTargetingKind.None)
+            {
+                return battleController.TryPlayPlayerSpell(selectedCard, SpellTarget.None());
+            }
+
+            if (spellDefinition.TargetingKind == SpellTargetingKind.FriendlyUnit)
+            {
+                RuntimeUnit unit;
+                if (!SpellTargetingUtility.TryFindFriendlyUnitAtCoord(state.Player, tile.Coord, out unit))
+                {
+                    return false;
+                }
+
+                return battleController.TryPlayPlayerSpell(selectedCard, SpellTarget.ForUnit(unit));
+            }
+
+            return false;
+        }
+
+        private void PlayDraggedCard()
+        {
+            if (battleController == null || draggedCard == null || currentDragTile == null)
+            {
+                return;
+            }
+
+            if (draggedCard.UnitDefinition != null && draggedCard.Definition.CardKind == CardKind.Unit)
+            {
+                battleController.TryPlayPlayerCard(draggedCard, currentDragTile.Coord);
+                return;
+            }
+
+            SpellDefinition spellDefinition = draggedCard.SpellDefinition;
+            if (spellDefinition == null || draggedCard.Definition.CardKind != CardKind.Spell)
+            {
+                return;
+            }
+
+            if (spellDefinition.TargetingKind == SpellTargetingKind.None)
+            {
+                battleController.TryPlayPlayerSpell(draggedCard, SpellTarget.None());
+                return;
+            }
+
+            if (spellDefinition.TargetingKind == SpellTargetingKind.FriendlyUnit && currentDragSpellTargetUnit != null)
+            {
+                battleController.TryPlayPlayerSpell(draggedCard, SpellTarget.ForUnit(currentDragSpellTargetUnit));
+            }
+        }
+
+        private static bool IsCardDragTargetLegal(BattleState state, CardRuntimeState card, HexTileView tile, out RuntimeUnit spellTargetUnit)
+        {
+            spellTargetUnit = null;
+            if (state == null || state.Player == null || card == null || tile == null)
+            {
+                return false;
+            }
+
+            if (card.UnitDefinition != null && card.Definition.CardKind == CardKind.Unit)
+            {
+                return UnitPlayService.ValidatePlay(state, state.Player, card, tile.Coord) == PlayUnitFailReason.None;
+            }
+
+            SpellDefinition spellDefinition = card.SpellDefinition;
+            if (spellDefinition == null || card.Definition.CardKind != CardKind.Spell)
+            {
+                return false;
+            }
+
+            if (spellDefinition.TargetingKind == SpellTargetingKind.None)
+            {
+                return SpellPlayService.ValidatePlay(state, state.Player, card, SpellTarget.None()) == PlaySpellFailReason.None;
+            }
+
+            if (spellDefinition.TargetingKind == SpellTargetingKind.FriendlyUnit)
+            {
+                if (!SpellTargetingUtility.TryFindFriendlyUnitAtCoord(state.Player, tile.Coord, out spellTargetUnit))
+                {
+                    return false;
+                }
+
+                return SpellPlayService.ValidatePlay(state, state.Player, card, SpellTarget.ForUnit(spellTargetUnit)) == PlaySpellFailReason.None;
+            }
+
+            return false;
+        }
+
+        private static bool CanPreparePlayableCard(BattleState state, CardRuntimeState card)
+        {
+            PlayerBattleState player = state != null ? state.Player : null;
+            return PreparationTurnService.CanPlayerPrepare(state)
+                && card != null
+                && card.Definition != null
+                && HandService.IsInHand(player, card)
+                && ((card.Definition.CardKind == CardKind.Unit && card.UnitDefinition != null)
+                    || (card.Definition.CardKind == CardKind.Spell && card.SpellDefinition != null));
         }
 
         private void HandleBattleStateChanged()
@@ -333,6 +461,7 @@ namespace DeckBattle
             draggedCard = null;
             draggedCardView = null;
             currentDragTile = null;
+            currentDragSpellTargetUnit = null;
             currentDragTileLegal = false;
             selectedCard = null;
             selectedUnit = null;

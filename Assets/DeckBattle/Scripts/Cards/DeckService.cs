@@ -5,7 +5,7 @@ namespace DeckBattle
 {
     public static class DeckService
     {
-        public static void CreateDeck(IList<UnitDefinition> definitions, IList<CardRuntimeState> targetDeck, ref int nextRuntimeCardId)
+        public static void CreateDeck(IReadOnlyList<CardDefinition> definitions, IList<CardRuntimeState> targetDeck, ref int nextRuntimeCardId)
         {
             if (definitions == null)
             {
@@ -14,7 +14,7 @@ namespace DeckBattle
 
             for (int i = 0; i < definitions.Count; i++)
             {
-                UnitDefinition definition = definitions[i];
+                CardDefinition definition = definitions[i];
                 if (definition == null)
                 {
                     continue;

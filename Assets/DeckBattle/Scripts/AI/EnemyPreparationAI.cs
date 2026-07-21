@@ -71,6 +71,11 @@ namespace DeckBattle
             for (int cardIndex = 0; cardIndex < enemy.Hand.Count; cardIndex++)
             {
                 CardRuntimeState card = enemy.Hand[cardIndex];
+                if (card == null || card.UnitDefinition == null)
+                {
+                    continue;
+                }
+
                 if (TryFindCoordForCard(battleState, card, out selectedCoord))
                 {
                     selectedCard = card;
@@ -85,11 +90,18 @@ namespace DeckBattle
 
         private static bool TryFindCoordForCard(BattleState battleState, CardRuntimeState card, out HexCoord selectedCoord)
         {
+            UnitDefinition unitDefinition = card != null ? card.UnitDefinition : null;
+            if (unitDefinition == null)
+            {
+                selectedCoord = default(HexCoord);
+                return false;
+            }
+
             int deploymentRows = battleState.Board.Height / 2;
             int minRow = battleState.Board.Height - deploymentRows;
             int maxRow = battleState.Board.Height - 1;
 
-            bool frontToBack = card.Definition.UnitType == UnitType.Melee;
+            bool frontToBack = unitDefinition.UnitType == UnitType.Melee;
             for (int rowStep = 0; rowStep < deploymentRows; rowStep++)
             {
                 int row = frontToBack ? minRow + rowStep : maxRow - rowStep;

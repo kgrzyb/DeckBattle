@@ -10,6 +10,16 @@ namespace DeckBattle
             DeterministicRandom rng,
             out bool isCritical)
         {
+            return CalculateDamage(attacker, target, 0, rng, out isCritical);
+        }
+
+        public static int CalculateDamage(
+            UnitDefinition attacker,
+            UnitDefinition target,
+            int attackBonus,
+            DeterministicRandom rng,
+            out bool isCritical)
+        {
             if (attacker == null)
             {
                 throw new ArgumentNullException(nameof(attacker));
@@ -23,7 +33,7 @@ namespace DeckBattle
             isCritical = RollCritical(attacker, rng);
             float armorPenetration = ClampPercentage(attacker.ArmorPenetration);
             float effectiveArmor = ClampPercentage(target.Armor) * (1f - armorPenetration / 100f);
-            float damageAfterArmor = Math.Max(0, attacker.Attack) * (1f - effectiveArmor / 100f);
+            float damageAfterArmor = Math.Max(0, attacker.Attack + Math.Max(0, attackBonus)) * (1f - effectiveArmor / 100f);
             if (isCritical)
             {
                 damageAfterArmor *= Math.Max(1f, attacker.CritMultiplier);

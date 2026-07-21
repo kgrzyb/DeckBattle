@@ -33,7 +33,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                spawnData.Add(new UnitSpawnData(unit.RuntimeId, unit.Definition, unit.Side, unit.BattleCoord));
+                spawnData.Add(new UnitSpawnData(unit.RuntimeId, unit.Definition, unit.Side, unit.BattleCoord, unit.AttackBonusNextCombat));
             }
         }
     }

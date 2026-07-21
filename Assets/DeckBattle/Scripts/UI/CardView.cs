@@ -61,7 +61,7 @@ namespace DeckBattle
             selected = false;
             ApplyRestingColor();
 
-            UnitDefinition definition = card != null ? card.Definition : null;
+            CardDefinition definition = card != null ? card.Definition : null;
             if (nameText != null)
             {
                 nameText.text = definition != null ? definition.DisplayName : string.Empty;
@@ -74,9 +74,12 @@ namespace DeckBattle
 
             if (statsText != null)
             {
-                statsText.text = definition != null
-                    ? "HP " + definition.MaxHp + " / ATK " + definition.Attack + " / RNG " + definition.AttackRange
-                    : string.Empty;
+                UnitDefinition unitDefinition = card != null ? card.UnitDefinition : null;
+                SpellDefinition spellDefinition = card != null ? card.SpellDefinition : null;
+                statsText.text = unitDefinition != null
+                    ? "HP " + unitDefinition.MaxHp + " / ATK " + unitDefinition.Attack + " / RNG " + unitDefinition.AttackRange
+                    : spellDefinition != null ? spellDefinition.EffectKind + " " + spellDefinition.Amount
+                    : definition != null ? definition.CardKind.ToString() : string.Empty;
             }
         }
 

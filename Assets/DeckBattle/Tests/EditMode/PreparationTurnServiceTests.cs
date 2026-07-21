@@ -117,6 +117,19 @@ namespace DeckBattle.Tests
             Assert.AreEqual(BattlePhase.Combat, state.Phase);
         }
 
+        [Test]
+        public void CanPlayAnyUnit_IgnoresNonUnitCards()
+        {
+            BattleState state = CreateState();
+            state.Player.Hand.Clear();
+            CardDefinition definition = TestDefinitions.CreateSpell("firebolt", 0);
+            var card = new CardRuntimeState(90, definition);
+            card.Location = CardLocation.Hand;
+            state.Player.Hand.Add(card);
+
+            Assert.IsFalse(PreparationTurnService.CanPlayAnyUnit(state, state.Player));
+        }
+
         private static BattleState CreateState()
         {
             BattleConfig config = TestDefinitions.CreateConfig();

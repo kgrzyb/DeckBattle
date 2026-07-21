@@ -57,7 +57,9 @@ namespace DeckBattle
                 }
 
                 bool isCritical;
-                int damage = DamageCalculator.CalculateDamage(attacker.Definition, target.Definition, simulation.Random, out isCritical);
+                int attackBonus = attacker.AttackBonusNextCombat;
+                int damage = DamageCalculator.CalculateDamage(attacker.Definition, target.Definition, attackBonus, simulation.Random, out isCritical);
+                attacker.AttackBonusNextCombat = 0;
                 if (eventQueue != null)
                 {
                     eventQueue.Enqueue(BattleEvent.UnitAttackStarted(attacker.UnitId, target.UnitId));

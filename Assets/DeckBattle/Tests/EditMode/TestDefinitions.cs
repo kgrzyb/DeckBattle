@@ -61,6 +61,24 @@ namespace DeckBattle.Tests
             return unit;
         }
 
+        public static SpellDefinition CreateSpell(
+            string cardId,
+            int apCost,
+            SpellEffectKind effectKind = SpellEffectKind.BuffAttackNextCombat,
+            SpellTargetingKind targetingKind = SpellTargetingKind.FriendlyUnit,
+            int amount = 1)
+        {
+            SpellDefinition spell = Track(ScriptableObject.CreateInstance<SpellDefinition>());
+            spell.CardId = cardId;
+            spell.DisplayName = cardId;
+            spell.Rarity = UnitRarity.Common;
+            spell.ApCost = apCost;
+            spell.EffectKind = effectKind;
+            spell.TargetingKind = targetingKind;
+            spell.Amount = amount;
+            return spell;
+        }
+
         public static T Track<T>(T createdObject) where T : Object
         {
             if (createdObject != null)

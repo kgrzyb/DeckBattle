@@ -13,8 +13,8 @@ namespace DeckBattle
 
         [Header("Config")]
         [SerializeField] private BattleConfig battleConfig;
-        [SerializeField] private List<UnitDefinition> playerDeck = new List<UnitDefinition>(8);
-        [SerializeField] private List<UnitDefinition> enemyDeck = new List<UnitDefinition>(8);
+        [SerializeField] private List<CardDefinition> playerDeck = new List<CardDefinition>(8);
+        [SerializeField] private List<CardDefinition> enemyDeck = new List<CardDefinition>(8);
         [SerializeField] private int seed = 12345;
 
         [Header("Presentation")]
@@ -109,6 +109,16 @@ namespace DeckBattle
                 return false;
             }
 
+            if (card == null || card.Definition == null)
+            {
+                return false;
+            }
+
+            if (card.Definition.CardKind != CardKind.Unit || card.UnitDefinition == null)
+            {
+                return false;
+            }
+
             PlayUnitResult result = UnitPlayService.PlayUnit(state, state.Player, card, coord);
             if (!result.Success)
             {
@@ -116,6 +126,31 @@ namespace DeckBattle
             }
 
             CreateOrUpdateUnitView(result.Unit);
+            EvaluatePreparationCountdownState();
+            ProgressAutomaticFlow();
+            RefreshUnits();
+            RaiseStateChanged();
+            return true;
+        }
+
+        public bool TryPlayPlayerSpell(CardRuntimeState card, SpellTarget target)
+        {
+            if (!PreparationTurnService.CanPlayerPrepare(state))
+            {
+                return false;
+            }
+
+            if (card == null || card.SpellDefinition == null)
+            {
+                return false;
+            }
+
+            PlaySpellResult result = SpellPlayService.PlaySpell(state, state.Player, card, target);
+            if (!result.Success)
+            {
+                return false;
+            }
+
             EvaluatePreparationCountdownState();
             ProgressAutomaticFlow();
             RefreshUnits();

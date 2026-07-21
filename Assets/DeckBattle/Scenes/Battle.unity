@@ -907,6 +907,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 766bebe44508c5d4a8a6144ab367c602, type: 2}
   - {fileID: 11400000, guid: e058364f049f9bd40af93cf15af5b304, type: 2}
   - {fileID: 11400000, guid: c0686eab33d7c8d48a2448c351adc71b, type: 2}
+  - {fileID: 11400000, guid: 53f4991f3d7082b45959fdc0ca287b2a, type: 2}
   enemyDeck:
   - {fileID: 11400000, guid: b2d9dfc3f41390f4e8e44eb9ca87ffdd, type: 2}
   - {fileID: 11400000, guid: 584b14920b63c2f49ad2b9511e45f754, type: 2}

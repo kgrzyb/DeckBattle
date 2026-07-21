@@ -10,6 +10,7 @@ namespace DeckBattle
         TileOccupied = 5,
         UnitAlreadyPlayed = 6,
         NotInPreparation = 7,
-        PlayerReady = 8
+        PlayerReady = 8,
+        InvalidCardType = 9
     }
 }

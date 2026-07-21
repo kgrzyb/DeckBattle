@@ -39,6 +39,7 @@ namespace DeckBattle
                 runtimeUnit.CurrentHp = Math.Max(0, simulatedUnit.CurrentHp);
                 runtimeUnit.BattleCoord = simulatedUnit.CurrentHex;
                 runtimeUnit.IsDefeated = simulatedUnit.IsDefeated || runtimeUnit.CurrentHp <= 0;
+                runtimeUnit.AttackBonusNextCombat = 0;
             }
         }
     }

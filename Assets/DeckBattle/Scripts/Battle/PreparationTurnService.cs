@@ -34,6 +34,11 @@ namespace DeckBattle
             for (int cardIndex = 0; cardIndex < player.Hand.Count; cardIndex++)
             {
                 CardRuntimeState card = player.Hand[cardIndex];
+                if (card == null || card.UnitDefinition == null)
+                {
+                    continue;
+                }
+
                 for (int r = 0; r < battleState.Board.Height; r++)
                 {
                     for (int q = 0; q < battleState.Board.Width; q++)

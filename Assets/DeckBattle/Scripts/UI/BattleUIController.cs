@@ -112,7 +112,7 @@ namespace DeckBattle
                 return;
             }
 
-            UnitDefinition definition = card != null ? card.Definition : null;
+            CardDefinition definition = card != null ? card.Definition : null;
             if (ghostNameText != null)
             {
                 ghostNameText.text = definition != null ? definition.DisplayName : string.Empty;

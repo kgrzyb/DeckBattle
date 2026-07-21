@@ -12,6 +12,7 @@ namespace DeckBattle
         public HexCoord FormationCoord;
         public HexCoord BattleCoord;
         public bool IsDefeated;
+        public int AttackBonusNextCombat;
 
         public RuntimeUnit(int runtimeId, UnitDefinition definition, BattleSide side, HexCoord formationCoord)
         {
@@ -27,6 +28,7 @@ namespace DeckBattle
             BattleCoord = formationCoord;
             CurrentHp = definition.MaxHp;
             IsDefeated = false;
+            AttackBonusNextCombat = 0;
         }
 
         public bool IsAlive
@@ -39,6 +41,7 @@ namespace DeckBattle
             CurrentHp = Definition.MaxHp;
             BattleCoord = FormationCoord;
             IsDefeated = false;
+            AttackBonusNextCombat = 0;
         }
     }
 }

@@ -60,6 +60,7 @@
 ## Gameplay Code Rules
 
 - Keep card, deck, combat, and rule logic independent from visual presentation where practical.
+- Keep simulation logic separate from visuals such as animations, particles, camera shake, sound triggers, and other presentation effects.
 - Prefer data-driven card definitions using `ScriptableObject` assets or structured config.
 - Keep runtime card state separate from immutable card definitions.
 - Avoid hardcoding card behavior in UI components.

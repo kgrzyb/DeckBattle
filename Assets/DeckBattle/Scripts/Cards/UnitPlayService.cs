@@ -12,12 +12,13 @@ namespace DeckBattle
                 return PlayUnitResult.Failed(failReason);
             }
 
+            UnitDefinition unitDefinition = card.UnitDefinition;
             HandService.RemoveFromHand(player, card);
             player.Ap -= card.Definition.ApCost;
             card.Location = CardLocation.Played;
             player.PlayedCards.Add(card);
 
-            var unit = new RuntimeUnit(battleState.AllocateRuntimeUnitId(), card.Definition, player.Side, targetCoord);
+            var unit = new RuntimeUnit(battleState.AllocateRuntimeUnitId(), unitDefinition, player.Side, targetCoord);
             player.Units.Add(unit);
             return PlayUnitResult.Succeeded(unit);
         }
@@ -32,6 +33,12 @@ namespace DeckBattle
             if (player == null)
             {
                 throw new ArgumentNullException(nameof(player));
+            }
+
+            UnitDefinition unitDefinition = card != null ? card.UnitDefinition : null;
+            if (unitDefinition == null)
+            {
+                return PlayUnitFailReason.InvalidCardType;
             }
 
             if (battleState.Phase != BattlePhase.Preparation)
@@ -49,7 +56,7 @@ namespace DeckBattle
                 return card != null && card.Location == CardLocation.Played ? PlayUnitFailReason.UnitAlreadyPlayed : PlayUnitFailReason.CardNotInHand;
             }
 
-            if (WasUnitAlreadyPlayed(player, card.Definition))
+            if (WasUnitAlreadyPlayed(player, unitDefinition))
             {
                 return PlayUnitFailReason.UnitAlreadyPlayed;
             }

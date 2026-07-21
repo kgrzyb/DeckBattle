@@ -20,9 +20,15 @@ namespace DeckBattle
         public float MovementTimeRemaining;
         public float SpecialDurationRemaining;
         public float AttackCooldownMultiplier;
+        public int AttackBonusNextCombat;
         public bool IsDefeated;
 
         public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex)
+            : this(unitId, definition, side, startHex, 0)
+        {
+        }
+
+        public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex, int attackBonusNextCombat)
         {
             if (unitId <= 0)
             {
@@ -42,6 +48,7 @@ namespace DeckBattle
             MovementTimeRemaining = 0f;
             SpecialDurationRemaining = 0f;
             AttackCooldownMultiplier = 1f;
+            AttackBonusNextCombat = Math.Max(0, attackBonusNextCombat);
             IsDefeated = false;
         }
 
@@ -72,6 +79,7 @@ namespace DeckBattle
             MovementTimeRemaining = 0f;
             SpecialDurationRemaining = 0f;
             AttackCooldownMultiplier = 1f;
+            AttackBonusNextCombat = 0;
             IsDefeated = false;
         }
     }

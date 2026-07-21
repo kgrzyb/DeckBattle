@@ -35,6 +35,42 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void CreateDeck_AcceptsBaseCardDefinitionsAndKeepsRuntimeIds()
+        {
+            int nextRuntimeCardId = 7;
+            var definitions = new List<CardDefinition>
+            {
+                TestDefinitions.CreateUnit("guard", 1),
+                TestDefinitions.CreateSpell("firebolt", 2)
+            };
+            var deck = new List<CardRuntimeState>();
+
+            DeckService.CreateDeck(definitions, deck, ref nextRuntimeCardId);
+
+            Assert.AreEqual(2, deck.Count);
+            Assert.AreEqual(7, deck[0].RuntimeCardId);
+            Assert.AreEqual(8, deck[1].RuntimeCardId);
+            Assert.AreSame(definitions[0], deck[0].Definition);
+            Assert.AreSame(definitions[1], deck[1].Definition);
+            Assert.AreEqual(9, nextRuntimeCardId);
+        }
+
+        [Test]
+        public void CanPayForCard_UsesBaseCardDefinitionCost()
+        {
+            BattleState state = CreateState();
+            CardDefinition definition = TestDefinitions.CreateSpell("firebolt", 2);
+            var card = new CardRuntimeState(50, definition);
+            state.Player.Ap = 2;
+
+            Assert.IsTrue(HandService.CanPayForCard(state.Player, card));
+
+            state.Player.Ap = 1;
+
+            Assert.IsFalse(HandService.CanPayForCard(state.Player, card));
+        }
+
+        [Test]
         public void PlayUnit_OnLegalTile_SpendsApAndCreatesUnit()
         {
             BattleState state = CreateState();
@@ -50,6 +86,19 @@ namespace DeckBattle.Tests
             Assert.IsFalse(state.Player.Hand.Contains(card));
             Assert.AreEqual(1, state.Player.Units.Count);
             Assert.AreEqual(new HexCoord(0, 0), result.Unit.FormationCoord);
+        }
+
+        [Test]
+        public void PlayUnit_RejectsNonUnitCard()
+        {
+            BattleState state = CreateState();
+            CardRuntimeState card = new CardRuntimeState(51, TestDefinitions.CreateSpell("firebolt", 1));
+            card.Location = CardLocation.Hand;
+            state.Player.Hand.Add(card);
+
+            PlayUnitFailReason reason = UnitPlayService.ValidatePlay(state, state.Player, card, new HexCoord(0, 0));
+
+            Assert.AreEqual(PlayUnitFailReason.InvalidCardType, reason);
         }
 
         [Test]
@@ -128,5 +177,6 @@ namespace DeckBattle.Tests
 
             return BattleState.Create(config, playerDeck, enemyDeck, 99);
         }
+
     }
 }

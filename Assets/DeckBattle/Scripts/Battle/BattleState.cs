@@ -22,7 +22,7 @@ namespace DeckBattle
         {
         }
 
-        public static BattleState Create(BattleConfig config, IList<UnitDefinition> playerDeck, IList<UnitDefinition> enemyDeck, int seed)
+        public static BattleState Create(BattleConfig config, IReadOnlyList<CardDefinition> playerDeck, IReadOnlyList<CardDefinition> enemyDeck, int seed)
         {
             if (config == null)
             {

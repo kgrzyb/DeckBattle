@@ -3,13 +3,20 @@ using UnityEngine;
 namespace DeckBattle
 {
     [CreateAssetMenu(fileName = "UnitDefinition", menuName = "Deck Battle/Unit Definition")]
-    public sealed class UnitDefinition : ScriptableObject
+    public sealed class UnitDefinition : CardDefinition
     {
-        public string UnitId;
-        public string DisplayName;
+        public string UnitId
+        {
+            get { return CardId; }
+            set { CardId = value; }
+        }
+
+        public override CardKind CardKind
+        {
+            get { return DeckBattle.CardKind.Unit; }
+        }
+
         public UnitType UnitType;
-        public UnitRarity Rarity;
-        public int ApCost = 1;
         public int MaxHp = 1;
         public int Attack = 1;
         public int Power = 1;
@@ -24,11 +31,11 @@ namespace DeckBattle
         public float ArmorPenetration = 0f;
         public ProjectileDefinition Projectile;
         public UnitView UnitPrefab;
-        public Sprite CardArt;
 
-        private void OnValidate()
+        protected override void OnValidate()
         {
-            ApCost = Mathf.Max(0, ApCost);
+            base.OnValidate();
+            SetCardKind(DeckBattle.CardKind.Unit);
             MaxHp = Mathf.Max(1, MaxHp);
             Attack = Mathf.Max(0, Attack);
             Power = Mathf.Max(0, Power);

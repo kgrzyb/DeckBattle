@@ -132,11 +132,34 @@ namespace DeckBattle
             }
         }
 
-        public void HighlightPlayableTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
+        public void HighlightCardPlayableTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
+        {
+            if (selectedCard == null || selectedCard.Definition == null)
+            {
+                ClearAllHighlights();
+                return;
+            }
+
+            if (selectedCard.Definition.CardKind == CardKind.Unit && selectedCard.UnitDefinition != null)
+            {
+                HighlightUnitPlayableTiles(state, player, selectedCard);
+                return;
+            }
+
+            if (selectedCard.Definition.CardKind == CardKind.Spell && selectedCard.SpellDefinition != null)
+            {
+                HighlightSpellTargetTiles(state, player, selectedCard);
+                return;
+            }
+
+            ClearAllHighlights();
+        }
+
+        public void HighlightUnitPlayableTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
         {
             ClearHoverHighlight();
 
-            if (state == null || player == null || selectedCard == null || board == null)
+            if (state == null || player == null || selectedCard == null || selectedCard.UnitDefinition == null || board == null)
             {
                 return;
             }
@@ -152,6 +175,47 @@ namespace DeckBattle
                 else
                 {
                     tile.ClearHighlight();
+                }
+            }
+        }
+
+        public void HighlightSpellTargetTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
+        {
+            ClearAllHighlights();
+
+            SpellDefinition spellDefinition = selectedCard != null ? selectedCard.SpellDefinition : null;
+            if (state == null || player == null || spellDefinition == null)
+            {
+                return;
+            }
+
+            if (spellDefinition.TargetingKind == SpellTargetingKind.None)
+            {
+                return;
+            }
+
+            if (spellDefinition.TargetingKind != SpellTargetingKind.FriendlyUnit)
+            {
+                return;
+            }
+
+            for (int i = 0; i < player.Units.Count; i++)
+            {
+                RuntimeUnit unit = player.Units[i];
+                if (unit == null || !unit.IsAlive)
+                {
+                    continue;
+                }
+
+                if (SpellPlayService.ValidatePlay(state, player, selectedCard, SpellTarget.ForUnit(unit)) != PlaySpellFailReason.None)
+                {
+                    continue;
+                }
+
+                HexTileView tile = GetTileView(unit.BattleCoord);
+                if (tile != null)
+                {
+                    tile.SetLegalHighlight();
                 }
             }
         }
