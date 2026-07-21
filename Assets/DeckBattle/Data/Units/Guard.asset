@@ -12,11 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
   m_Name: Guard
   m_EditorClassIdentifier: 
-  UnitId: guard
+  CardId: guard
   DisplayName: Guard
-  UnitType: 0
   Rarity: 0
   ApCost: 2
+  CardArt: {fileID: 0}
+  cardKind: 0
+  UnitType: 0
   MaxHp: 70
   Attack: 10
   Power: 2
@@ -30,6 +32,5 @@ MonoBehaviour:
   Armor: 0
   ArmorPenetration: 0
   Projectile: {fileID: 0}
-  UnitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
+  UnitPrefab: {fileID: 7506552908754966910, guid: 4af6bc9af37bc3044a281834f8ca89b6,
     type: 3}
-  CardArt: {fileID: 0}

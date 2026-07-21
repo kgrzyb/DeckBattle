@@ -12,11 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
   m_Name: Archer
   m_EditorClassIdentifier: 
-  UnitId: archer
+  CardId: archer
   DisplayName: Archer
-  UnitType: 1
   Rarity: 0
   ApCost: 2
+  CardArt: {fileID: 0}
+  cardKind: 0
+  UnitType: 1
   MaxHp: 40
   Attack: 15
   Power: 2
@@ -30,6 +32,5 @@ MonoBehaviour:
   Armor: 0
   ArmorPenetration: 0
   Projectile: {fileID: 11400000, guid: ee570de75d9ef454c9bf51a76c1ddb96, type: 2}
-  UnitPrefab: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
+  UnitPrefab: {fileID: 7506552908754966910, guid: 9f55c116b0c85a444999106aad1cbd6b,
     type: 3}
-  CardArt: {fileID: 0}
