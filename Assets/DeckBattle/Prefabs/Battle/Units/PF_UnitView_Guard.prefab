@@ -10,6 +10,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
         type: 3}
+      propertyPath: modelRoot
+      value: 
+      objectReference: {fileID: 5092470688151388829}
+    - target: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
+        type: 3}
       propertyPath: groundOffset
       value: 0
       objectReference: {fileID: 0}
