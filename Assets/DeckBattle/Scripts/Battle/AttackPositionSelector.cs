@@ -77,7 +77,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (!board.TryFindPath(attacker.CurrentHex, candidate, workspace.Path, workspace.Pathfinding))
+                if (!board.TryFindPath(attacker.CurrentHex, candidate, workspace.Path, workspace.Pathfinding, workspace.OccupiedHexes))
                 {
                     continue;
                 }

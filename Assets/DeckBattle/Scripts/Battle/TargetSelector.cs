@@ -78,12 +78,6 @@ namespace DeckBattle
             workspace.Clear();
             FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
 
-            UnitRuntimeState retainedTarget;
-            if (TryGetReachableCurrentTarget(simulation, attacker, workspace, out retainedTarget))
-            {
-                return retainedTarget;
-            }
-
             return SelectNewTarget(simulation, attacker, workspace);
         }
 
@@ -94,9 +88,9 @@ namespace DeckBattle
                 return null;
             }
 
-            UnitRuntimeState nearestEnemy = null;
-            int nearestEnemyDistance = int.MaxValue;
-
+            UnitRuntimeState bestTarget = null;
+            int bestDistance = int.MaxValue;
+            int bestHp = int.MaxValue;
             IReadOnlyList<UnitRuntimeState> units = simulation.Units;
             for (int i = 0; i < units.Count; i++)
             {
@@ -107,69 +101,21 @@ namespace DeckBattle
                 }
 
                 int distance = simulation.Board.Distance(attacker.CurrentHex, candidate.CurrentHex);
-                if (IsBetterNearestTarget(candidate, distance, nearestEnemy, nearestEnemyDistance))
-                {
-                    nearestEnemy = candidate;
-                    nearestEnemyDistance = distance;
-                }
-            }
-
-            if (nearestEnemy == null)
-            {
-                return null;
-            }
-
-            if (HasReachableAttackPosition(simulation, attacker, nearestEnemy, workspace))
-            {
-                return nearestEnemy;
-            }
-
-            UnitRuntimeState lowestHpReachable = null;
-            int lowestReachableHp = int.MaxValue;
-            for (int i = 0; i < units.Count; i++)
-            {
-                UnitRuntimeState candidate = units[i];
-                if (!IsLiveEnemy(attacker, candidate))
+                if (!IsBetterTarget(candidate, distance, bestTarget, bestDistance, bestHp))
                 {
                     continue;
                 }
 
                 if (HasReachableAttackPosition(simulation, attacker, candidate, workspace)
-                    && IsBetterLowestHpTarget(candidate, lowestHpReachable, lowestReachableHp))
+                    && IsBetterTarget(candidate, distance, bestTarget, bestDistance, bestHp))
                 {
-                    lowestHpReachable = candidate;
-                    lowestReachableHp = candidate.CurrentHp;
+                    bestTarget = candidate;
+                    bestDistance = distance;
+                    bestHp = candidate.CurrentHp;
                 }
             }
 
-            return lowestHpReachable;
-        }
-
-        private static bool TryGetReachableCurrentTarget(
-            BattleSimulation simulation,
-            UnitRuntimeState attacker,
-            Workspace workspace,
-            out UnitRuntimeState target)
-        {
-            target = null;
-            if (attacker.TargetUnitId == UnitRuntimeState.NoTargetUnitId)
-            {
-                return false;
-            }
-
-            if (!simulation.TryGetUnitById(attacker.TargetUnitId, out target) || !IsLiveEnemy(attacker, target))
-            {
-                target = null;
-                return false;
-            }
-
-            if (!HasReachableAttackPosition(simulation, attacker, target, workspace))
-            {
-                target = null;
-                return false;
-            }
-
-            return true;
+            return bestTarget;
         }
 
         private static bool IsLiveEnemy(UnitRuntimeState attacker, UnitRuntimeState candidate)
@@ -222,7 +168,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (!board.TryFindPath(attacker.CurrentHex, attackHex, workspace.Path, workspace.Pathfinding))
+                if (!board.TryFindPath(attacker.CurrentHex, attackHex, workspace.Path, workspace.Pathfinding, workspace.OccupiedHexes))
                 {
                     continue;
                 }
@@ -233,11 +179,12 @@ namespace DeckBattle
             return false;
         }
 
-        private static bool IsBetterNearestTarget(
+        private static bool IsBetterTarget(
             UnitRuntimeState candidate,
             int distance,
             UnitRuntimeState selected,
-            int selectedDistance)
+            int selectedDistance,
+            int selectedHp)
         {
             if (selected == null)
             {
@@ -247,16 +194,6 @@ namespace DeckBattle
             if (distance != selectedDistance)
             {
                 return distance < selectedDistance;
-            }
-
-            return candidate.UnitId < selected.UnitId;
-        }
-
-        private static bool IsBetterLowestHpTarget(UnitRuntimeState candidate, UnitRuntimeState selected, int selectedHp)
-        {
-            if (selected == null)
-            {
-                return true;
             }
 
             if (candidate.CurrentHp != selectedHp)

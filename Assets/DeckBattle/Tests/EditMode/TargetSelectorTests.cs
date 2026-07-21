@@ -27,7 +27,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void SelectTarget_FallsBackToLowestHpReachable_WhenNearestEnemyCannotBeReached()
+        public void SelectTarget_FallsBackToNearestReachable_WhenNearestEnemyCannotBeReached()
         {
             var board = new HexBoard(5, 6, 1f);
             BlockAttackRing(board, new HexCoord(2, 0), 1);
@@ -45,6 +45,27 @@ namespace DeckBattle.Tests
             simulation.Units[1].CurrentHp = 5;
             simulation.Units[2].CurrentHp = 1;
             simulation.Units[3].CurrentHp = 3;
+
+            UnitRuntimeState target = TargetSelector.SelectTarget(simulation, simulation.Units[0]);
+
+            Assert.AreSame(simulation.Units[3], target);
+        }
+
+        [Test]
+        public void SelectTarget_UsesLowestHpTieBreaker_ForEnemiesAtSameDistance()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            UnitDefinition melee = CreateUnit("melee", 5, 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                board,
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(2, 2)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(3, 2)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(2, 3))
+                });
+            simulation.Units[1].CurrentHp = 5;
+            simulation.Units[2].CurrentHp = 1;
 
             UnitRuntimeState target = TargetSelector.SelectTarget(simulation, simulation.Units[0]);
 
@@ -91,7 +112,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void SelectTargetOrRetainCurrent_KeepsReachableCurrentTarget()
+        public void SelectTargetOrRetainCurrent_ReplacesCurrentTarget_WhenCloserEnemyIsReachable()
         {
             var board = new HexBoard(5, 6, 1f);
             UnitDefinition melee = CreateUnit("melee", 5, 1);
@@ -112,7 +133,7 @@ namespace DeckBattle.Tests
                 simulation.Units[0],
                 new TargetSelector.Workspace(board.Width * board.Height));
 
-            Assert.AreSame(simulation.Units[1], target);
+            Assert.AreSame(simulation.Units[2], target);
         }
 
         [Test]

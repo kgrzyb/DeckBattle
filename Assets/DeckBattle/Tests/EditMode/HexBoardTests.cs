@@ -185,6 +185,26 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void TryFindPath_AvoidsAdditionalBlockedHexes()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var path = new List<HexCoord>(8);
+            var dynamicBlocked = new HashSet<HexCoord>
+            {
+                new HexCoord(0, 0),
+                new HexCoord(1, 0)
+            };
+            var workspace = new HexBoard.PathfindingWorkspace(board.Width * board.Height);
+
+            bool found = board.TryFindPath(new HexCoord(0, 0), new HexCoord(2, 0), path, workspace, dynamicBlocked);
+
+            Assert.IsTrue(found);
+            Assert.IsFalse(path.Contains(new HexCoord(1, 0)));
+            Assert.AreEqual(new HexCoord(0, 0), path[0]);
+            Assert.AreEqual(new HexCoord(2, 0), path[path.Count - 1]);
+        }
+
+        [Test]
         public void TryFindPath_ReturnsFalse_WhenGoalIsNotWalkable()
         {
             var board = new HexBoard(5, 6, 1f);

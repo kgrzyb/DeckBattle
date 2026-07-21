@@ -134,7 +134,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (!simulation.Board.TryFindPath(unit.CurrentHex, attackPosition, workspace.Path, workspace.Pathfinding))
+                if (!simulation.Board.TryFindPath(unit.CurrentHex, attackPosition, workspace.Path, workspace.Pathfinding, workspace.OccupiedHexes))
                 {
                     continue;
                 }
@@ -248,7 +248,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (!simulation.Board.TryFindPath(candidate, intent.AttackPosition, workspace.AlternativePath, workspace.AlternativePathfinding))
+                if (!simulation.Board.TryFindPath(candidate, intent.AttackPosition, workspace.AlternativePath, workspace.AlternativePathfinding, workspace.OccupiedHexes))
                 {
                     continue;
                 }

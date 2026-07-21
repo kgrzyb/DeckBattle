@@ -190,6 +190,16 @@ namespace DeckBattle
 
         public bool TryFindPath(HexCoord start, HexCoord goal, IList<HexCoord> path, PathfindingWorkspace workspace)
         {
+            return TryFindPath(start, goal, path, workspace, null);
+        }
+
+        public bool TryFindPath(
+            HexCoord start,
+            HexCoord goal,
+            IList<HexCoord> path,
+            PathfindingWorkspace workspace,
+            HashSet<HexCoord> additionalBlockedHexes)
+        {
             if (path == null)
             {
                 throw new ArgumentNullException(nameof(path));
@@ -232,7 +242,9 @@ namespace DeckBattle
                 for (int i = 0; i < neighbors.Count; i++)
                 {
                     HexCoord neighbor = neighbors[i];
-                    if (!IsWalkable(neighbor) || cameFrom.ContainsKey(neighbor))
+                    if (!IsWalkable(neighbor)
+                        || IsDynamicallyBlocked(neighbor, start, goal, additionalBlockedHexes)
+                        || cameFrom.ContainsKey(neighbor))
                     {
                         continue;
                     }
@@ -243,6 +255,20 @@ namespace DeckBattle
             }
 
             return false;
+        }
+
+        private static bool IsDynamicallyBlocked(
+            HexCoord coord,
+            HexCoord start,
+            HexCoord goal,
+            HashSet<HexCoord> additionalBlockedHexes)
+        {
+            if (additionalBlockedHexes == null || coord == start || coord == goal)
+            {
+                return false;
+            }
+
+            return additionalBlockedHexes.Contains(coord);
         }
 
         public Vector3 ToLocalPosition(HexCoord coord)

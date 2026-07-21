@@ -110,7 +110,7 @@ namespace DeckBattle.Tests
 
             int moved = MovementResolver.ResolveMovement(simulation);
 
-            Assert.AreEqual(1, moved);
+            Assert.AreEqual(2, moved);
             Assert.AreNotEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
             Assert.AreNotEqual(simulation.Units[0].CurrentHex, simulation.Units[1].CurrentHex);
         }
