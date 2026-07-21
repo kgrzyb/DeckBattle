@@ -25,6 +25,77 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void PrepareFormation_PlaysSpellAfterUnitAndBuffsFriendlyTarget()
+        {
+            UnitDefinition guard = TestDefinitions.CreateUnit("guard", 1);
+            SpellDefinition spell = TestDefinitions.CreateSpell("warcry", 1, amount: 3);
+            BattleState state = CreateStateWithEnemyHand(spell, guard);
+
+            EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
+
+            Assert.IsTrue(result.PlayedUnit);
+            Assert.IsTrue(result.PlayedSpell);
+            Assert.AreEqual(2, result.PlayedCardCount);
+            Assert.AreEqual(1, result.PlayedUnitCount);
+            Assert.AreEqual(1, result.PlayedSpellCount);
+            Assert.AreEqual(1, state.Enemy.Units.Count);
+            Assert.AreEqual(3, state.Enemy.Units[0].AttackBonusNextCombat);
+            Assert.AreSame(state.Enemy.Units[0], result.SpellTargetUnit);
+            Assert.AreEqual(1, state.Enemy.Ap);
+            Assert.IsTrue(state.Enemy.IsReady);
+        }
+
+        [Test]
+        public void PrepareFormation_DoesNotPlayFriendlySpellWithoutFriendlyUnit()
+        {
+            SpellDefinition spell = TestDefinitions.CreateSpell("warcry", 1);
+            BattleState state = CreateStateWithEnemyHand(spell);
+
+            EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
+
+            Assert.IsFalse(result.PlayedSpell);
+            Assert.AreEqual(0, result.PlayedCardCount);
+            Assert.AreEqual(1, state.Enemy.Hand.Count);
+            Assert.AreEqual(CardLocation.Hand, state.Enemy.Hand[0].Location);
+            Assert.IsTrue(state.Enemy.IsReady);
+        }
+
+        [Test]
+        public void PrepareFormation_DoesNotSpendMoreThanAvailableApWithSpells()
+        {
+            BattleState state = CreateStateWithEnemyHand(
+                TestDefinitions.CreateUnit("guard", 1),
+                TestDefinitions.CreateSpell("expensive-spell", 3, amount: 3),
+                TestDefinitions.CreateSpell("cheap-spell", 1, amount: 2));
+            state.Enemy.Ap = 2;
+
+            EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
+
+            Assert.AreEqual(1, result.PlayedUnitCount);
+            Assert.AreEqual(1, result.PlayedSpellCount);
+            Assert.AreEqual(2, state.Enemy.Units[0].AttackBonusNextCombat);
+            Assert.AreEqual(0, state.Enemy.Ap);
+            Assert.AreEqual(1, state.Enemy.Hand.Count);
+            Assert.AreEqual("expensive-spell", state.Enemy.Hand[0].Definition.CardId);
+        }
+
+        [Test]
+        public void PrepareFormation_SkipsUnsupportedSpellAndPlaysSupportedSpell()
+        {
+            BattleState state = CreateStateWithEnemyHand(
+                TestDefinitions.CreateUnit("guard", 1),
+                TestDefinitions.CreateSpell("unsupported", 1, SpellEffectKind.None, SpellTargetingKind.FriendlyUnit),
+                TestDefinitions.CreateSpell("supported", 1, amount: 2));
+
+            EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
+
+            Assert.AreEqual(1, result.PlayedSpellCount);
+            Assert.AreEqual(2, state.Enemy.Units[0].AttackBonusNextCombat);
+            Assert.AreEqual(1, state.Enemy.Hand.Count);
+            Assert.AreEqual("unsupported", state.Enemy.Hand[0].Definition.CardId);
+        }
+
+        [Test]
         public void PrepareFormation_DoesNotSpendMoreThanAvailableAp()
         {
             BattleState state = CreateStateWithEnemyHand(
@@ -111,13 +182,30 @@ namespace DeckBattle.Tests
             Assert.AreEqual(BattlePhase.Combat, state.Phase);
         }
 
+        [Test]
+        public void ExecuteTurn_WithExistingUnitAndSpell_PlaysSingleSpellAction()
+        {
+            BattleState state = CreateStateWithEnemyHand(TestDefinitions.CreateSpell("warcry", 1, amount: 2));
+            var existingUnit = new RuntimeUnit(state.AllocateRuntimeUnitId(), TestDefinitions.CreateUnit("guard", 1), BattleSide.Enemy, new HexCoord(2, 5));
+            state.Enemy.Units.Add(existingUnit);
+
+            EnemyPreparationAIResult result = EnemyPreparationAI.ExecuteTurn(state);
+
+            Assert.IsFalse(result.PlayedUnit);
+            Assert.IsTrue(result.PlayedSpell);
+            Assert.AreEqual(1, result.PlayedCardCount);
+            Assert.AreEqual(2, existingUnit.AttackBonusNextCombat);
+            Assert.AreEqual(0, state.Enemy.Hand.Count);
+            Assert.IsFalse(state.Enemy.IsReady);
+        }
+
         private static BattleState CreateState()
         {
             BattleConfig config = TestDefinitions.CreateConfig();
             return BattleState.Create(config, CreateDeck("player"), CreateDeck("enemy"), 42);
         }
 
-        private static BattleState CreateStateWithEnemyHand(params UnitDefinition[] enemyHandDefinitions)
+        private static BattleState CreateStateWithEnemyHand(params CardDefinition[] enemyHandDefinitions)
         {
             BattleConfig config = TestDefinitions.CreateConfig();
             BattleState state = BattleState.Create(config, CreateDeck("player"), CreateDeck("enemy"), 42);
@@ -133,9 +221,9 @@ namespace DeckBattle.Tests
             return state;
         }
 
-        private static List<UnitDefinition> CreateDeck(string prefix)
+        private static List<CardDefinition> CreateDeck(string prefix)
         {
-            return new List<UnitDefinition>
+            return new List<CardDefinition>
             {
                 TestDefinitions.CreateUnit(prefix + "-guard", 1),
                 TestDefinitions.CreateUnit(prefix + "-swordsman", 1),
