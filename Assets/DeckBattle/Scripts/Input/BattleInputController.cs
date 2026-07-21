@@ -10,6 +10,8 @@ namespace DeckBattle
             Idle,
             DraggingCard,
             SelectedCard,
+            PressingUnit,
+            DraggingUnit,
             SelectedUnit
         }
 
@@ -18,6 +20,7 @@ namespace DeckBattle
         [SerializeField] private Camera battleCamera;
         [SerializeField] private LayerMask boardRaycastMask = ~0;
         [SerializeField] private float raycastDistance = 80f;
+        [SerializeField] private float unitDragThresholdPixels = 18f;
 
         private readonly RaycastHit[] raycastHits = new RaycastHit[8];
 
@@ -29,6 +32,20 @@ namespace DeckBattle
         private bool currentDragTileLegal;
         private CardRuntimeState selectedCard;
         private RuntimeUnit selectedUnit;
+        private RuntimeUnit pressedUnit;
+        private UnitView pressedUnitView;
+        private int pressedPointerId;
+        private Vector2 pressedUnitStartScreenPosition;
+        private Vector2 pressedUnitLastScreenPosition;
+        private HexCoord currentUnitDragCoord;
+        private HexTileView currentUnitDragTile;
+        private bool currentUnitDragHasTarget;
+        private bool currentUnitDragTileLegal;
+
+        private void OnValidate()
+        {
+            unitDragThresholdPixels = Mathf.Max(1f, unitDragThresholdPixels);
+        }
 
         private void Awake()
         {
@@ -61,6 +78,18 @@ namespace DeckBattle
                 return;
             }
 
+            if (mode == InputMode.PressingUnit)
+            {
+                UpdatePressedUnit();
+                return;
+            }
+
+            if (mode == InputMode.DraggingUnit)
+            {
+                UpdateUnitDragInput();
+                return;
+            }
+
             Vector2 screenPosition;
             int pointerId;
             if (!TryGetPointerDown(out screenPosition, out pointerId))
@@ -73,7 +102,7 @@ namespace DeckBattle
                 return;
             }
 
-            HandleBoardTap(screenPosition);
+            HandleBoardTap(screenPosition, pointerId);
         }
 
         public bool BeginCardDrag(CardView cardView, CardRuntimeState card, Vector2 screenPosition)
@@ -202,7 +231,7 @@ namespace DeckBattle
             ClearSelection();
         }
 
-        private void HandleBoardTap(Vector2 screenPosition)
+        private void HandleBoardTap(Vector2 screenPosition, int pointerId)
         {
             if (mode == InputMode.SelectedCard && selectedCard != null)
             {
@@ -218,23 +247,30 @@ namespace DeckBattle
 
             HideShownCardDetails();
 
-            UnitView unitView = RaycastForUnit(screenPosition);
-            if (unitView != null && unitView.Unit != null && unitView.Unit.Side == BattleSide.Player)
-            {
-                ClearSelection();
-                SelectUnit(unitView.Unit);
-                return;
-            }
-
-            HexTileView tile = RaycastForTile(screenPosition);
             if (mode == InputMode.SelectedUnit && selectedUnit != null)
             {
-                if (tile != null && battleController != null)
+                UnitView selectedUnitView = RaycastForUnit(screenPosition);
+                if (selectedUnitView != null && selectedUnitView.Unit == selectedUnit)
                 {
-                    battleController.TryMovePlayerUnit(selectedUnit, tile.Coord);
+                    BeginUnitPress(selectedUnitView, screenPosition, pointerId);
+                    return;
+                }
+
+                HexCoord targetCoord;
+                HexTileView targetTile;
+                if (TryGetFormationTarget(screenPosition, out targetCoord, out targetTile) && battleController != null)
+                {
+                    battleController.TryMovePlayerUnit(selectedUnit, targetCoord);
                 }
 
                 ClearSelection();
+                return;
+            }
+
+            UnitView unitView = RaycastForUnit(screenPosition);
+            if (unitView != null && unitView.Unit != null && unitView.Unit.Side == BattleSide.Player)
+            {
+                BeginUnitPress(unitView, screenPosition, pointerId);
                 return;
             }
 
@@ -257,6 +293,195 @@ namespace DeckBattle
             {
                 boardPresenter.HighlightFormationTiles(state, state.Player, selectedUnit);
             }
+        }
+
+        private void BeginUnitPress(UnitView unitView, Vector2 screenPosition, int pointerId)
+        {
+            RuntimeUnit unit = unitView != null ? unitView.Unit : null;
+            BattleState state = battleController != null ? battleController.State : null;
+            if (!PreparationTurnService.CanPlayerPrepare(state) || unit == null || unit.Side != BattleSide.Player)
+            {
+                ClearSelection();
+                return;
+            }
+
+            ClearSelection();
+            mode = InputMode.PressingUnit;
+            pressedUnit = unit;
+            pressedUnitView = unitView;
+            pressedPointerId = pointerId;
+            pressedUnitStartScreenPosition = screenPosition;
+            pressedUnitLastScreenPosition = screenPosition;
+        }
+
+        private void UpdatePressedUnit()
+        {
+            Vector2 screenPosition;
+            bool isPressed;
+            bool isReleased;
+            TryGetTrackedPointer(out screenPosition, out isPressed, out isReleased);
+            pressedUnitLastScreenPosition = screenPosition;
+
+            if (isReleased)
+            {
+                if (IsUnitTap(screenPosition))
+                {
+                    RuntimeUnit unit = pressedUnit;
+                    ClearSelection();
+                    SelectUnit(unit);
+                }
+                else
+                {
+                    BeginUnitDrag(screenPosition);
+                    EndUnitDrag(screenPosition);
+                }
+
+                return;
+            }
+
+            if (!isPressed)
+            {
+                RestorePressedUnitView();
+                ClearSelection();
+                return;
+            }
+
+            if (!IsUnitTap(screenPosition))
+            {
+                BeginUnitDrag(screenPosition);
+            }
+        }
+
+        private void BeginUnitDrag(Vector2 screenPosition)
+        {
+            if (pressedUnit == null)
+            {
+                ClearSelection();
+                return;
+            }
+
+            BattleState state = battleController != null ? battleController.State : null;
+            if (!PreparationTurnService.CanPlayerPrepare(state))
+            {
+                ClearSelection();
+                return;
+            }
+
+            mode = InputMode.DraggingUnit;
+            UpdateUnitDrag(screenPosition);
+        }
+
+        private void UpdateUnitDragInput()
+        {
+            Vector2 screenPosition;
+            bool isPressed;
+            bool isReleased;
+            TryGetTrackedPointer(out screenPosition, out isPressed, out isReleased);
+            pressedUnitLastScreenPosition = screenPosition;
+
+            if (isReleased)
+            {
+                EndUnitDrag(screenPosition);
+                return;
+            }
+
+            if (!isPressed)
+            {
+                RestorePressedUnitView();
+                ClearSelection();
+                return;
+            }
+
+            UpdateUnitDrag(screenPosition);
+        }
+
+        private void UpdateUnitDrag(Vector2 screenPosition)
+        {
+            HexCoord targetCoord;
+            HexTileView targetTile;
+            bool hasTarget = TryGetFormationTarget(screenPosition, out targetCoord, out targetTile);
+            bool legal = false;
+            BattleState state = battleController != null ? battleController.State : null;
+            if (hasTarget)
+            {
+                legal = IsUnitFormationTargetLegal(state, pressedUnit, targetCoord);
+            }
+
+            currentUnitDragCoord = targetCoord;
+            currentUnitDragTile = targetTile;
+            currentUnitDragHasTarget = hasTarget;
+            currentUnitDragTileLegal = legal;
+
+            BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
+            if (boardPresenter != null)
+            {
+                boardPresenter.HighlightSingleTile(targetTile, legal);
+            }
+
+            MovePressedUnitView(screenPosition);
+        }
+
+        private void EndUnitDrag(Vector2 screenPosition)
+        {
+            UpdateUnitDrag(screenPosition);
+
+            bool moved = false;
+            if (currentUnitDragHasTarget && currentUnitDragTileLegal && battleController != null)
+            {
+                moved = battleController.TryMovePlayerUnit(pressedUnit, currentUnitDragCoord);
+            }
+
+            if (!moved)
+            {
+                RestorePressedUnitView();
+            }
+
+            ClearSelection();
+        }
+
+        private void MovePressedUnitView(Vector2 screenPosition)
+        {
+            if (pressedUnitView == null)
+            {
+                return;
+            }
+
+            Vector3 worldPosition;
+            if (TryGetBoardWorldPosition(screenPosition, out worldPosition))
+            {
+                pressedUnitView.SetWorldPosition(worldPosition);
+            }
+        }
+
+        private void RestorePressedUnitView()
+        {
+            if (pressedUnit == null || pressedUnitView == null || battleController == null || battleController.BoardPresenter == null)
+            {
+                return;
+            }
+
+            pressedUnitView.SetWorldPosition(battleController.BoardPresenter.GetWorldPosition(pressedUnit.BattleCoord));
+        }
+
+        private bool TryGetBoardWorldPosition(Vector2 screenPosition, out Vector3 worldPosition)
+        {
+            worldPosition = Vector3.zero;
+            if (battleCamera == null || battleController == null || battleController.BoardPresenter == null)
+            {
+                return false;
+            }
+
+            Ray ray = battleCamera.ScreenPointToRay(screenPosition);
+            Transform boardTransform = battleController.BoardPresenter.transform;
+            var boardPlane = new Plane(boardTransform.up, boardTransform.position);
+            float enter;
+            if (!boardPlane.Raycast(ray, out enter))
+            {
+                return false;
+            }
+
+            worldPosition = ray.GetPoint(enter);
+            return true;
         }
 
         private void HandleSelectedCardBoardTap(Vector2 screenPosition)
@@ -400,6 +625,50 @@ namespace DeckBattle
             return false;
         }
 
+        private bool TryGetFormationTarget(Vector2 screenPosition, out HexCoord targetCoord, out HexTileView targetTile)
+        {
+            targetCoord = default(HexCoord);
+            targetTile = null;
+
+            int count = Raycast(screenPosition);
+            for (int i = 0; i < count; i++)
+            {
+                UnitView unitView = raycastHits[i].collider.GetComponentInParent<UnitView>();
+                if (unitView != null && unitView.Unit != null && unitView.Unit != pressedUnit && unitView.Unit.Side == BattleSide.Player)
+                {
+                    targetCoord = unitView.Unit.FormationCoord;
+                    BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
+                    targetTile = boardPresenter != null ? boardPresenter.GetTileView(targetCoord) : null;
+                    return true;
+                }
+
+                if (targetTile == null)
+                {
+                    targetTile = raycastHits[i].collider.GetComponentInParent<HexTileView>();
+                }
+            }
+
+            if (targetTile == null)
+            {
+                return false;
+            }
+
+            targetCoord = targetTile.Coord;
+            return true;
+        }
+
+        private static bool IsUnitFormationTargetLegal(BattleState state, RuntimeUnit unit, HexCoord targetCoord)
+        {
+            PlayerBattleState player = state != null ? state.Player : null;
+            return PreparationTurnService.CanPlayerPrepare(state)
+                && player != null
+                && unit != null
+                && unit.Side == player.Side
+                && player.Units.Contains(unit)
+                && state.Board != null
+                && state.Board.IsDeploymentCoord(player.Side, targetCoord);
+        }
+
         private static bool CanPreparePlayableCard(BattleState state, CardRuntimeState card)
         {
             PlayerBattleState player = state != null ? state.Player : null;
@@ -422,6 +691,14 @@ namespace DeckBattle
 
             if (mode == InputMode.SelectedCard && !PreparationTurnService.CanPlayerPrepare(state))
             {
+                ClearSelection();
+                return;
+            }
+
+            if ((mode == InputMode.SelectedUnit || mode == InputMode.PressingUnit || mode == InputMode.DraggingUnit)
+                && !PreparationTurnService.CanPlayerPrepare(state))
+            {
+                RestorePressedUnitView();
                 ClearSelection();
                 return;
             }
@@ -457,6 +734,8 @@ namespace DeckBattle
                 HideShownCardDetails();
             }
 
+            RestorePressedUnitView();
+
             mode = InputMode.Idle;
             draggedCard = null;
             draggedCardView = null;
@@ -465,6 +744,15 @@ namespace DeckBattle
             currentDragTileLegal = false;
             selectedCard = null;
             selectedUnit = null;
+            pressedUnit = null;
+            pressedUnitView = null;
+            pressedPointerId = -1;
+            pressedUnitStartScreenPosition = Vector2.zero;
+            pressedUnitLastScreenPosition = Vector2.zero;
+            currentUnitDragCoord = default(HexCoord);
+            currentUnitDragTile = null;
+            currentUnitDragHasTarget = false;
+            currentUnitDragTileLegal = false;
 
             if (uiController != null)
             {
@@ -540,6 +828,42 @@ namespace DeckBattle
             screenPosition = Input.mousePosition;
             pointerId = -1;
             return Input.GetMouseButtonDown(0);
+        }
+
+        private bool TryGetTrackedPointer(out Vector2 screenPosition, out bool isPressed, out bool isReleased)
+        {
+            if (pressedPointerId >= 0)
+            {
+                for (int i = 0; i < Input.touchCount; i++)
+                {
+                    Touch touch = Input.GetTouch(i);
+                    if (touch.fingerId != pressedPointerId)
+                    {
+                        continue;
+                    }
+
+                    screenPosition = touch.position;
+                    isReleased = touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled;
+                    isPressed = !isReleased;
+                    return true;
+                }
+
+                screenPosition = pressedUnitLastScreenPosition;
+                isPressed = false;
+                isReleased = true;
+                return true;
+            }
+
+            screenPosition = Input.mousePosition;
+            isReleased = Input.GetMouseButtonUp(0);
+            isPressed = Input.GetMouseButton(0);
+            return isPressed || isReleased;
+        }
+
+        private bool IsUnitTap(Vector2 screenPosition)
+        {
+            float threshold = unitDragThresholdPixels * unitDragThresholdPixels;
+            return (screenPosition - pressedUnitStartScreenPosition).sqrMagnitude <= threshold;
         }
 
         private static bool IsPointerOverUi(int pointerId)

@@ -172,6 +172,11 @@ namespace DeckBattle
             }
 
             UpdateUnitView(unit);
+            if (result.SwappedUnit != null)
+            {
+                UpdateUnitView(result.SwappedUnit);
+            }
+
             RaiseStateChanged();
             return true;
         }

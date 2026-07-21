@@ -114,7 +114,7 @@ namespace DeckBattle
             for (int i = 0; i < tiles.Count; i++)
             {
                 HexTileView tile = tiles[i];
-                bool legal = board.IsDeploymentCoord(player.Side, tile.Coord) && !FormationService.IsOccupied(player, tile.Coord, selectedUnit);
+                bool legal = board.IsDeploymentCoord(player.Side, tile.Coord);
                 if (legal)
                 {
                     tile.SetLegalHighlight();

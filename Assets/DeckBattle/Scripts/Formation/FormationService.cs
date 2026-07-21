@@ -36,9 +36,15 @@ namespace DeckBattle
                 return FormationMoveResult.Failed(FormationMoveFailReason.InvalidTile);
             }
 
-            if (IsOccupied(player, targetCoord, unit))
+            RuntimeUnit occupyingUnit = FindUnitAtFormationCoord(player, targetCoord, unit);
+            if (occupyingUnit != null)
             {
-                return FormationMoveResult.Failed(FormationMoveFailReason.TileOccupied);
+                HexCoord sourceCoord = unit.FormationCoord;
+                unit.FormationCoord = targetCoord;
+                unit.BattleCoord = targetCoord;
+                occupyingUnit.FormationCoord = sourceCoord;
+                occupyingUnit.BattleCoord = sourceCoord;
+                return FormationMoveResult.SucceededWithSwap(occupyingUnit);
             }
 
             unit.FormationCoord = targetCoord;
@@ -47,6 +53,11 @@ namespace DeckBattle
         }
 
         public static bool IsOccupied(PlayerBattleState player, HexCoord coord, RuntimeUnit ignoredUnit)
+        {
+            return FindUnitAtFormationCoord(player, coord, ignoredUnit) != null;
+        }
+
+        public static RuntimeUnit FindUnitAtFormationCoord(PlayerBattleState player, HexCoord coord, RuntimeUnit ignoredUnit)
         {
             for (int i = 0; i < player.Units.Count; i++)
             {
@@ -58,11 +69,11 @@ namespace DeckBattle
 
                 if (unit.FormationCoord == coord)
                 {
-                    return true;
+                    return unit;
                 }
             }
 
-            return false;
+            return null;
         }
 
         public static void RestoreFormationAndResetRoundHealth(PlayerBattleState player)

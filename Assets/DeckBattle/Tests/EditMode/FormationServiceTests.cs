@@ -19,15 +19,22 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void MoveUnit_RejectsOccupiedTile()
+        public void MoveUnit_SwapsUnits_OnOccupiedFriendlyTile()
         {
             BattleState state = CreateStateWithTwoUnits();
             RuntimeUnit unit = state.Player.Units[0];
+            RuntimeUnit occupyingUnit = state.Player.Units[1];
+            HexCoord sourceCoord = unit.FormationCoord;
+            HexCoord targetCoord = occupyingUnit.FormationCoord;
 
-            FormationMoveResult result = FormationService.MoveUnit(state, state.Player, unit, state.Player.Units[1].FormationCoord);
+            FormationMoveResult result = FormationService.MoveUnit(state, state.Player, unit, targetCoord);
 
-            Assert.IsFalse(result.Success);
-            Assert.AreEqual(FormationMoveFailReason.TileOccupied, result.FailReason);
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(occupyingUnit, result.SwappedUnit);
+            Assert.AreEqual(targetCoord, unit.FormationCoord);
+            Assert.AreEqual(targetCoord, unit.BattleCoord);
+            Assert.AreEqual(sourceCoord, occupyingUnit.FormationCoord);
+            Assert.AreEqual(sourceCoord, occupyingUnit.BattleCoord);
         }
 
         [Test]
