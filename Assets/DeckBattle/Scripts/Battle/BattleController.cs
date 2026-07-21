@@ -7,12 +7,12 @@ namespace DeckBattle
     public sealed class BattleController : MonoBehaviour
     {
         private const int MaxAutomaticFlowSteps = 32;
-        private const int DefaultMaxCombatTicks = 1000;
 
         public event System.Action StateChanged;
 
         [Header("Config")]
         [SerializeField] private BattleConfig battleConfig;
+        [SerializeField] private BattleTimingConfig battleTimingConfig;
         [SerializeField] private List<CardDefinition> playerDeck = new List<CardDefinition>(8);
         [SerializeField] private List<CardDefinition> enemyDeck = new List<CardDefinition>(8);
         [SerializeField] private int seed = 12345;
@@ -25,9 +25,9 @@ namespace DeckBattle
         [SerializeField] private RoundAnnouncementView roundAnnouncementView;
 
         [Header("Combat Timing")]
-        [SerializeField] private float combatTickDuration = BattleTiming.DefaultCombatTickDuration;
-        [SerializeField] private int maxCombatTicks = DefaultMaxCombatTicks;
-        [SerializeField] private float roundResolutionDelay = 0.25f;
+        [SerializeField, HideInInspector] private float combatTickDuration = BattleTiming.DefaultCombatTickDuration;
+        [SerializeField, HideInInspector] private int maxCombatTicks = BattleTiming.DefaultMaxCombatTicks;
+        [SerializeField, HideInInspector] private float roundResolutionDelay = BattleTiming.DefaultRoundResolutionDelay;
 
         private readonly List<UnitView> unitViews = new List<UnitView>(16);
         private readonly List<UnitView> unitViewSearchBuffer = new List<UnitView>(16);
@@ -359,7 +359,7 @@ namespace DeckBattle
                 statusOverlayController.ReleaseAll();
             }
 
-            resolvedBattleView.BindSimulation(activeSimulation, combatTickDuration, maxCombatTicks, unitViewByRuntimeId);
+            resolvedBattleView.BindSimulation(activeSimulation, ResolveCombatTickDuration(), ResolveMaxCombatTicks(), unitViewByRuntimeId);
             ReleaseUnitViewOwnership();
 
             while (state != null
@@ -390,9 +390,10 @@ namespace DeckBattle
         {
             if (state != null && state.Phase == BattlePhase.RoundResolution)
             {
-                if (roundResolutionDelay > 0f)
+                float delay = ResolveRoundResolutionDelay();
+                if (delay > 0f)
                 {
-                    yield return new WaitForSeconds(roundResolutionDelay);
+                    yield return new WaitForSeconds(delay);
                 }
 
                 lastRoundResolutionResult = RoundFlowService.ResolveRoundAndStartNext(state);
@@ -410,13 +411,13 @@ namespace DeckBattle
         private CombatSimulationResult RunCombatSynchronously()
         {
             activeSimulation = BattleSimulationFactory.Create(state, BattleRuntimeTuning.Default);
-            var activeTickLoop = new BattleTickLoop(activeSimulation, combatTickDuration);
+            var activeTickLoop = new BattleTickLoop(activeSimulation, ResolveCombatTickDuration());
             var eventQueue = new BattleEventQueue(32);
             CombatSimulationResult result = BattleSimulationCombatService.RunToResolution(
                 state,
                 activeSimulation,
                 activeTickLoop,
-                maxCombatTicks,
+                ResolveMaxCombatTicks(),
                 eventQueue);
             activeSimulation = null;
             return result;
@@ -473,6 +474,30 @@ namespace DeckBattle
             }
 
             return battleView;
+        }
+
+        private float ResolveCombatTickDuration()
+        {
+            float configuredDuration = battleTimingConfig != null
+                ? battleTimingConfig.CombatTickDuration
+                : combatTickDuration;
+            return Mathf.Max(BattleTiming.MinCombatTickDuration, configuredDuration);
+        }
+
+        private int ResolveMaxCombatTicks()
+        {
+            int configuredTicks = battleTimingConfig != null
+                ? battleTimingConfig.MaxCombatTicks
+                : maxCombatTicks;
+            return Mathf.Max(1, configuredTicks);
+        }
+
+        private float ResolveRoundResolutionDelay()
+        {
+            float configuredDelay = battleTimingConfig != null
+                ? battleTimingConfig.RoundResolutionDelay
+                : roundResolutionDelay;
+            return Mathf.Max(0f, configuredDelay);
         }
 
         private void EvaluatePreparationCountdownState()

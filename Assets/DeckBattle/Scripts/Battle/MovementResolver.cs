@@ -36,7 +36,7 @@ namespace DeckBattle
             workspace.Clear();
             AdvanceActiveMovements(simulation, tickDuration);
             FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
-            PlanMovementIntents(simulation, workspace, true);
+            PlanMovementIntents(simulation, workspace, true, true);
             return ApplyMovementIntents(simulation, workspace, eventQueue);
         }
 
@@ -68,7 +68,7 @@ namespace DeckBattle
             workspace.Clear();
             destinationsByUnitId.Clear();
             FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
-            PlanMovementIntents(simulation, workspace, false);
+            PlanMovementIntents(simulation, workspace, false, false);
             return ReservePlannedDestinations(simulation, workspace, destinationsByUnitId);
         }
 
@@ -96,7 +96,11 @@ namespace DeckBattle
             }
         }
 
-        private static void PlanMovementIntents(BattleSimulation simulation, Workspace workspace, bool updateUnitTargets)
+        private static void PlanMovementIntents(
+            BattleSimulation simulation,
+            Workspace workspace,
+            bool updateUnitTargets,
+            bool randomizeReciprocalGapConflicts)
         {
             IReadOnlyList<UnitRuntimeState> units = simulation.Units;
             for (int i = 0; i < units.Count; i++)
@@ -152,10 +156,114 @@ namespace DeckBattle
 
                 int pathStepsToAttackPosition = workspace.Path.Count - 1;
                 float arrivalTime = pathStepsToAttackPosition * simulation.Tuning.MovementStepDuration;
-                workspace.Intents.Add(new MovementIntent(unit, destination, attackPosition, pathStepsToAttackPosition, arrivalTime));
+                workspace.Intents.Add(new MovementIntent(unit, target, destination, attackPosition, pathStepsToAttackPosition, arrivalTime));
             }
 
+            ResolveReciprocalGapConflicts(simulation, workspace, randomizeReciprocalGapConflicts);
             workspace.Intents.Sort(CompareIntentPriority);
+        }
+
+        private static void ResolveReciprocalGapConflicts(
+            BattleSimulation simulation,
+            Workspace workspace,
+            bool randomizeWinner)
+        {
+            Dictionary<HexCoord, DestinationContest> contests = workspace.DestinationContests;
+            contests.Clear();
+
+            for (int i = 0; i < workspace.Intents.Count; i++)
+            {
+                MovementIntent intent = workspace.Intents[i];
+                DestinationContest contest;
+                if (contests.TryGetValue(intent.Destination, out contest))
+                {
+                    if (contest.Count == 1)
+                    {
+                        contest.SecondIndex = i;
+                    }
+
+                    contest.Count++;
+                    contests[intent.Destination] = contest;
+                }
+                else
+                {
+                    contests.Add(intent.Destination, new DestinationContest(i));
+                }
+            }
+
+            List<int> indexesToRemove = workspace.IntentIndexesToRemove;
+            indexesToRemove.Clear();
+
+            for (int i = 0; i < workspace.Intents.Count; i++)
+            {
+                MovementIntent intent = workspace.Intents[i];
+                DestinationContest contest = contests[intent.Destination];
+                if (contest.FirstIndex != i || contest.Count != 2)
+                {
+                    continue;
+                }
+
+                MovementIntent first = workspace.Intents[contest.FirstIndex];
+                MovementIntent second = workspace.Intents[contest.SecondIndex];
+                if (!IsReciprocalOneHexGapConflict(simulation, first, second))
+                {
+                    continue;
+                }
+
+                bool firstWins = randomizeWinner
+                    ? simulation.Random.NextInt(0, 2) == 0
+                    : CompareIntentPriority(first, second) <= 0;
+                indexesToRemove.Add(firstWins ? contest.SecondIndex : contest.FirstIndex);
+            }
+
+            if (indexesToRemove.Count == 0)
+            {
+                return;
+            }
+
+            indexesToRemove.Sort();
+            for (int i = indexesToRemove.Count - 1; i >= 0; i--)
+            {
+                workspace.Intents.RemoveAt(indexesToRemove[i]);
+            }
+        }
+
+        private static bool IsReciprocalOneHexGapConflict(
+            BattleSimulation simulation,
+            MovementIntent first,
+            MovementIntent second)
+        {
+            UnitRuntimeState firstUnit = first.Unit;
+            UnitRuntimeState secondUnit = second.Unit;
+            if (firstUnit.Side == secondUnit.Side)
+            {
+                return false;
+            }
+
+            if (first.Target != secondUnit || second.Target != firstUnit)
+            {
+                return false;
+            }
+
+            if (first.Destination != second.Destination
+                || first.AttackPosition != first.Destination
+                || second.AttackPosition != second.Destination)
+            {
+                return false;
+            }
+
+            int firstRange = simulation.Tuning.GetAttackRange(firstUnit.Definition);
+            int secondRange = simulation.Tuning.GetAttackRange(secondUnit.Definition);
+            if (firstRange != 1 || secondRange != 1)
+            {
+                return false;
+            }
+
+            HexBoard board = simulation.Board;
+            int unitDistance = board.Distance(firstUnit.CurrentHex, secondUnit.CurrentHex);
+            return unitDistance == 2
+                && board.Distance(firstUnit.CurrentHex, first.Destination) == 1
+                && board.Distance(secondUnit.CurrentHex, second.Destination) == 1;
         }
 
         private static int ApplyMovementIntents(BattleSimulation simulation, Workspace workspace, BattleEventQueue eventQueue)
@@ -334,14 +442,16 @@ namespace DeckBattle
         internal readonly struct MovementIntent
         {
             public readonly UnitRuntimeState Unit;
+            public readonly UnitRuntimeState Target;
             public readonly HexCoord Destination;
             public readonly HexCoord AttackPosition;
             public readonly int PathStepsToAttackPosition;
             public readonly float ArrivalTime;
 
-            public MovementIntent(UnitRuntimeState unit, HexCoord destination, HexCoord attackPosition, int pathStepsToAttackPosition, float arrivalTime)
+            public MovementIntent(UnitRuntimeState unit, UnitRuntimeState target, HexCoord destination, HexCoord attackPosition, int pathStepsToAttackPosition, float arrivalTime)
             {
                 Unit = unit;
+                Target = target;
                 Destination = destination;
                 AttackPosition = attackPosition;
                 PathStepsToAttackPosition = pathStepsToAttackPosition;
@@ -349,11 +459,27 @@ namespace DeckBattle
             }
         }
 
+        internal struct DestinationContest
+        {
+            public int FirstIndex;
+            public int SecondIndex;
+            public int Count;
+
+            public DestinationContest(int firstIndex)
+            {
+                FirstIndex = firstIndex;
+                SecondIndex = -1;
+                Count = 1;
+            }
+        }
+
         public sealed class Workspace
         {
             internal readonly HashSet<HexCoord> OccupiedHexes;
             internal readonly Dictionary<HexCoord, int> ReservedHexes;
+            internal readonly Dictionary<HexCoord, DestinationContest> DestinationContests;
             internal readonly List<MovementIntent> Intents;
+            internal readonly List<int> IntentIndexesToRemove;
             internal readonly List<HexCoord> Path;
             internal readonly List<HexCoord> AlternativePath;
             internal readonly List<HexCoord> Neighbors;
@@ -368,7 +494,9 @@ namespace DeckBattle
                 int units = Math.Max(1, unitCapacity);
                 OccupiedHexes = new HashSet<HexCoord>();
                 ReservedHexes = new Dictionary<HexCoord, int>(units);
+                DestinationContests = new Dictionary<HexCoord, DestinationContest>(units);
                 Intents = new List<MovementIntent>(units);
+                IntentIndexesToRemove = new List<int>(units);
                 Path = new List<HexCoord>(boardCapacity);
                 AlternativePath = new List<HexCoord>(boardCapacity);
                 Neighbors = new List<HexCoord>(6);
@@ -382,7 +510,9 @@ namespace DeckBattle
             {
                 OccupiedHexes.Clear();
                 ReservedHexes.Clear();
+                DestinationContests.Clear();
                 Intents.Clear();
+                IntentIndexesToRemove.Clear();
                 Path.Clear();
                 AlternativePath.Clear();
                 Neighbors.Clear();

@@ -61,6 +61,12 @@ namespace DeckBattle
                 return true;
             }
 
+            if (target.IsMoving && board.Distance(attacker.CurrentHex, target.MovementDestination) <= attackRange)
+            {
+                attackPosition = attacker.CurrentHex;
+                return true;
+            }
+
             workspace.Clear();
             FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
             board.FillHexesInRange(target.CurrentHex, attackRange, workspace.RangeHexes);

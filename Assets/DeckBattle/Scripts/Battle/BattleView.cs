@@ -10,8 +10,9 @@ namespace DeckBattle
 
         [Header("Simulation")]
         [SerializeField] private BattleConfig battleConfig;
-        [SerializeField] private float tickDuration = BattleTiming.DefaultCombatTickDuration;
-        [SerializeField] private int maxTicksPerFrame = 4;
+        [SerializeField] private BattleTimingConfig battleTimingConfig;
+        [SerializeField, HideInInspector] private float tickDuration = BattleTiming.DefaultCombatTickDuration;
+        [SerializeField, HideInInspector] private int maxTicksPerFrame = BattleTiming.DefaultMaxTicksPerFrame;
         [SerializeField] private float attackCooldownMultiplier = 1f;
         [SerializeField] private int attackRangeBonus;
         [SerializeField] private float movementStepDuration = 0.4f;
@@ -147,7 +148,7 @@ namespace DeckBattle
 
         public void BindSimulation(BattleSimulation nextSimulation)
         {
-            BindSimulation(nextSimulation, tickDuration, int.MaxValue);
+            BindSimulation(nextSimulation, ResolveStandaloneTickDuration(), ResolveStandaloneMaxCombatTicks());
         }
 
         public void BindSimulation(BattleSimulation nextSimulation, float nextTickDuration, int nextMaxTicks)
@@ -257,7 +258,8 @@ namespace DeckBattle
 
             tickAccumulator += deltaTime;
             int ticksThisFrame = 0;
-            while (tickAccumulator >= tickLoop.TickDuration && ticksThisFrame < maxTicksPerFrame)
+            int resolvedMaxTicksPerFrame = ResolveMaxTicksPerFrame();
+            while (tickAccumulator >= tickLoop.TickDuration && ticksThisFrame < resolvedMaxTicksPerFrame)
             {
                 if (ticksElapsed >= maxSimulationTicks)
                 {
@@ -291,7 +293,7 @@ namespace DeckBattle
                 }
             }
 
-            if (ticksThisFrame >= maxTicksPerFrame)
+            if (ticksThisFrame >= resolvedMaxTicksPerFrame)
             {
                 tickAccumulator = 0f;
             }
@@ -655,6 +657,30 @@ namespace DeckBattle
         private BattleRuntimeTuning CreateRuntimeTuning()
         {
             return new BattleRuntimeTuning(attackCooldownMultiplier, attackRangeBonus, movementStepDuration);
+        }
+
+        private float ResolveStandaloneTickDuration()
+        {
+            float configuredDuration = battleTimingConfig != null
+                ? battleTimingConfig.CombatTickDuration
+                : tickDuration;
+            return Mathf.Max(BattleTiming.MinCombatTickDuration, configuredDuration);
+        }
+
+        private int ResolveStandaloneMaxCombatTicks()
+        {
+            int configuredTicks = battleTimingConfig != null
+                ? battleTimingConfig.MaxCombatTicks
+                : int.MaxValue;
+            return Mathf.Max(1, configuredTicks);
+        }
+
+        private int ResolveMaxTicksPerFrame()
+        {
+            int configuredTicks = battleTimingConfig != null
+                ? battleTimingConfig.MaxTicksPerFrame
+                : maxTicksPerFrame;
+            return Mathf.Max(1, configuredTicks);
         }
 
         private static void ReleaseCompletedEffects(List<PooledBattleEffect> activeEffects, Stack<PooledBattleEffect> pooledEffects)

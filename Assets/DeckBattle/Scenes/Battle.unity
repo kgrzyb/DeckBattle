@@ -900,6 +900,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battleConfig: {fileID: 11400000, guid: 8108cc2527ed11245b2df1e4663bc2a2, type: 2}
+  battleTimingConfig: {fileID: 11400000, guid: 7ca68c547f47473db009e8a8e6b2d8b7, type: 2}
   playerDeck:
   - {fileID: 11400000, guid: b2d9dfc3f41390f4e8e44eb9ca87ffdd, type: 2}
   - {fileID: 11400000, guid: 584b14920b63c2f49ad2b9511e45f754, type: 2}
@@ -922,7 +923,7 @@ MonoBehaviour:
   battleView: {fileID: 225271485}
   statusOverlayController: {fileID: 641749120}
   roundAnnouncementView: {fileID: 752130575}
-  combatTickDuration: 0.35
+  combatTickDuration: 0.25
   maxCombatTicks: 1000
   roundResolutionDelay: 0.25
 --- !u!4 &225271483
@@ -973,6 +974,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battleConfig: {fileID: 11400000, guid: 8108cc2527ed11245b2df1e4663bc2a2, type: 2}
+  battleTimingConfig: {fileID: 11400000, guid: 7ca68c547f47473db009e8a8e6b2d8b7, type: 2}
   tickDuration: 0.35
   maxTicksPerFrame: 4
   attackCooldownMultiplier: 1

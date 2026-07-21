@@ -46,6 +46,81 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void ResolveMovement_RandomizesReciprocalOneHexGapConflict()
+        {
+            BattleSimulation simulation = CreateReciprocalGapSimulation(2);
+
+            int moved = MovementResolver.ResolveMovement(simulation);
+
+            Assert.AreEqual(1, moved);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.IsFalse(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+            Assert.AreEqual(new HexCoord(2, 0), simulation.Units[1].CurrentHex);
+        }
+
+        [Test]
+        public void ResolveMovement_ReciprocalOneHexGapLoserWaitsInsteadOfFindingAlternativeStep()
+        {
+            BattleSimulation simulation = CreateReciprocalGapSimulation(1);
+
+            int moved = MovementResolver.ResolveMovement(simulation);
+
+            Assert.AreEqual(1, moved);
+            Assert.IsFalse(simulation.Units[0].IsMoving);
+            Assert.IsTrue(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[1].MovementDestination);
+        }
+
+        [Test]
+        public void ResolveMovement_ReciprocalOneHexGapLoserKeepsWaitingWhileWinnerMovesIntoRange()
+        {
+            BattleSimulation simulation = CreateReciprocalGapSimulation(2);
+            var workspace = new MovementResolver.Workspace(25, 2);
+
+            MovementResolver.ResolveMovement(simulation, 0f, workspace, null);
+            int moved = MovementResolver.ResolveMovement(simulation, 0.1f, workspace, null);
+
+            Assert.AreEqual(0, moved);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+            Assert.IsFalse(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(2, 0), simulation.Units[1].CurrentHex);
+        }
+
+        [Test]
+        public void PlanMovementDestinations_ReciprocalOneHexGapDoesNotUseAlternativeStep()
+        {
+            BattleSimulation simulation = CreateReciprocalGapSimulation(2);
+            var destinationsByUnitId = new System.Collections.Generic.Dictionary<int, HexCoord>(2);
+            var workspace = new MovementResolver.Workspace(25, 2);
+
+            int planned = MovementResolver.PlanMovementDestinations(simulation, workspace, destinationsByUnitId);
+
+            Assert.AreEqual(1, planned);
+            Assert.IsTrue(destinationsByUnitId.ContainsKey(1));
+            Assert.IsFalse(destinationsByUnitId.ContainsKey(2));
+            Assert.AreEqual(new HexCoord(1, 0), destinationsByUnitId[1]);
+        }
+
+        [Test]
+        public void PlanMovementDestinations_ReciprocalOneHexGapDoesNotConsumeMovementRandom()
+        {
+            BattleSimulation simulation = CreateReciprocalGapSimulation(1);
+            var destinationsByUnitId = new System.Collections.Generic.Dictionary<int, HexCoord>(2);
+            var workspace = new MovementResolver.Workspace(25, 2);
+
+            MovementResolver.PlanMovementDestinations(simulation, workspace, destinationsByUnitId);
+            int moved = MovementResolver.ResolveMovement(simulation);
+
+            Assert.AreEqual(1, moved);
+            Assert.IsFalse(simulation.Units[0].IsMoving);
+            Assert.IsTrue(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[1].MovementDestination);
+        }
+
+        [Test]
         public void ResolveMovement_ChasesReachableCurrentTarget_WhenAnotherEnemyIsInRange()
         {
             UnitDefinition melee = CreateUnit("melee", 1);
@@ -221,6 +296,21 @@ namespace DeckBattle.Tests
             UnitDefinition definition = TestDefinitions.CreateUnit(unitId, 1);
             definition.AttackRange = attackRange;
             return definition;
+        }
+
+        private static BattleSimulation CreateReciprocalGapSimulation(int randomSeed)
+        {
+            UnitDefinition player = CreateUnit("player", 1);
+            UnitDefinition enemy = CreateUnit("enemy", 1);
+            return BattleSimulation.Create(
+                new HexBoard(5, 5, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 0))
+                },
+                BattleRuntimeTuning.Default,
+                randomSeed);
         }
     }
 }

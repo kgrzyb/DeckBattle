@@ -27,6 +27,30 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void TrySelectAttackPosition_ReturnsCurrentHex_WhenMovingTargetDestinationIsInRange()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 0))
+                },
+                BattleRuntimeTuning.Default);
+            simulation.StartUnitMovement(simulation.Units[0], new HexCoord(1, 0));
+
+            bool found = AttackPositionSelector.TrySelectAttackPosition(
+                simulation,
+                simulation.Units[1],
+                simulation.Units[0],
+                out HexCoord attackPosition);
+
+            Assert.IsTrue(found);
+            Assert.AreEqual(new HexCoord(2, 0), attackPosition);
+        }
+
+        [Test]
         public void TrySelectAttackPosition_MeleeSelectsNearestFreeNeighbor()
         {
             UnitDefinition melee = CreateUnit("melee", 1);
