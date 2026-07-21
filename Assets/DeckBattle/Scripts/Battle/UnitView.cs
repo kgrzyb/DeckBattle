@@ -23,6 +23,7 @@ namespace DeckBattle
 
         private MaterialPropertyBlock propertyBlock;
         private Vector3 baseModelScale;
+        private Quaternion baseModelRotation;
         private Vector3 moveFrom;
         private Vector3 moveTo;
         private readonly Vector3[] queuedMoveTargets = new Vector3[MaxQueuedMoves];
@@ -52,6 +53,7 @@ namespace DeckBattle
             }
 
             baseModelScale = modelRoot.localScale;
+            baseModelRotation = modelRoot.localRotation;
             propertyBlock = new MaterialPropertyBlock();
         }
 
@@ -112,6 +114,23 @@ namespace DeckBattle
             attackTimer = Mathf.Max(attackPulseDuration, 0.01f);
         }
 
+        public void FaceWorldPosition(Vector3 worldPosition)
+        {
+            if (modelRoot == null)
+            {
+                return;
+            }
+
+            Vector3 direction = worldPosition - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            modelRoot.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up) * baseModelRotation;
+        }
+
         public void PlayDamage(int remainingHp)
         {
             damageTimer = Mathf.Max(damageFlashDuration, 0.01f);
@@ -161,6 +180,7 @@ namespace DeckBattle
             if (modelRoot != null)
             {
                 modelRoot.localScale = baseModelScale;
+                modelRoot.localRotation = baseModelRotation;
             }
 
             SetWorldPosition(worldPosition);
@@ -194,6 +214,7 @@ namespace DeckBattle
             moveTo = target;
             moveElapsed = 0f;
             moveDuration = duration;
+            FaceWorldPosition(target);
             isMoving = true;
         }
 

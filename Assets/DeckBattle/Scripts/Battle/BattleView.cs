@@ -342,12 +342,13 @@ namespace DeckBattle
             }
 
             UnitRuntimeState unit;
+            Vector3 targetPosition = boardPresenter.GetWorldPosition(battleEvent.To);
             float duration = simulation != null
                 && simulation.TryGetUnitById(battleEvent.UnitId, out unit)
                 && unit != null
                 ? ResolvePresentationMovementStepDuration(simulation.Tuning.MovementStepDuration)
                 : tickDuration;
-            view.MoveToWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To), duration);
+            view.MoveToWorldPosition(targetPosition, duration);
         }
 
         private float ResolvePresentationMovementStepDuration(float stepDuration)
@@ -366,6 +367,12 @@ namespace DeckBattle
             UnitView attackerView;
             if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out attackerView) && attackerView != null)
             {
+                UnitRuntimeState target;
+                if (simulation.TryGetUnitById(battleEvent.TargetUnitId, out target) && target != null)
+                {
+                    attackerView.FaceWorldPosition(boardPresenter.GetWorldPosition(target.CurrentHex));
+                }
+
                 attackerView.PlayAttack();
                 UnitRuntimeState attacker;
                 if (simulation.TryGetUnitById(battleEvent.UnitId, out attacker))
