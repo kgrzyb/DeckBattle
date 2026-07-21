@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace DeckBattle
         [SerializeField] private BattleTimingConfig battleTimingConfig;
         [SerializeField] private List<CardDefinition> playerDeck = new List<CardDefinition>(8);
         [SerializeField] private List<CardDefinition> enemyDeck = new List<CardDefinition>(8);
+        [SerializeField] private bool randomizeSeedOnPlay;
         [SerializeField] private int seed = 12345;
 
         [Header("Presentation")]
@@ -36,6 +38,7 @@ namespace DeckBattle
         private BattleSimulation activeSimulation;
         private CombatSimulationResult lastCombatResult;
         private RoundResolutionResult lastRoundResolutionResult;
+        private int activeSeed;
         private Coroutine combatRoutine;
         private Coroutine roundAnnouncementRoutine;
         private Coroutine preparationCountdownRoutine;
@@ -60,6 +63,11 @@ namespace DeckBattle
         public RoundResolutionResult LastRoundResolutionResult
         {
             get { return lastRoundResolutionResult; }
+        }
+
+        public int ActiveSeed
+        {
+            get { return activeSeed; }
         }
 
         private void OnValidate()
@@ -91,7 +99,8 @@ namespace DeckBattle
             StopRoundAnnouncementRoutine();
             StopPreparationCountdownRoutine();
             ClearUnitViews();
-            state = BattleState.Create(battleConfig, playerDeck, enemyDeck, seed);
+            activeSeed = ResolveBattleSeed();
+            state = BattleState.Create(battleConfig, playerDeck, enemyDeck, activeSeed);
             state.BeginRoundStart();
             lastCombatResult = null;
             lastRoundResolutionResult = null;
@@ -100,6 +109,24 @@ namespace DeckBattle
             ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
+        }
+
+        private int ResolveBattleSeed()
+        {
+            return randomizeSeedOnPlay && Application.isPlaying ? GeneratePlaySeed() : seed;
+        }
+
+        private int GeneratePlaySeed()
+        {
+            unchecked
+            {
+                long ticks = DateTime.UtcNow.Ticks;
+                int generatedSeed = (int)ticks;
+                generatedSeed = (generatedSeed * 397) ^ (int)(ticks >> 32);
+                generatedSeed = (generatedSeed * 397) ^ GetInstanceID();
+                generatedSeed = (generatedSeed * 397) ^ Time.frameCount;
+                return generatedSeed;
+            }
         }
 
         public bool TryPlayPlayerCard(CardRuntimeState card, HexCoord coord)

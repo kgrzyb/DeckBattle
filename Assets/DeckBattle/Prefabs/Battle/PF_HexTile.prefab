@@ -122,9 +122,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   meshRenderer: {fileID: 4274861848944135021}
-  playerZoneColor: {r: 0.3524386, g: 0.37097108, b: 0.4528302, a: 1}
-  enemyZoneColor: {r: 0.3529412, g: 0.37254903, b: 0.4509804, a: 1}
-  neutralColor: {r: 0.3529412, g: 0.37254903, b: 0.4509804, a: 1}
+  playerZoneColor: {r: 0.43102527, g: 0.45425418, b: 0.5471698, a: 1}
+  enemyZoneColor: {r: 0.43137255, g: 0.45490196, b: 0.54901963, a: 1}
+  neutralColor: {r: 0.43137255, g: 0.45490196, b: 0.54901963, a: 1}
   legalHighlightColor: {r: 0.28, g: 0.72, b: 0.38, a: 1}
   blockedHighlightColor: {r: 0.82, g: 0.32, b: 0.24, a: 1}
   selectedHighlightColor: {r: 0.96, g: 0.78, b: 0.26, a: 1}
