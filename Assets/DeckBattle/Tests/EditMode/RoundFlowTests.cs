@@ -32,7 +32,31 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Resolve_AddsRoundDamageBonusToSurvivorPowerForBothSides()
+        public void Resolve_AddsRoundDamageBonusOnlyForCombatWinner()
+        {
+            BattleState state = CreateState(0, 0);
+            state.Player.Hp = 10;
+            state.Enemy.Hp = 10;
+            state.Player.RoundDamageBonus = 2;
+            state.Enemy.RoundDamageBonus = 1;
+            state.Phase = BattlePhase.RoundResolution;
+
+            state.Player.Units.Add(CreateRuntimeUnit(1, BattleSide.Player, new HexCoord(0, 0), 4));
+            RuntimeUnit defeatedEnemy = CreateRuntimeUnit(2, BattleSide.Enemy, new HexCoord(0, 5), 3);
+            defeatedEnemy.IsDefeated = true;
+            state.Enemy.Units.Add(defeatedEnemy);
+
+            RoundResolutionResult result = RoundDamageResolver.Resolve(state);
+
+            Assert.AreEqual(6, result.PlayerDamageDealt);
+            Assert.AreEqual(0, result.EnemyDamageDealt);
+            Assert.AreEqual(10, state.Player.Hp);
+            Assert.AreEqual(4, state.Enemy.Hp);
+            Assert.IsFalse(result.MatchEnded);
+        }
+
+        [Test]
+        public void Resolve_WhenCombatHasNoWinner_DoesNotAddRoundDamageBonus()
         {
             BattleState state = CreateState(0, 0);
             state.Player.Hp = 10;
@@ -46,10 +70,10 @@ namespace DeckBattle.Tests
 
             RoundResolutionResult result = RoundDamageResolver.Resolve(state);
 
-            Assert.AreEqual(6, result.PlayerDamageDealt);
-            Assert.AreEqual(4, result.EnemyDamageDealt);
-            Assert.AreEqual(6, state.Player.Hp);
-            Assert.AreEqual(4, state.Enemy.Hp);
+            Assert.AreEqual(4, result.PlayerDamageDealt);
+            Assert.AreEqual(3, result.EnemyDamageDealt);
+            Assert.AreEqual(7, state.Player.Hp);
+            Assert.AreEqual(6, state.Enemy.Hp);
             Assert.IsFalse(result.MatchEnded);
         }
 

@@ -16,8 +16,10 @@ namespace DeckBattle
                 throw new InvalidOperationException("Round damage can only be resolved during RoundResolution.");
             }
 
-            int playerDamage = CalculateRoundDamage(battleState.Player);
-            int enemyDamage = CalculateRoundDamage(battleState.Enemy);
+            bool playerWonCombat = HasLivingUnits(battleState.Player) && !HasLivingUnits(battleState.Enemy);
+            bool enemyWonCombat = HasLivingUnits(battleState.Enemy) && !HasLivingUnits(battleState.Player);
+            int playerDamage = CalculateRoundDamage(battleState.Player, playerWonCombat);
+            int enemyDamage = CalculateRoundDamage(battleState.Enemy, enemyWonCombat);
 
             battleState.Enemy.Hp = Math.Max(0, battleState.Enemy.Hp - playerDamage);
             battleState.Player.Hp = Math.Max(0, battleState.Player.Hp - enemyDamage);
@@ -43,9 +45,29 @@ namespace DeckBattle
                 winner);
         }
 
-        private static int CalculateRoundDamage(PlayerBattleState player)
+        private static int CalculateRoundDamage(PlayerBattleState player, bool wonCombat)
         {
-            return CalculateSurvivorPower(player) + Math.Max(0, player.RoundDamageBonus);
+            int damage = CalculateSurvivorPower(player);
+            if (wonCombat)
+            {
+                damage += Math.Max(0, player.RoundDamageBonus);
+            }
+
+            return damage;
+        }
+
+        private static bool HasLivingUnits(PlayerBattleState player)
+        {
+            for (int i = 0; i < player.Units.Count; i++)
+            {
+                RuntimeUnit unit = player.Units[i];
+                if (unit != null && unit.IsAlive)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static int CalculateSurvivorPower(PlayerBattleState player)
