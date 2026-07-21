@@ -915,6 +915,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 766bebe44508c5d4a8a6144ab367c602, type: 2}
   - {fileID: 11400000, guid: e058364f049f9bd40af93cf15af5b304, type: 2}
   - {fileID: 11400000, guid: c0686eab33d7c8d48a2448c351adc71b, type: 2}
+  - {fileID: 11400000, guid: 53f4991f3d7082b45959fdc0ca287b2a, type: 2}
   seed: 71347134
   boardPresenter: {fileID: 1201968723}
   unitRoot: {fileID: 763315698}
@@ -3472,6 +3473,12 @@ MonoBehaviour:
   armorPenetrationText: {fileID: 0}
   typeText: {fileID: 0}
   rarityText: {fileID: 0}
+  unitDetailsRoot: {fileID: 0}
+  spellDetailsRoot: {fileID: 0}
+  spellTargetText: {fileID: 0}
+  spellEffectText: {fileID: 0}
+  spellAmountText: {fileID: 0}
+  spellDescriptionText: {fileID: 0}
 --- !u!114 &1666162182
 MonoBehaviour:
   m_ObjectHideFlags: 0
