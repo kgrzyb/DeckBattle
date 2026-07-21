@@ -148,7 +148,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                attacker.AttackCooldownRemaining = simulation.Tuning.GetAttackCooldown(attacker.Definition, attacker);
+                attacker.AttackCooldownRemaining += simulation.Tuning.GetAttackCooldown(attacker.Definition, attacker);
             }
 
             for (int i = 0; i < simulation.Units.Count; i++)
@@ -178,7 +178,7 @@ namespace DeckBattle
                 return;
             }
 
-            unit.AttackCooldownRemaining = Math.Max(0f, unit.AttackCooldownRemaining - tickDuration);
+            unit.AttackCooldownRemaining -= tickDuration;
         }
 
         private static void UpdateSpecialDuration(UnitRuntimeState unit, float tickDuration)

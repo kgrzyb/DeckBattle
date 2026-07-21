@@ -59,6 +59,37 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void ResolveCombat_CarriesCooldownOvershootAcrossAttacks()
+        {
+            BattleSimulation fastSimulation = CreateSimulation(
+                CreateUnit("fast-attacker", 20, 1, 1, 0.5f),
+                new HexCoord(1, 1),
+                CreateUnit("fast-target", 20, 1, 1, 1f),
+                new HexCoord(2, 1));
+            BattleSimulation slowSimulation = CreateSimulation(
+                CreateUnit("slow-attacker", 20, 1, 1, 0.7f),
+                new HexCoord(1, 1),
+                CreateUnit("slow-target", 20, 1, 1, 1f),
+                new HexCoord(2, 1));
+            fastSimulation.Units[0].SetTarget(fastSimulation.Units[1]);
+            slowSimulation.Units[0].SetTarget(slowSimulation.Units[1]);
+
+            CombatResolver.ResolveCombat(fastSimulation, 0.35f);
+            CombatResolver.ResolveCombat(slowSimulation, 0.35f);
+            CombatResolutionResult fastSecondTick = CombatResolver.ResolveCombat(fastSimulation, 0.35f);
+            CombatResolutionResult slowSecondTick = CombatResolver.ResolveCombat(slowSimulation, 0.35f);
+            CombatResolutionResult fastThirdTick = CombatResolver.ResolveCombat(fastSimulation, 0.35f);
+            CombatResolutionResult slowThirdTick = CombatResolver.ResolveCombat(slowSimulation, 0.35f);
+
+            Assert.AreEqual(1, fastSecondTick.Attacks);
+            Assert.AreEqual(1, slowSecondTick.Attacks);
+            Assert.AreEqual(1, fastThirdTick.Attacks);
+            Assert.AreEqual(0, slowThirdTick.Attacks);
+            Assert.AreEqual(18, fastSimulation.Units[1].CurrentHp);
+            Assert.AreEqual(19, slowSimulation.Units[1].CurrentHp);
+        }
+
+        [Test]
         public void ResolveCombat_DoesNotAttackTargetOutOfRange()
         {
             BattleSimulation simulation = CreateSimulation(

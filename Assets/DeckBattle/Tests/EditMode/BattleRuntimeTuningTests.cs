@@ -41,8 +41,9 @@ namespace DeckBattle.Tests
                 },
                 new BattleRuntimeTuning(2f, 0));
             simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].AttackCooldownRemaining = 0f;
 
-            CombatResolver.ResolveCombat(simulation, 2f);
+            CombatResolver.ResolveCombat(simulation, 0f);
 
             Assert.AreEqual(2f, simulation.Units[0].AttackCooldownRemaining);
         }
