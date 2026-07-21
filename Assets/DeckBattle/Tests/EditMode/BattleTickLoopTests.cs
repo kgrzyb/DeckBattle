@@ -126,6 +126,29 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Tick_ScoutMirrorFromOffsetHexes_DefeatsBothUnitsTogether()
+        {
+            UnitDefinition player = CreateScout("player-scout");
+            UnitDefinition enemy = CreateScout("enemy-scout");
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(1, 2)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 3))
+                });
+            var loop = new BattleTickLoop(simulation, BattleTiming.DefaultCombatTickDuration);
+            var events = new BattleEventQueue();
+
+            BattleTickResult result = RunUntilEnded(simulation, loop, events, 30);
+
+            Assert.IsTrue(result.BattleEnded);
+            Assert.IsFalse(result.HasWinner);
+            Assert.IsTrue(simulation.Units[0].IsDefeated);
+            Assert.IsTrue(simulation.Units[1].IsDefeated);
+        }
+
+        [Test]
         public void Tick_DoesNotEmitBattleEndedAgain_AfterBattleAlreadyEnded()
         {
             UnitDefinition player = CreateUnit("player-ranged", 5, 4, 3, 1f);
@@ -192,6 +215,15 @@ namespace DeckBattle.Tests
 
             Assert.Fail("Battle did not end within expected ticks.");
             return result;
+        }
+
+        private static UnitDefinition CreateScout(string unitId)
+        {
+            UnitDefinition definition = CreateUnit(unitId, 35, 5, 1, 0.5f);
+            definition.ManaThreshold = 100;
+            definition.ManaPerAttack = 25;
+            definition.ManaPerDamageTaken = 10;
+            return definition;
         }
 
         private static void AssertEventTypeExists(BattleEventQueue events, BattleEventType type)

@@ -6,6 +6,7 @@ namespace DeckBattle
     {
         private readonly MovementResolver.Workspace movementWorkspace;
         private readonly TargetSelector.Workspace targetWorkspace;
+        private readonly CombatResolver.Workspace combatWorkspace;
 
         public BattleTickLoop(BattleSimulation simulation, float tickDuration)
         {
@@ -23,6 +24,7 @@ namespace DeckBattle
             int boardCellCapacity = simulation.Board.Width * simulation.Board.Height;
             movementWorkspace = new MovementResolver.Workspace(boardCellCapacity, simulation.Units.Count);
             targetWorkspace = new TargetSelector.Workspace(boardCellCapacity);
+            combatWorkspace = new CombatResolver.Workspace(simulation.Units.Count);
         }
 
         public float TickDuration { get; private set; }
@@ -49,7 +51,7 @@ namespace DeckBattle
             RefreshTargets(simulation);
 
             ProjectileResolver.ResolveProjectiles(simulation, TickDuration, eventQueue);
-            CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, TickDuration, eventQueue);
+            CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, TickDuration, eventQueue, combatWorkspace);
             int moved = MovementResolver.ResolveMovement(simulation, TickDuration, movementWorkspace, eventQueue);
 
             BattleSide winner;

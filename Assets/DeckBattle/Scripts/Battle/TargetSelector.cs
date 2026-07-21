@@ -78,6 +78,15 @@ namespace DeckBattle
             workspace.Clear();
             FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
 
+            UnitRuntimeState currentTarget;
+            if (attacker.TargetUnitId != UnitRuntimeState.NoTargetUnitId
+                && simulation.TryGetUnitById(attacker.TargetUnitId, out currentTarget)
+                && IsLiveEnemy(attacker, currentTarget)
+                && HasReachableAttackPosition(simulation, attacker, currentTarget, workspace))
+            {
+                return currentTarget;
+            }
+
             return SelectNewTarget(simulation, attacker, workspace);
         }
 

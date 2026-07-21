@@ -118,6 +118,35 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void ResolveCombat_ReadyAttackerGainsAttackAndDamageManaWhenLethallyHitSameTick()
+        {
+            UnitDefinition first = CreateUnit("first", 20, 5, 1, 1f);
+            UnitDefinition second = CreateUnit("second", 5, 2, 1, 1f);
+            first.ManaPerAttack = 11;
+            first.ManaPerDamageTaken = 13;
+            second.ManaPerAttack = 17;
+            second.ManaPerDamageTaken = 19;
+            BattleSimulation simulation = CreateSimulation(
+                first,
+                new HexCoord(1, 1),
+                second,
+                new HexCoord(2, 1));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[1].SetTarget(simulation.Units[0]);
+            simulation.Units[0].AttackCooldownRemaining = 0f;
+            simulation.Units[1].AttackCooldownRemaining = 0f;
+
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 0f);
+
+            Assert.AreEqual(2, result.Attacks);
+            Assert.AreEqual(1, result.Deaths);
+            Assert.AreEqual(18, simulation.Units[0].CurrentHp);
+            Assert.IsTrue(simulation.Units[1].IsDefeated);
+            Assert.AreEqual(24, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(36, simulation.Units[1].CurrentMana);
+        }
+
+        [Test]
         public void ResolveCombat_OutOfRangeUnitCanMoveBeforeLaterAttack()
         {
             UnitDefinition melee = CreateUnit("melee", 10, 2, 1, 1f);

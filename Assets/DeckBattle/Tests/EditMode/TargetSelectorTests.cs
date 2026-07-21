@@ -112,7 +112,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void SelectTargetOrRetainCurrent_ReplacesCurrentTarget_WhenCloserEnemyIsReachable()
+        public void SelectTargetOrRetainCurrent_RetainsCurrentTarget_WhenCurrentTargetIsReachable()
         {
             var board = new HexBoard(5, 6, 1f);
             UnitDefinition melee = CreateUnit("melee", 5, 1);
@@ -133,7 +133,7 @@ namespace DeckBattle.Tests
                 simulation.Units[0],
                 new TargetSelector.Workspace(board.Width * board.Height));
 
-            Assert.AreSame(simulation.Units[2], target);
+            Assert.AreSame(simulation.Units[1], target);
         }
 
         [Test]
