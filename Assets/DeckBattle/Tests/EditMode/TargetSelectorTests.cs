@@ -112,7 +112,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void SelectTargetOrRetainCurrent_RetainsCurrentTarget_WhenCurrentTargetIsReachable()
+        public void SelectTargetOrRetainCurrent_ReevaluatesAllPaths_AndChoosesCloserTarget()
         {
             var board = new HexBoard(5, 6, 1f);
             UnitDefinition melee = CreateUnit("melee", 5, 1);
@@ -133,7 +133,7 @@ namespace DeckBattle.Tests
                 simulation.Units[0],
                 new TargetSelector.Workspace(board.Width * board.Height));
 
-            Assert.AreSame(simulation.Units[1], target);
+            Assert.AreSame(simulation.Units[2], target);
         }
 
         [Test]
@@ -159,6 +159,31 @@ namespace DeckBattle.Tests
                 new TargetSelector.Workspace(board.Width * board.Height));
 
             Assert.AreSame(simulation.Units[2], target);
+        }
+
+        [Test]
+        public void TrySelectTarget_ReturnsSelectedTargetAndItsAttackPath()
+        {
+            UnitDefinition melee = CreateUnit("melee", 5, 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(3, 0))
+                });
+            var workspace = new TargetSelector.Workspace(30);
+
+            bool found = TargetSelector.TrySelectTarget(
+                simulation,
+                simulation.Units[0],
+                workspace,
+                out TargetSelector.TargetSelection selection);
+
+            Assert.IsTrue(found);
+            Assert.AreSame(simulation.Units[1], selection.Target);
+            Assert.AreEqual(new HexCoord(1, 0), selection.AttackPath.NextStep);
+            Assert.AreEqual(2, selection.AttackPath.PathSteps);
         }
 
         [Test]

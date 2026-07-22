@@ -118,6 +118,33 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void TrySelectAttackPosition_ReturnsPathMetadataWithoutASecondSearch()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(3, 0))
+                });
+            var workspace = new AttackPositionSelector.Workspace(30);
+
+            bool found = AttackPositionSelector.TrySelectAttackPosition(
+                simulation,
+                simulation.Units[0],
+                simulation.Units[1],
+                workspace,
+                out AttackPositionSelector.AttackPathResult result);
+
+            Assert.IsTrue(found);
+            Assert.AreEqual(new HexCoord(2, 0), result.AttackPosition);
+            Assert.AreEqual(new HexCoord(1, 0), result.NextStep);
+            Assert.AreEqual(2, result.PathSteps);
+            Assert.IsFalse(result.IsAlreadyInRange);
+        }
+
+        [Test]
         public void TrySelectAttackPosition_ReturnsFalse_WhenNoAttackHexIsReachable()
         {
             var board = new HexBoard(5, 6, 1f);

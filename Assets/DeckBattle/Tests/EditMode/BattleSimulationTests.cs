@@ -153,5 +153,39 @@ namespace DeckBattle.Tests
 
             Assert.AreEqual(0, simulation.Units.Count);
         }
+
+        [Test]
+        public void StartUnitMovement_RejectsNonAdjacentDestination()
+        {
+            UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, definition, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, definition, BattleSide.Enemy, new HexCoord(4, 5))
+                });
+
+            Assert.Throws<ArgumentException>(
+                () => simulation.StartUnitMovement(simulation.Units[0], new HexCoord(2, 0)));
+        }
+
+        [Test]
+        public void StartUnitMovement_RejectsAnotherMovingUnitDestination()
+        {
+            UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, definition, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, definition, BattleSide.Player, new HexCoord(2, 0)),
+                    new UnitSpawnData(3, definition, BattleSide.Enemy, new HexCoord(4, 5))
+                });
+            simulation.StartUnitMovement(simulation.Units[0], new HexCoord(1, 0));
+
+            Assert.Throws<ArgumentException>(
+                () => simulation.StartUnitMovement(simulation.Units[1], new HexCoord(1, 0)));
+        }
     }
 }

@@ -46,7 +46,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void ResolveMovement_RandomizesReciprocalOneHexGapConflict()
+        public void ResolveMovement_ResolvesReciprocalOneHexGapConflictByUnitId()
         {
             BattleSimulation simulation = CreateReciprocalGapSimulation(2);
 
@@ -67,10 +67,10 @@ namespace DeckBattle.Tests
             int moved = MovementResolver.ResolveMovement(simulation);
 
             Assert.AreEqual(1, moved);
-            Assert.IsFalse(simulation.Units[0].IsMoving);
-            Assert.IsTrue(simulation.Units[1].IsMoving);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.IsFalse(simulation.Units[1].IsMoving);
             Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[1].MovementDestination);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
         }
 
         [Test]
@@ -105,7 +105,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void PlanMovementDestinations_ReciprocalOneHexGapDoesNotConsumeMovementRandom()
+        public void PlanMovementDestinations_ReciprocalOneHexGapIsIndependentOfMovementRandom()
         {
             BattleSimulation simulation = CreateReciprocalGapSimulation(1);
             var destinationsByUnitId = new System.Collections.Generic.Dictionary<int, HexCoord>(2);
@@ -115,9 +115,9 @@ namespace DeckBattle.Tests
             int moved = MovementResolver.ResolveMovement(simulation);
 
             Assert.AreEqual(1, moved);
-            Assert.IsFalse(simulation.Units[0].IsMoving);
-            Assert.IsTrue(simulation.Units[1].IsMoving);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[1].MovementDestination);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.IsFalse(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
         }
 
         [Test]

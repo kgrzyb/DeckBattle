@@ -124,6 +124,10 @@
 - When moving or renaming Unity assets, preserve associated `.meta` files.
 - Do not delete generated Unity folders such as `Library`, `Temp`, `Obj`, or build outputs unless explicitly asked.
 
+## Documentation Rules
+
+- Do not inspect or search `Docs/CompletedPlans`; it contains plans that have already been implemented.
+
 ## Before Finishing a Task
 
 - Check whether the change affects mobile performance, memory, loading time, or build size.

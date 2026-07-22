@@ -22,7 +22,7 @@ namespace DeckBattle.Tests
 
             BattleTickResult result = loop.Tick(simulation, events);
 
-            Assert.AreEqual(1, result.Attacks);
+            Assert.AreEqual(2, result.Attacks);
             Assert.AreEqual(0, result.Moves);
             Assert.IsTrue(simulation.Units[1].IsDefeated);
         }

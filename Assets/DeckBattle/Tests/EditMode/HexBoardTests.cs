@@ -218,6 +218,71 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void TryFindShortestPathToAny_SelectsStableCoordinateAmongEquallyNearGoals()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var goals = new List<HexCoord>
+            {
+                new HexCoord(2, 0),
+                new HexCoord(0, 2)
+            };
+            var path = new List<HexCoord>(8);
+            var workspace = new HexBoard.PathfindingWorkspace(board.Width * board.Height);
+
+            bool found = board.TryFindShortestPathToAny(
+                new HexCoord(0, 0),
+                goals,
+                path,
+                workspace,
+                out HexCoord selectedGoal,
+                out HexCoord nextStep,
+                out int pathSteps);
+
+            Assert.IsTrue(found);
+            Assert.AreEqual(new HexCoord(0, 2), selectedGoal);
+            Assert.AreEqual(new HexCoord(0, 1), nextStep);
+            Assert.AreEqual(2, pathSteps);
+            Assert.AreEqual(selectedGoal, path[path.Count - 1]);
+        }
+
+        [Test]
+        public void TryFindShortestPathToAny_AvoidsDynamicBlockedHexesAndReusesWorkspace()
+        {
+            var board = new HexBoard(5, 6, 1f);
+            var goals = new List<HexCoord> { new HexCoord(2, 0) };
+            var path = new List<HexCoord>(8);
+            var blocked = new HashSet<HexCoord>
+            {
+                new HexCoord(0, 0),
+                new HexCoord(1, 0)
+            };
+            var workspace = new HexBoard.PathfindingWorkspace(board.Width * board.Height);
+
+            Assert.IsTrue(board.TryFindShortestPathToAny(
+                new HexCoord(0, 0),
+                goals,
+                path,
+                workspace,
+                blocked,
+                out _,
+                out _,
+                out int firstSteps));
+            Assert.IsFalse(path.Contains(new HexCoord(1, 0)));
+
+            blocked.Clear();
+            Assert.IsTrue(board.TryFindShortestPathToAny(
+                new HexCoord(0, 0),
+                goals,
+                path,
+                workspace,
+                blocked,
+                out _,
+                out _,
+                out int secondSteps));
+            Assert.Less(secondSteps, firstSteps);
+        }
+
+        [Test]
         public void DeploymentZones_AreSeparatedBySide()
         {
             var board = new HexBoard(5, 6, 1f);

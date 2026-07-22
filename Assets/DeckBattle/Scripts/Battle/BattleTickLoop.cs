@@ -7,6 +7,8 @@ namespace DeckBattle
         private readonly MovementResolver.Workspace movementWorkspace;
         private readonly TargetSelector.Workspace targetWorkspace;
         private readonly CombatResolver.Workspace combatWorkspace;
+        private readonly TargetSelector.TargetSelection[] targetSelections;
+        private readonly bool[] targetSelectionValid;
 
         public BattleTickLoop(BattleSimulation simulation, float tickDuration)
         {
@@ -25,6 +27,8 @@ namespace DeckBattle
             movementWorkspace = new MovementResolver.Workspace(boardCellCapacity, simulation.Units.Count);
             targetWorkspace = new TargetSelector.Workspace(boardCellCapacity);
             combatWorkspace = new CombatResolver.Workspace(simulation.Units.Count);
+            targetSelections = new TargetSelector.TargetSelection[simulation.Units.Count];
+            targetSelectionValid = new bool[simulation.Units.Count];
         }
 
         public float TickDuration { get; private set; }
@@ -48,11 +52,23 @@ namespace DeckBattle
                 return new BattleTickResult(0, 0, true, simulation.HasWinner, simulation.Winner);
             }
 
-            RefreshTargets(simulation);
-
+            // Commit completed logical steps before any range or target query.
+            MovementResolver.AdvanceActiveMovements(simulation, TickDuration);
             ProjectileResolver.ResolveProjectiles(simulation, TickDuration, eventQueue);
+
+            RefreshTargets(simulation);
             CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, TickDuration, eventQueue, combatWorkspace);
-            int moved = MovementResolver.ResolveMovement(simulation, TickDuration, movementWorkspace, eventQueue);
+
+            // Melee deaths and projectile/attack side effects can invalidate targets
+            // and occupied attack positions before the next movement plan.
+            RefreshTargets(simulation);
+            int moved = MovementResolver.ResolveMovement(
+                simulation,
+                0f,
+                movementWorkspace,
+                eventQueue,
+                targetSelections,
+                targetSelectionValid);
 
             BattleSide winner;
             bool hasWinner;
@@ -70,14 +86,26 @@ namespace DeckBattle
         {
             for (int i = 0; i < simulation.Units.Count; i++)
             {
+                targetSelectionValid[i] = false;
                 UnitRuntimeState unit = simulation.Units[i];
-                if (unit == null || !unit.IsAlive)
+                if (unit == null || !unit.IsAlive || unit.IsMoving)
                 {
                     continue;
                 }
 
-                UnitRuntimeState target = TargetSelector.SelectTargetOrRetainCurrent(simulation, unit, targetWorkspace);
-                unit.SetTarget(target);
+                if (!TargetSelector.TrySelectTargetOrRetainCurrent(
+                        simulation,
+                        unit,
+                        targetWorkspace,
+                        out TargetSelector.TargetSelection selection))
+                {
+                    unit.ClearTarget();
+                    continue;
+                }
+
+                targetSelections[i] = selection;
+                targetSelectionValid[i] = true;
+                unit.SetTarget(selection.Target);
             }
         }
 

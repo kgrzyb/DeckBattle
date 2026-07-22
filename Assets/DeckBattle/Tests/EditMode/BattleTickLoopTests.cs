@@ -22,8 +22,8 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1, firstTick.Moves);
             Assert.AreEqual(new HexCoord(0, 0), first.Units[0].CurrentHex);
             Assert.AreEqual(new HexCoord(2, 0), first.Units[1].CurrentHex);
-            Assert.IsFalse(first.Units[0].IsMoving);
-            Assert.AreEqual(new HexCoord(1, 0), first.Units[1].MovementDestination);
+            Assert.IsTrue(first.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].MovementDestination);
             Assert.AreEqual(first.Units[0].CurrentHex, second.Units[0].CurrentHex);
             Assert.AreEqual(first.Units[1].CurrentHex, second.Units[1].CurrentHex);
             Assert.AreEqual(1, firstEvents.Count);
@@ -31,21 +31,20 @@ namespace DeckBattle.Tests
 
             BattleTickResult commitTick = firstLoop.Tick(first, firstEvents);
 
-            Assert.IsFalse(commitTick.BattleEnded);
-            Assert.AreEqual(new HexCoord(0, 0), first.Units[0].CurrentHex);
-            Assert.AreEqual(new HexCoord(1, 0), first.Units[1].CurrentHex);
-
-            BattleTickResult endTick = firstLoop.Tick(first, firstEvents);
-
-            Assert.IsTrue(endTick.BattleEnded);
-            Assert.IsTrue(endTick.HasWinner);
-            Assert.AreEqual(BattleSide.Player, endTick.Winner);
+            Assert.IsTrue(commitTick.BattleEnded);
+            Assert.AreEqual(2, commitTick.Attacks);
+            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(2, 0), first.Units[1].CurrentHex);
             Assert.IsTrue(first.IsBattleEnded);
             Assert.IsTrue(first.Units[1].IsDefeated);
             AssertEventTypeExists(firstEvents, BattleEventType.UnitAttackStarted);
             AssertEventTypeExists(firstEvents, BattleEventType.UnitDamaged);
             AssertEventTypeExists(firstEvents, BattleEventType.UnitDied);
             AssertEventTypeExists(firstEvents, BattleEventType.BattleEnded);
+
+            BattleTickResult endTick = firstLoop.Tick(first, firstEvents);
+            Assert.IsTrue(endTick.BattleEnded);
+            Assert.AreEqual(0, firstEvents.Count);
         }
 
         [Test]

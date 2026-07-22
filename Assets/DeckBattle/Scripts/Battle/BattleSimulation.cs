@@ -116,6 +116,20 @@ namespace DeckBattle
                 throw new ArgumentException("Destination is occupied.", nameof(destination));
             }
 
+            for (int i = 0; i < units.Count; i++)
+            {
+                UnitRuntimeState other = units[i];
+                if (other == null || other == unit || !other.IsAlive)
+                {
+                    continue;
+                }
+
+                if (other.IsMoving && other.MovementDestination == destination)
+                {
+                    throw new ArgumentException("Destination is reserved by another moving unit.", nameof(destination));
+                }
+            }
+
             unitByHex.Remove(unit.CurrentHex);
             unit.CurrentHex = destination;
             unitByHex[destination] = unit;
@@ -143,10 +157,29 @@ namespace DeckBattle
                 throw new ArgumentException("Destination is not walkable.", nameof(destination));
             }
 
+            if (Board.Distance(unit.CurrentHex, destination) != 1)
+            {
+                throw new ArgumentException("Movement destination must be adjacent to the current hex.", nameof(destination));
+            }
+
             UnitRuntimeState occupyingUnit;
             if (unitByHex.TryGetValue(destination, out occupyingUnit) && occupyingUnit != unit)
             {
                 throw new ArgumentException("Destination is occupied.", nameof(destination));
+            }
+
+            for (int i = 0; i < units.Count; i++)
+            {
+                UnitRuntimeState other = units[i];
+                if (other == null || other == unit || !other.IsAlive)
+                {
+                    continue;
+                }
+
+                if (other.IsMoving && other.MovementDestination == destination)
+                {
+                    throw new ArgumentException("Destination is reserved by another moving unit.", nameof(destination));
+                }
             }
 
             unit.IsMoving = true;
@@ -172,10 +205,29 @@ namespace DeckBattle
                 throw new InvalidOperationException("Movement destination is no longer walkable.");
             }
 
+            if (Board.Distance(unit.CurrentHex, destination) != 1)
+            {
+                throw new InvalidOperationException("Movement destination is no longer adjacent to the current hex.");
+            }
+
             UnitRuntimeState occupyingUnit;
             if (unitByHex.TryGetValue(destination, out occupyingUnit) && occupyingUnit != unit)
             {
                 throw new InvalidOperationException("Movement destination is occupied.");
+            }
+
+            for (int i = 0; i < units.Count; i++)
+            {
+                UnitRuntimeState other = units[i];
+                if (other == null || other == unit || !other.IsAlive)
+                {
+                    continue;
+                }
+
+                if (other.IsMoving && other.MovementDestination == destination)
+                {
+                    throw new InvalidOperationException("Movement destination is reserved by another moving unit.");
+                }
             }
 
             unitByHex.Remove(unit.CurrentHex);

@@ -243,7 +243,7 @@ namespace DeckBattle
                 {
                     HexCoord neighbor = neighbors[i];
                     if (!IsWalkable(neighbor)
-                        || IsDynamicallyBlocked(neighbor, start, goal, additionalBlockedHexes)
+                        || IsDynamicallyBlocked(neighbor, start, additionalBlockedHexes)
                         || cameFrom.ContainsKey(neighbor))
                     {
                         continue;
@@ -257,18 +257,171 @@ namespace DeckBattle
             return false;
         }
 
+        public bool TryFindShortestPathToAny(
+            HexCoord start,
+            IList<HexCoord> goals,
+            IList<HexCoord> path,
+            PathfindingWorkspace workspace,
+            HashSet<HexCoord> additionalBlockedHexes,
+            out HexCoord selectedGoal,
+            out HexCoord nextStep,
+            out int pathSteps)
+        {
+            if (goals == null)
+            {
+                throw new ArgumentNullException(nameof(goals));
+            }
+
+            if (path == null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            if (workspace == null)
+            {
+                throw new ArgumentNullException(nameof(workspace));
+            }
+
+            path.Clear();
+            workspace.Clear();
+            selectedGoal = default;
+            nextStep = default;
+            pathSteps = 0;
+
+            if (!IsWalkable(start))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < goals.Count; i++)
+            {
+                HexCoord goal = goals[i];
+                if (!IsWalkable(goal)
+                    || (goal != start && IsDynamicallyBlocked(goal, start, additionalBlockedHexes)))
+                {
+                    continue;
+                }
+
+                workspace.Goals.Add(goal);
+            }
+
+            if (workspace.Goals.Count == 0)
+            {
+                return false;
+            }
+
+            if (workspace.Goals.Contains(start))
+            {
+                selectedGoal = start;
+                nextStep = start;
+                path.Add(start);
+                return true;
+            }
+
+            Dictionary<HexCoord, HexCoord> cameFrom = workspace.CameFrom;
+            List<HexCoord> frontier = workspace.Frontier;
+            List<HexCoord> neighbors = workspace.Neighbors;
+            cameFrom.Add(start, start);
+            frontier.Add(start);
+
+            int readIndex = 0;
+            int levelEnd = frontier.Count;
+            int distance = 0;
+            bool foundAtCurrentLevel = false;
+            HexCoord bestGoal = default;
+
+            while (readIndex < frontier.Count)
+            {
+                while (readIndex < levelEnd)
+                {
+                    HexCoord current = frontier[readIndex];
+                    readIndex++;
+
+                    if (workspace.Goals.Contains(current))
+                    {
+                        if (!foundAtCurrentLevel || CompareHexCoords(current, bestGoal) < 0)
+                        {
+                            bestGoal = current;
+                        }
+
+                        foundAtCurrentLevel = true;
+                    }
+
+                    neighbors.Clear();
+                    FillNeighbors(current, neighbors);
+                    for (int i = 0; i < neighbors.Count; i++)
+                    {
+                        HexCoord neighbor = neighbors[i];
+                        if (!IsWalkable(neighbor)
+                            || IsDynamicallyBlocked(neighbor, start, additionalBlockedHexes)
+                            || cameFrom.ContainsKey(neighbor))
+                        {
+                            continue;
+                        }
+
+                        cameFrom.Add(neighbor, current);
+                        frontier.Add(neighbor);
+                    }
+                }
+
+                if (foundAtCurrentLevel)
+                {
+                    selectedGoal = bestGoal;
+                    pathSteps = distance;
+                    BuildPath(start, selectedGoal, path, workspace.ReversedPath, cameFrom);
+                    nextStep = path.Count > 1 ? path[1] : start;
+                    return true;
+                }
+
+                distance++;
+                levelEnd = frontier.Count;
+            }
+
+            return false;
+        }
+
+        public bool TryFindShortestPathToAny(
+            HexCoord start,
+            IList<HexCoord> goals,
+            IList<HexCoord> path,
+            PathfindingWorkspace workspace,
+            out HexCoord selectedGoal,
+            out HexCoord nextStep,
+            out int pathSteps)
+        {
+            return TryFindShortestPathToAny(
+                start,
+                goals,
+                path,
+                workspace,
+                null,
+                out selectedGoal,
+                out nextStep,
+                out pathSteps);
+        }
+
         private static bool IsDynamicallyBlocked(
             HexCoord coord,
             HexCoord start,
-            HexCoord goal,
             HashSet<HexCoord> additionalBlockedHexes)
         {
-            if (additionalBlockedHexes == null || coord == start || coord == goal)
+            if (additionalBlockedHexes == null || coord == start)
             {
                 return false;
             }
 
             return additionalBlockedHexes.Contains(coord);
+        }
+
+        private static int CompareHexCoords(HexCoord left, HexCoord right)
+        {
+            int qCompare = left.Q.CompareTo(right.Q);
+            if (qCompare != 0)
+            {
+                return qCompare;
+            }
+
+            return left.R.CompareTo(right.R);
         }
 
         public Vector3 ToLocalPosition(HexCoord coord)
@@ -317,6 +470,7 @@ namespace DeckBattle
             internal readonly List<HexCoord> Frontier;
             internal readonly List<HexCoord> Neighbors;
             internal readonly List<HexCoord> ReversedPath;
+            internal readonly HashSet<HexCoord> Goals;
 
             public PathfindingWorkspace(int boardCellCapacity)
             {
@@ -325,6 +479,7 @@ namespace DeckBattle
                 Frontier = new List<HexCoord>(capacity);
                 Neighbors = new List<HexCoord>(6);
                 ReversedPath = new List<HexCoord>(capacity);
+                Goals = new HashSet<HexCoord>(capacity);
             }
 
             internal void Clear()
@@ -333,6 +488,7 @@ namespace DeckBattle
                 Frontier.Clear();
                 Neighbors.Clear();
                 ReversedPath.Clear();
+                Goals.Clear();
             }
         }
     }
