@@ -99,8 +99,24 @@ namespace DeckBattle
             StopRoundAnnouncementRoutine();
             StopPreparationCountdownRoutine();
             ClearUnitViews();
-            activeSeed = ResolveBattleSeed();
-            state = BattleState.Create(battleConfig, playerDeck, enemyDeck, activeSeed);
+            BattleStartData startData;
+            bool hasPendingStartData = BattleSession.TryConsumePendingStartData(out startData);
+            if (hasPendingStartData && IsUsableStartData(startData))
+            {
+                activeSeed = startData.Seed;
+                state = BattleState.Create(battleConfig, startData.PlayerDeck, startData.EnemyDeck, activeSeed);
+            }
+            else
+            {
+                if (hasPendingStartData)
+                {
+                    Debug.LogWarning("BattleSession start data is incomplete. Falling back to BattleController inspector decks.", this);
+                }
+
+                activeSeed = ResolveBattleSeed();
+                state = BattleState.Create(battleConfig, playerDeck, enemyDeck, activeSeed);
+            }
+
             state.BeginRoundStart();
             lastCombatResult = null;
             lastRoundResolutionResult = null;
@@ -109,6 +125,15 @@ namespace DeckBattle
             ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
+        }
+
+        private static bool IsUsableStartData(BattleStartData startData)
+        {
+            return startData != null
+                && startData.PlayerDeck != null
+                && startData.PlayerDeck.Count > 0
+                && startData.EnemyDeck != null
+                && startData.EnemyDeck.Count > 0;
         }
 
         private int ResolveBattleSeed()

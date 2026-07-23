@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
   m_Name: Brute
   m_EditorClassIdentifier: 
-  UnitId: brute
+  CardId: brute
   DisplayName: Brute
   UnitType: 0
   Rarity: 1

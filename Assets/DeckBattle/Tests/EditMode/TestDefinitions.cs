@@ -79,6 +79,16 @@ namespace DeckBattle.Tests
             return spell;
         }
 
+        public static CardCatalog CreateCatalog(
+            IReadOnlyList<CardDefinition> allCards,
+            IReadOnlyList<CardDefinition> startingCards,
+            IReadOnlyList<CardDefinition> defaultDeckCards)
+        {
+            CardCatalog catalog = Track(ScriptableObject.CreateInstance<CardCatalog>());
+            catalog.Configure(allCards, startingCards, defaultDeckCards);
+            return catalog;
+        }
+
         public static T Track<T>(T createdObject) where T : Object
         {
             if (createdObject != null)

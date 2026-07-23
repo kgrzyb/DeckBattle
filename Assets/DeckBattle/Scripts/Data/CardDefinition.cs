@@ -17,6 +17,12 @@ namespace DeckBattle
             get { return cardKind; }
         }
 
+        public string Id
+        {
+            get { return CardId; }
+            set { CardId = value; }
+        }
+
         protected void SetCardKind(CardKind value)
         {
             cardKind = value;
@@ -24,6 +30,11 @@ namespace DeckBattle
 
         protected virtual void OnValidate()
         {
+            if (CardId != null)
+            {
+                CardId = CardId.Trim();
+            }
+
             ApCost = Mathf.Max(0, ApCost);
         }
     }
