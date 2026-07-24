@@ -48,6 +48,7 @@ namespace DeckBattle
                 string json = File.ReadAllText(savePath);
                 if (string.IsNullOrWhiteSpace(json))
                 {
+                    Debug.LogWarning("Could not load player profile. Save file is empty. Creating a default profile.");
                     return CreateDefaultProfile(catalog);
                 }
 
