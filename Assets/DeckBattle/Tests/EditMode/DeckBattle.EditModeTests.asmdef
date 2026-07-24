@@ -2,7 +2,9 @@
   "name": "DeckBattle.EditModeTests",
   "rootNamespace": "DeckBattle.Tests",
   "references": [
-    "DeckBattle.Runtime"
+    "DeckBattle.Runtime",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI"
   ],
   "includePlatforms": [
     "Editor"

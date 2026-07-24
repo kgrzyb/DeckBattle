@@ -1,19 +1,11 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 namespace DeckBattle
 {
     public sealed class CardView : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
     {
-        [SerializeField] private TextMeshProUGUI nameText;
-        [SerializeField] private TextMeshProUGUI costText;
-        [SerializeField] private TextMeshProUGUI statsText;
-        [SerializeField] private Image background;
-        [SerializeField] private Color normalColor = new Color(0.16f, 0.18f, 0.20f, 0.96f);
-        [SerializeField] private Color selectedColor = new Color(0.88f, 0.66f, 0.22f, 0.96f);
-        [SerializeField] private Color draggingColor = new Color(0.24f, 0.30f, 0.34f, 0.96f);
+        [SerializeField] private CardFaceView faceView;
         [SerializeField] private float holdToDragSeconds = 0.18f;
         [SerializeField] private float tapMoveThresholdPixels = 18f;
 
@@ -34,7 +26,12 @@ namespace DeckBattle
 
         private void Awake()
         {
-            ApplyColor(normalColor);
+            if (faceView == null)
+            {
+                faceView = GetComponentInChildren<CardFaceView>(true);
+            }
+
+            ApplyRestingVisualState();
         }
 
         private void Update()
@@ -59,28 +56,12 @@ namespace DeckBattle
             dragging = false;
             pointerHeld = false;
             selected = false;
-            ApplyRestingColor();
-
-            CardDefinition definition = card != null ? card.Definition : null;
-            if (nameText != null)
+            if (faceView != null)
             {
-                nameText.text = definition != null ? definition.DisplayName : string.Empty;
+                faceView.Bind(card);
             }
 
-            if (costText != null)
-            {
-                costText.text = definition != null ? definition.ApCost.ToString() : string.Empty;
-            }
-
-            if (statsText != null)
-            {
-                UnitDefinition unitDefinition = card != null ? card.UnitDefinition : null;
-                SpellDefinition spellDefinition = card != null ? card.SpellDefinition : null;
-                statsText.text = unitDefinition != null
-                    ? "HP " + unitDefinition.MaxHp + " / ATK " + unitDefinition.Attack + " / RNG " + unitDefinition.AttackRange
-                    : spellDefinition != null ? spellDefinition.EffectKind + " " + spellDefinition.Amount
-                    : definition != null ? definition.CardKind.ToString() : string.Empty;
-            }
+            ApplyRestingVisualState();
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -132,7 +113,7 @@ namespace DeckBattle
             }
 
             dragging = false;
-            ApplyRestingColor();
+            ApplyRestingVisualState();
         }
 
         public void SetSelected(bool isSelected)
@@ -140,7 +121,7 @@ namespace DeckBattle
             selected = isSelected;
             if (!dragging)
             {
-                ApplyRestingColor();
+                ApplyRestingVisualState();
             }
         }
 
@@ -154,20 +135,20 @@ namespace DeckBattle
             dragging = inputController.BeginCardDrag(this, card, screenPosition);
             if (dragging)
             {
-                ApplyColor(draggingColor);
+                SetVisualState(CardVisualState.Dragging);
             }
         }
 
-        private void ApplyRestingColor()
+        private void ApplyRestingVisualState()
         {
-            ApplyColor(selected ? selectedColor : normalColor);
+            SetVisualState(selected ? CardVisualState.Selected : CardVisualState.Normal);
         }
 
-        private void ApplyColor(Color color)
+        private void SetVisualState(CardVisualState state)
         {
-            if (background != null)
+            if (faceView != null)
             {
-                background.color = color;
+                faceView.SetVisualState(state);
             }
         }
 

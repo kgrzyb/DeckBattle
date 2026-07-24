@@ -34,6 +34,7 @@ namespace DeckBattle
 
         [Header("Drag Ghost")]
         [SerializeField] private RectTransform cardGhostRoot;
+        [SerializeField] private CardFaceView ghostCardFaceView;
         [SerializeField] private TextMeshProUGUI ghostNameText;
         [SerializeField] private TextMeshProUGUI ghostCostText;
         [SerializeField] private CanvasGroup ghostCanvasGroup;
@@ -113,14 +114,22 @@ namespace DeckBattle
             }
 
             CardDefinition definition = card != null ? card.Definition : null;
-            if (ghostNameText != null)
+            if (ghostCardFaceView != null)
             {
-                ghostNameText.text = definition != null ? definition.DisplayName : string.Empty;
+                ghostCardFaceView.Bind(card);
+                ghostCardFaceView.SetVisualState(CardVisualState.Dragging);
             }
-
-            if (ghostCostText != null)
+            else
             {
-                ghostCostText.text = definition != null ? definition.ApCost.ToString() : string.Empty;
+                if (ghostNameText != null)
+                {
+                    ghostNameText.text = definition != null ? definition.DisplayName : string.Empty;
+                }
+
+                if (ghostCostText != null)
+                {
+                    ghostCostText.text = definition != null ? definition.ApCost.ToString() : string.Empty;
+                }
             }
 
             if (ghostCanvasGroup != null)
