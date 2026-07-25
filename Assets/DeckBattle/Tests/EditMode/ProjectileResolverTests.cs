@@ -57,7 +57,7 @@ namespace DeckBattle.Tests
         {
             BattleSimulation simulation = CreateProjectileSimulation(1f);
 
-            simulation.MoveUnit(simulation.Units[1], new HexCoord(4, 4));
+            MoveUnitTo(simulation, simulation.Units[1], new HexCoord(3, 2), new HexCoord(3, 3), new HexCoord(4, 4));
             ProjectileResolver.ResolveProjectiles(simulation, 1f, null);
 
             Assert.AreEqual(7, simulation.Units[1].CurrentHp);
@@ -208,6 +208,14 @@ namespace DeckBattle.Tests
             definition.ProjectileId = projectileId;
             definition.Speed = speed;
             return definition;
+        }
+
+        private static void MoveUnitTo(BattleSimulation simulation, UnitRuntimeState unit, params HexCoord[] steps)
+        {
+            for (int i = 0; i < steps.Length; i++)
+            {
+                simulation.MoveUnit(unit, steps[i]);
+            }
         }
 
         private static void AssertEventTypeExists(BattleEventQueue events, BattleEventType type)

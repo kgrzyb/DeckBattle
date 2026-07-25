@@ -22,7 +22,7 @@ namespace DeckBattle.Tests
         [Test]
         public void ResolveMovement_DoesNotMoveUnitAlreadyInAttackRange()
         {
-            BattleSimulation simulation = CreateDuel(1, 1);
+            BattleSimulation simulation = CreateDuel(1, 2, 1);
 
             Assert.AreEqual(0, MovementResolver.ResolveMovement(simulation));
             Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
@@ -72,13 +72,13 @@ namespace DeckBattle.Tests
             Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
         }
 
-        private static BattleSimulation CreateDuel(int playerId, int enemyId)
+        private static BattleSimulation CreateDuel(int playerId, int enemyId, int enemyQ = 2)
         {
             UnitDefinition melee = CreateUnit("melee", 1);
             return BattleSimulation.Create(new HexBoard(5, 5, 1f), new[]
             {
                 new UnitSpawnData(playerId, melee, BattleSide.Player, new HexCoord(0, 0)),
-                new UnitSpawnData(enemyId, melee, BattleSide.Enemy, new HexCoord(2, 0))
+                new UnitSpawnData(enemyId, melee, BattleSide.Enemy, new HexCoord(enemyQ, 0))
             });
         }
 

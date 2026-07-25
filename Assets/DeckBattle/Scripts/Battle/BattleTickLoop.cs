@@ -6,7 +6,7 @@ namespace DeckBattle
     {
         private readonly MovementResolver.Workspace movementWorkspace;
         private readonly TargetSelector.Workspace targetWorkspace;
-        private readonly CombatResolver.Workspace combatWorkspace;
+        private readonly AttackCycleResolver.Workspace attackCycleWorkspace;
         private readonly TargetSelector.TargetSelection[] targetSelections;
         private readonly bool[] targetSelectionValid;
 
@@ -26,7 +26,7 @@ namespace DeckBattle
             int boardCellCapacity = simulation.Board.Width * simulation.Board.Height;
             movementWorkspace = new MovementResolver.Workspace(boardCellCapacity, simulation.Units.Count);
             targetWorkspace = new TargetSelector.Workspace(boardCellCapacity);
-            combatWorkspace = new CombatResolver.Workspace(simulation.Units.Count);
+            attackCycleWorkspace = new AttackCycleResolver.Workspace(simulation.Units.Count);
             targetSelections = new TargetSelector.TargetSelection[simulation.Units.Count];
             targetSelectionValid = new bool[simulation.Units.Count];
         }
@@ -55,10 +55,10 @@ namespace DeckBattle
             simulation.AdvanceTime(TickDuration);
             UpdateActiveSpecials(simulation);
 
-            ProjectileResolver.ResolveProjectiles(simulation, TickDuration, eventQueue);
+            ProjectileResolver.ResolveProjectiles(simulation, eventQueue);
 
             RefreshTargets(simulation);
-            CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, eventQueue, combatWorkspace);
+            CombatResolutionResult combat = AttackCycleResolver.Resolve(simulation, eventQueue, attackCycleWorkspace);
 
             // Melee deaths and projectile/attack side effects can invalidate targets
             // and occupied attack positions before the next movement plan.
@@ -90,6 +90,11 @@ namespace DeckBattle
                 targetSelectionValid[i] = false;
                 UnitRuntimeState unit = simulation.Units[i];
                 if (unit == null || !unit.IsAlive)
+                {
+                    continue;
+                }
+
+                if (unit.AttackPhase == UnitAttackPhase.Windup)
                 {
                     continue;
                 }

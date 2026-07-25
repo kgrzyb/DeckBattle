@@ -37,6 +37,7 @@ namespace DeckBattle
         private readonly Stack<PooledBattleEffect> pooledAttackEffects = new Stack<PooledBattleEffect>(8);
         private readonly Stack<PooledBattleEffect> pooledDamageEffects = new Stack<PooledBattleEffect>(8);
         private readonly List<ProjectileView> activeProjectileViews = new List<ProjectileView>(8);
+        private readonly Dictionary<int, ProjectileView> projectileViewById = new Dictionary<int, ProjectileView>(8);
         private readonly Dictionary<ProjectileView, Stack<ProjectileView>> pooledProjectileViews = new Dictionary<ProjectileView, Stack<ProjectileView>>(4);
         private readonly BattleDebugSnapshot debugSnapshot = new BattleDebugSnapshot(16);
 
@@ -318,7 +319,16 @@ namespace DeckBattle
                         HandleUnitMoved(battleEvent);
                         break;
                     case BattleEventType.UnitAttackStarted:
-                        HandleUnitAttackStarted(battleEvent);
+                        // Kept for legacy consumers; phase events drive this view.
+                        break;
+                    case BattleEventType.AttackWindupStarted:
+                        HandleAttackWindupStarted(battleEvent);
+                        break;
+                    case BattleEventType.AttackWindupCancelled:
+                        HandleAttackWindupCancelled(battleEvent);
+                        break;
+                    case BattleEventType.AttackFired:
+                        HandleAttackFired(battleEvent);
                         break;
                     case BattleEventType.UnitDamaged:
                         HandleUnitDamaged(battleEvent);
@@ -331,6 +341,9 @@ namespace DeckBattle
                         break;
                     case BattleEventType.ProjectileLaunched:
                         HandleProjectileLaunched(battleEvent);
+                        break;
+                    case BattleEventType.ProjectileResolved:
+                        HandleProjectileResolved(battleEvent);
                         break;
                 }
             }
@@ -349,6 +362,7 @@ namespace DeckBattle
                 UnitRuntimeState unit = units[i];
                 if (unit == null
                     || !unit.IsAlive
+                    || unit.IsMoving
                     || unit.TargetUnitId == UnitRuntimeState.NoTargetUnitId)
                 {
                     continue;
@@ -511,6 +525,16 @@ namespace DeckBattle
             ProjectileView projectileView = GetProjectileView(projectileDefinition.ProjectilePrefab);
             projectileView.Play(from, targetTransform, fallbackTarget, battleEvent.Duration);
             activeProjectileViews.Add(projectileView);
+            projectileViewById[battleEvent.ProjectileId] = projectileView;
+        }
+
+        private void HandleProjectileResolved(BattleEvent battleEvent)
+        {
+            if (projectileViewById.TryGetValue(battleEvent.ProjectileId, out ProjectileView view) && view != null)
+            {
+                view.Resolve();
+                projectileViewById.Remove(battleEvent.ProjectileId);
+            }
         }
 
         private void CreateOrUpdateUnitView(UnitRuntimeState unit)
@@ -694,6 +718,32 @@ namespace DeckBattle
             return new BattleRuntimeTuning(attackCooldownMultiplier, attackRangeBonus, movementStepDuration);
         }
 
+        private void HandleAttackWindupStarted(BattleEvent battleEvent)
+        {
+            if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) || view == null) return;
+            if (simulation.TryGetUnitById(battleEvent.TargetUnitId, out UnitRuntimeState target) && target != null)
+                view.FaceWorldPosition(boardPresenter.GetWorldPosition(target.CurrentHex));
+            view.BeginAttackWindup(battleEvent.SequenceId, battleEvent.Duration);
+        }
+
+        private void HandleAttackWindupCancelled(BattleEvent battleEvent)
+        {
+            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) && view != null)
+                view.CancelAttackWindup(battleEvent.SequenceId);
+        }
+
+        private void HandleAttackFired(BattleEvent battleEvent)
+        {
+            if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) || view == null) return;
+            float winddown = 0f;
+            if (simulation.TryGetUnitById(battleEvent.UnitId, out UnitRuntimeState attacker) && attacker != null)
+            {
+                winddown = attacker.Definition.AttackWinddownDuration;
+                SpawnEffect(attackEffectPrefab, boardPresenter.GetWorldPosition(attacker.CurrentHex), activeAttackEffects, pooledAttackEffects);
+            }
+            view.PlayAttackFire(battleEvent.SequenceId, winddown);
+        }
+
         private float ResolveStandaloneTickDuration()
         {
             float configuredDuration = battleTimingConfig != null
@@ -790,6 +840,7 @@ namespace DeckBattle
             }
 
             activeProjectileViews.Clear();
+            projectileViewById.Clear();
         }
 
         private void ReturnProjectileViewToPool(ProjectileView projectileView)

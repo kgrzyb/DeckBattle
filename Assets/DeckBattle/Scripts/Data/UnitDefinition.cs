@@ -8,21 +8,6 @@ namespace DeckBattle
         AttackSpeed = 1
     }
 
-    [CreateAssetMenu(fileName = "UnitSpecialDefinition", menuName = "Deck Battle/Unit Special Definition")]
-    public sealed class UnitSpecialDefinition : ScriptableObject
-    {
-        public string SpecialId;
-        public UnitSpecialKind Kind;
-        public float Duration;
-        public float AttackCooldownMultiplier = 1f;
-
-        private void OnValidate()
-        {
-            Duration = Mathf.Max(0f, Duration);
-            AttackCooldownMultiplier = Mathf.Max(0.01f, AttackCooldownMultiplier);
-        }
-    }
-
     [CreateAssetMenu(fileName = "UnitDefinition", menuName = "Deck Battle/Unit Definition")]
     public sealed class UnitDefinition : CardDefinition
     {
@@ -45,6 +30,8 @@ namespace DeckBattle
         public float CritChance = 0f;
         public float CritMultiplier = 2f;
         public float AttackCooldown = 1f;
+        public float AttackWindupDuration;
+        public float AttackWinddownDuration;
         public int ManaThreshold = 100;
         public int ManaPerAttack = 10;
         public int ManaPerDamageTaken = 10;
@@ -65,6 +52,8 @@ namespace DeckBattle
             CritChance = Mathf.Clamp(CritChance, 0f, 100f);
             CritMultiplier = Mathf.Max(1f, CritMultiplier);
             AttackCooldown = Mathf.Max(0.01f, AttackCooldown);
+            AttackWindupDuration = Mathf.Max(0f, AttackWindupDuration);
+            AttackWinddownDuration = Mathf.Max(0f, AttackWinddownDuration);
             ManaThreshold = Mathf.Max(0, ManaThreshold);
             ManaPerAttack = Mathf.Max(0, ManaPerAttack);
             ManaPerDamageTaken = Mathf.Max(0, ManaPerDamageTaken);

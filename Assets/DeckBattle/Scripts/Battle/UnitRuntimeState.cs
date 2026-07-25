@@ -2,6 +2,13 @@ using System;
 
 namespace DeckBattle
 {
+    public enum UnitAttackPhase
+    {
+        AcquireReload = 0,
+        Windup = 1,
+        Winddown = 2
+    }
+
     public sealed class UnitRuntimeState
     {
         public const int NoTargetUnitId = 0;
@@ -14,6 +21,12 @@ namespace DeckBattle
         public HexCoord CurrentHex;
         public int TargetUnitId;
         public double NextAttackTime;
+        public UnitAttackPhase AttackPhase;
+        public int LockedAttackTargetUnitId;
+        public int AttackSequenceId;
+        public double AttackCycleStartTime;
+        public double WindupEndTime;
+        public double WinddownEndTime;
         public int CurrentMana;
         public bool IsMoving;
         public HexCoord MovementDestination;
@@ -43,6 +56,7 @@ namespace DeckBattle
             CurrentHp = definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
             NextAttackTime = double.PositiveInfinity;
+            ResetAttackCycle();
             CurrentMana = 0;
             IsMoving = false;
             MovementDestination = startHex;
@@ -75,6 +89,7 @@ namespace DeckBattle
             CurrentHp = Definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
             NextAttackTime = double.PositiveInfinity;
+            ResetAttackCycle();
             CurrentMana = 0;
             IsMoving = false;
             MovementDestination = startHex;
@@ -84,6 +99,16 @@ namespace DeckBattle
             SpecialAttackCooldownMultiplier = 1f;
             AttackBonusNextCombat = 0;
             IsDefeated = false;
+        }
+
+        public void ResetAttackCycle()
+        {
+            AttackPhase = UnitAttackPhase.AcquireReload;
+            LockedAttackTargetUnitId = NoTargetUnitId;
+            AttackSequenceId = 0;
+            AttackCycleStartTime = double.PositiveInfinity;
+            WindupEndTime = double.PositiveInfinity;
+            WinddownEndTime = double.PositiveInfinity;
         }
     }
 }

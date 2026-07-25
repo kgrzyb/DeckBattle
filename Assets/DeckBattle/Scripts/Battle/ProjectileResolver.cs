@@ -16,6 +16,19 @@ namespace DeckBattle
                 throw new ArgumentOutOfRangeException(nameof(tickDuration));
             }
 
+            // Compatibility entry point for standalone callers. The tick loop uses
+            // the overload below after advancing simulation time exactly once.
+            simulation.AdvanceTime(tickDuration);
+            return ResolveProjectiles(simulation, eventQueue);
+        }
+
+        public static ProjectileResolutionResult ResolveProjectiles(BattleSimulation simulation, BattleEventQueue eventQueue)
+        {
+            if (simulation == null)
+            {
+                throw new ArgumentNullException(nameof(simulation));
+            }
+
             int hits = 0;
             int totalDamage = 0;
             int deaths = 0;
@@ -39,8 +52,7 @@ namespace DeckBattle
                     projectile.LastKnownTargetHex = target.CurrentHex;
                 }
 
-                projectile.TravelTimeRemaining = Math.Max(0f, projectile.TravelTimeRemaining - tickDuration);
-                if (projectile.TravelTimeRemaining > 0f)
+                if (simulation.ElapsedTime < projectile.ImpactTime)
                 {
                     index++;
                     continue;
@@ -50,41 +62,30 @@ namespace DeckBattle
                 {
                     if (eventQueue != null)
                     {
+                        eventQueue.Enqueue(BattleEvent.ProjectileResolved(
+                            projectile.ProjectileId,
+                            projectile.AttackerUnitId,
+                            projectile.TargetUnitId,
+                            projectile.LastKnownTargetHex,
+                            true));
                         eventQueue.Enqueue(BattleEvent.ProjectileHit(
                             projectile.ProjectileId,
                             projectile.AttackerUnitId,
                             projectile.TargetUnitId,
                             projectile.LastKnownTargetHex));
 
-                        if (projectile.IsCritical)
-                        {
-                            eventQueue.Enqueue(BattleEvent.UnitCrit(projectile.AttackerUnitId, projectile.TargetUnitId));
-                        }
                     }
-
-                    target.CurrentHp -= projectile.Damage;
-                    hits++;
-                    totalDamage += projectile.Damage;
-                    if (eventQueue != null)
-                    {
-                        eventQueue.Enqueue(BattleEvent.UnitDamaged(target.UnitId, projectile.Damage, Math.Max(0, target.CurrentHp)));
-                    }
-
-                    if (projectile.Damage > 0)
-                    {
-                CombatResolver.AddMana(simulation, target, target.Definition.ManaPerDamageTaken, eventQueue);
-                    }
-
-                    if (target.CurrentHp <= 0 && !target.IsDefeated)
-                    {
-                        simulation.DefeatUnit(target);
-                        if (eventQueue != null)
-                        {
-                            eventQueue.Enqueue(BattleEvent.UnitDied(target.UnitId));
-                        }
-
-                        deaths++;
-                    }
+                    HitResolutionResult hit = HitResolver.ResolveHit(simulation, null, target, projectile.Damage, projectile.IsCritical, eventQueue);
+                    if (hit.DidHit) { hits++; totalDamage += hit.Damage; if (hit.Died) deaths++; }
+                }
+                else if (eventQueue != null)
+                {
+                    eventQueue.Enqueue(BattleEvent.ProjectileResolved(
+                        projectile.ProjectileId,
+                        projectile.AttackerUnitId,
+                        projectile.TargetUnitId,
+                        projectile.LastKnownTargetHex,
+                        false));
                 }
 
                 simulation.RemoveProjectileAt(index);

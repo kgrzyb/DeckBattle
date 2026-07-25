@@ -45,10 +45,8 @@ namespace DeckBattle
                 transform.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
             }
 
-            if (t >= 1f)
-            {
-                isPlaying = false;
-            }
+            // The logical impact event owns the lifetime. A visual that arrives
+            // early waits at its destination until that event is received.
         }
 
         public void Play(Vector3 fromPosition, Transform targetTransform, Vector3 fallbackTargetPosition, float travelDuration)
@@ -73,6 +71,11 @@ namespace DeckBattle
             isPlaying = false;
             target = null;
             gameObject.SetActive(false);
+        }
+
+        public void Resolve()
+        {
+            isPlaying = false;
         }
 
         private Vector3 ResolveDestination()

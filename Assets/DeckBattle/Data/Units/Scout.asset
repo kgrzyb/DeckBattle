@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CardId: scout
   DisplayName: Scout
-  UnitType: 0
   Rarity: 0
   ApCost: 1
+  CardArt: {fileID: 21300000, guid: 16bdca8a69ade9d4490104204728b3c0, type: 3}
+  cardKind: 0
+  UnitType: 0
   MaxHp: 35
   Attack: 5
   Power: 1
@@ -24,13 +26,14 @@ MonoBehaviour:
   CritChance: 0
   CritMultiplier: 2
   AttackCooldown: 0.5
+  AttackWindupDuration: 0
+  AttackWinddownDuration: 0.1
   ManaThreshold: 100
   ManaPerAttack: 25
   ManaPerDamageTaken: 10
-  Special: {fileID: 11400000, guid: f3a42db683f64b8ca4a9e3a2e59fd8b7, type: 2}
+  Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
   Armor: 0
   ArmorPenetration: 0
   Projectile: {fileID: 0}
   UnitPrefab: {fileID: 7506552908754966910, guid: b3716b717c4f54541bff7b52c30556e1,
     type: 3}
-  CardArt: {fileID: 21300000, guid: 16bdca8a69ade9d4490104204728b3c0, type: 3}

@@ -26,10 +26,12 @@ MonoBehaviour:
   CritChance: 0
   CritMultiplier: 2
   AttackCooldown: 2
+  AttackWindupDuration: 0
+  AttackWinddownDuration: 0.1
   ManaThreshold: 100
   ManaPerAttack: 25
   ManaPerDamageTaken: 10
-  Special: {fileID: 11400000, guid: f3a42db683f64b8ca4a9e3a2e59fd8b7, type: 2}
+  Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
   Armor: 0
   ArmorPenetration: 25
   Projectile: {fileID: 11400000, guid: dc1b0f2c5ac6f7847943c4d589e96d82, type: 2}

@@ -154,7 +154,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_MovingUnitDoesNotBlockCombatAfterLogicalMovementMigration()
+        public void Tick_MovingUnitWaitsForAcquireReloadBeforeStartingWindup()
         {
             BattleSimulation simulation = CreateSimulation(1f);
             simulation.StartUnitMovement(simulation.Units[0], new HexCoord(2, 0));
@@ -165,8 +165,8 @@ namespace DeckBattle.Tests
 
             BattleTickResult movingTick = loop.Tick(simulation, events);
 
-            Assert.AreEqual(1, movingTick.Attacks);
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
+            Assert.AreEqual(0, movingTick.Attacks);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(0d).Within(0.000001d));
         }
 
         private static BattleSimulation CreateSimulation(float cooldown)

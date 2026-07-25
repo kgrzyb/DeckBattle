@@ -11,7 +11,7 @@ namespace DeckBattle
         public readonly ProjectileDefinition ProjectileDefinition;
         public readonly HexCoord FromHex;
         public HexCoord LastKnownTargetHex;
-        public float TravelTimeRemaining;
+        public readonly double ImpactTime;
         public readonly float TravelDuration;
         public readonly int Damage;
         public readonly bool IsCritical;
@@ -25,6 +25,7 @@ namespace DeckBattle
             HexCoord fromHex,
             HexCoord lastKnownTargetHex,
             float travelDuration,
+            double impactTime,
             int damage,
             bool isCritical)
         {
@@ -41,7 +42,7 @@ namespace DeckBattle
             FromHex = fromHex;
             LastKnownTargetHex = lastKnownTargetHex;
             TravelDuration = Math.Max(0f, travelDuration);
-            TravelTimeRemaining = TravelDuration;
+            ImpactTime = impactTime;
             Damage = Math.Max(0, damage);
             IsCritical = isCritical;
         }

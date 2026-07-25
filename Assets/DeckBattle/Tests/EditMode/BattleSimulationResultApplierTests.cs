@@ -22,7 +22,7 @@ namespace DeckBattle.Tests
             Assert.IsTrue(simulation.TryGetUnitById(10, out simulatedPlayer));
             Assert.IsTrue(simulation.TryGetUnitById(20, out simulatedEnemy));
             simulatedPlayer.CurrentHp = 2;
-            simulation.MoveUnit(simulatedPlayer, new HexCoord(1, 1));
+            MoveUnitTo(simulation, simulatedPlayer, new HexCoord(1, 0), new HexCoord(1, 1));
             simulation.DefeatUnit(simulatedEnemy);
 
             BattleSimulationResultApplier.Apply(state, simulation);
@@ -87,7 +87,7 @@ namespace DeckBattle.Tests
             UnitRuntimeState simulatedPlayer;
             Assert.IsTrue(simulation.TryGetUnitById(1, out simulatedPlayer));
             simulatedPlayer.CurrentHp = 2;
-            simulation.MoveUnit(simulatedPlayer, new HexCoord(1, 1));
+            MoveUnitTo(simulation, simulatedPlayer, new HexCoord(1, 0), new HexCoord(1, 1));
             BattleSimulationResultApplier.Apply(state, simulation);
 
             Assert.AreEqual(new HexCoord(1, 1), playerUnit.BattleCoord);
@@ -116,6 +116,14 @@ namespace DeckBattle.Tests
             {
                 TestDefinitions.CreateUnit(prefix + "-unit", 1)
             };
+        }
+
+        private static void MoveUnitTo(BattleSimulation simulation, UnitRuntimeState unit, params HexCoord[] steps)
+        {
+            for (int i = 0; i < steps.Length; i++)
+            {
+                simulation.MoveUnit(unit, steps[i]);
+            }
         }
     }
 }

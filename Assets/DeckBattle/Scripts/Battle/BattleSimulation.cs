@@ -266,6 +266,7 @@ namespace DeckBattle
             unit.IsDefeated = true;
             unit.CurrentHp = Math.Min(0, unit.CurrentHp);
             unit.ClearTarget();
+            unit.ResetAttackCycle();
             unit.IsMoving = false;
             unit.MovementDestination = unit.CurrentHex;
             unit.MovementTimeRemaining = 0f;
@@ -305,6 +306,7 @@ namespace DeckBattle
                 attacker.CurrentHex,
                 target.CurrentHex,
                 travelDuration,
+                ElapsedTime + travelDuration,
                 damage,
                 isCritical);
             nextProjectileId++;

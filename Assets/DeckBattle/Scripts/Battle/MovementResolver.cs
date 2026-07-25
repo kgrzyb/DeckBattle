@@ -122,7 +122,7 @@ namespace DeckBattle
             for (int i = 0; i < count; i++)
             {
                 UnitRuntimeState unit = units[i];
-                if (unit == null || !unit.IsAlive || !targetSelectionValid[i])
+                if (unit == null || !unit.IsAlive || unit.AttackPhase != UnitAttackPhase.AcquireReload || !targetSelectionValid[i])
                 {
                     continue;
                 }

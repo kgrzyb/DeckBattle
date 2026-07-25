@@ -44,6 +44,7 @@ namespace DeckBattle
         private bool isMoving;
         private bool isDying;
         private Sequence meleeAttackSequence;
+        private int activeAttackSequenceId;
 
         private void Awake()
         {
@@ -153,6 +154,26 @@ namespace DeckBattle
                 .Append(modelRoot.DOLocalRotateQuaternion(strikeRotation, duration * 0.35f).SetEase(Ease.InQuad))
                 .Append(modelRoot.DOLocalRotateQuaternion(startRotation, duration * 0.4f).SetEase(Ease.OutQuad))
                 .OnKill(() => meleeAttackSequence = null);
+        }
+
+        public void BeginAttackWindup(int sequenceId, float duration)
+        {
+            activeAttackSequenceId = sequenceId;
+            attackTimer = Mathf.Max(duration, 0.01f);
+        }
+
+        public void PlayAttackFire(int sequenceId, float winddownDuration)
+        {
+            if (sequenceId != activeAttackSequenceId) return;
+            attackTimer = Mathf.Max(attackPulseDuration, 0.01f);
+            PlayMeleeAttack();
+        }
+
+        public void CancelAttackWindup(int sequenceId)
+        {
+            if (sequenceId != activeAttackSequenceId) return;
+            attackTimer = 0f;
+            KillMeleeAttackSequence();
         }
 
         public void FaceWorldPosition(Vector3 worldPosition)

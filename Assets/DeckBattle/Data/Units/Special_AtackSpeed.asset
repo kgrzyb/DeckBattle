@@ -9,10 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
-  m_Name: AttackSpeedSpecial
-  m_EditorClassIdentifier:
-  SpecialId: attack-speed
+  m_Script: {fileID: 11500000, guid: 4c9d2e7a1b5f43d8a6e0c2f7b9d4a381, type: 3}
+  m_Name: Special_AtackSpeed
+  m_EditorClassIdentifier: 
+  SpecialId: special_attackspeed
   Kind: 1
   Duration: 5
   AttackCooldownMultiplier: 0.5
