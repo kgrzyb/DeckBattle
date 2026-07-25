@@ -5,127 +5,43 @@ namespace DeckBattle.Tests
     public sealed class CombatResolverTests
     {
         [Test]
-        public void ResolveCombat_WaitsInitialCooldownBeforeAttacking()
+        public void Tick_WaitsForInitialCooldownThenSchedulesFromPreviousDeadline()
         {
-            BattleSimulation simulation = CreateSimulation(
-                CreateUnit("attacker", 10, 2, 1, 1f),
-                new HexCoord(1, 1),
-                CreateUnit("target", 10, 1, 1, 1f),
-                new HexCoord(2, 1));
-            simulation.Units[0].SetTarget(simulation.Units[1]);
+            BattleSimulation simulation = CreateSimulation(0.5f);
+            var loop = new BattleTickLoop(simulation, 0.35f);
+            var events = new BattleEventQueue();
 
-            CombatResolutionResult beforeCooldown = CombatResolver.ResolveCombat(simulation, 0.25f);
-
-            Assert.AreEqual(0, beforeCooldown.Attacks);
-            Assert.AreEqual(0, beforeCooldown.TotalDamage);
-            Assert.AreEqual(0, beforeCooldown.Deaths);
-            Assert.AreEqual(10, simulation.Units[1].CurrentHp);
-            Assert.AreEqual(0.75f, simulation.Units[0].AttackCooldownRemaining);
-            Assert.AreEqual(0, simulation.Units[0].CurrentMana);
-            Assert.AreEqual(0, simulation.Units[1].CurrentMana);
-
-            CombatResolutionResult afterCooldown = CombatResolver.ResolveCombat(simulation, 0.75f);
-
-            Assert.AreEqual(1, afterCooldown.Attacks);
-            Assert.AreEqual(2, afterCooldown.TotalDamage);
-            Assert.AreEqual(0, afterCooldown.Deaths);
-            Assert.AreEqual(8, simulation.Units[1].CurrentHp);
-            Assert.AreEqual(1f, simulation.Units[0].AttackCooldownRemaining);
-            Assert.AreEqual(10, simulation.Units[0].CurrentMana);
-            Assert.AreEqual(10, simulation.Units[1].CurrentMana);
-        }
-
-        [Test]
-        public void ResolveCombat_ReducesCooldownAndDoesNotAttackUntilReady()
-        {
-            BattleSimulation simulation = CreateSimulation(
-                CreateUnit("attacker", 10, 2, 1, 1f),
-                new HexCoord(1, 1),
-                CreateUnit("target", 10, 1, 1, 1f),
-                new HexCoord(2, 1));
-            simulation.Units[0].SetTarget(simulation.Units[1]);
-            simulation.Units[0].AttackCooldownRemaining = 0.75f;
-
-            CombatResolutionResult first = CombatResolver.ResolveCombat(simulation, 0.25f);
+            BattleTickResult first = loop.Tick(simulation, events);
+            BattleTickResult second = loop.Tick(simulation, events);
+            BattleTickResult third = loop.Tick(simulation, events);
 
             Assert.AreEqual(0, first.Attacks);
-            Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownRemaining);
-
-            CombatResolutionResult second = CombatResolver.ResolveCombat(simulation, 0.5f);
-
             Assert.AreEqual(1, second.Attacks);
-            Assert.AreEqual(8, simulation.Units[1].CurrentHp);
-            Assert.AreEqual(1f, simulation.Units[0].AttackCooldownRemaining);
+            Assert.AreEqual(1, third.Attacks);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.5d).Within(0.000001d));
         }
 
         [Test]
-        public void ResolveCombat_CarriesCooldownOvershootAcrossAttacks()
+        public void Tick_PreservesOvershootForCooldownPointSeven()
         {
-            BattleSimulation fastSimulation = CreateSimulation(
-                CreateUnit("fast-attacker", 20, 1, 1, 0.5f),
-                new HexCoord(1, 1),
-                CreateUnit("fast-target", 20, 1, 1, 1f),
-                new HexCoord(2, 1));
-            BattleSimulation slowSimulation = CreateSimulation(
-                CreateUnit("slow-attacker", 20, 1, 1, 0.7f),
-                new HexCoord(1, 1),
-                CreateUnit("slow-target", 20, 1, 1, 1f),
-                new HexCoord(2, 1));
-            fastSimulation.Units[0].SetTarget(fastSimulation.Units[1]);
-            slowSimulation.Units[0].SetTarget(slowSimulation.Units[1]);
+            BattleSimulation simulation = CreateSimulation(0.7f);
+            var loop = new BattleTickLoop(simulation, 0.35f);
+            var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(fastSimulation, 0.35f);
-            CombatResolver.ResolveCombat(slowSimulation, 0.35f);
-            CombatResolutionResult fastSecondTick = CombatResolver.ResolveCombat(fastSimulation, 0.35f);
-            CombatResolutionResult slowSecondTick = CombatResolver.ResolveCombat(slowSimulation, 0.35f);
-            CombatResolutionResult fastThirdTick = CombatResolver.ResolveCombat(fastSimulation, 0.35f);
-            CombatResolutionResult slowThirdTick = CombatResolver.ResolveCombat(slowSimulation, 0.35f);
+            BattleTickResult first = loop.Tick(simulation, events);
+            BattleTickResult second = loop.Tick(simulation, events);
+            BattleTickResult third = loop.Tick(simulation, events);
+            BattleTickResult fourth = loop.Tick(simulation, events);
 
-            Assert.AreEqual(1, fastSecondTick.Attacks);
-            Assert.AreEqual(1, slowSecondTick.Attacks);
-            Assert.AreEqual(1, fastThirdTick.Attacks);
-            Assert.AreEqual(0, slowThirdTick.Attacks);
-            Assert.AreEqual(18, fastSimulation.Units[1].CurrentHp);
-            Assert.AreEqual(19, slowSimulation.Units[1].CurrentHp);
+            Assert.AreEqual(0, first.Attacks);
+            Assert.AreEqual(1, second.Attacks);
+            Assert.AreEqual(0, third.Attacks);
+            Assert.AreEqual(1, fourth.Attacks);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(2.1d).Within(0.000001d));
         }
 
         [Test]
-        public void ResolveCombat_DoesNotAttackTargetOutOfRange()
-        {
-            BattleSimulation simulation = CreateSimulation(
-                CreateUnit("attacker", 10, 2, 1, 1f),
-                new HexCoord(0, 0),
-                CreateUnit("target", 10, 1, 1, 1f),
-                new HexCoord(4, 5));
-            simulation.Units[0].SetTarget(simulation.Units[1]);
-
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f);
-
-            Assert.AreEqual(0, result.Attacks);
-            Assert.AreEqual(10, simulation.Units[1].CurrentHp);
-        }
-
-        [Test]
-        public void ResolveCombat_DefeatsTargetAndReleasesOccupiedHex()
-        {
-            BattleSimulation simulation = CreateSimulation(
-                CreateUnit("attacker", 10, 5, 1, 1f),
-                new HexCoord(1, 1),
-                CreateUnit("target", 3, 1, 1, 1f),
-                new HexCoord(2, 1));
-            simulation.Units[0].SetTarget(simulation.Units[1]);
-
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f);
-
-            Assert.AreEqual(1, result.Attacks);
-            Assert.AreEqual(1, result.Deaths);
-            Assert.IsTrue(simulation.Units[1].IsDefeated);
-            Assert.IsFalse(simulation.Units[1].IsAlive);
-            Assert.IsFalse(simulation.TryGetUnitAt(new HexCoord(2, 1), out UnitRuntimeState _));
-        }
-
-        [Test]
-        public void ResolveCombat_DoesNotKeepAttackingDeadTarget()
+        public void ResolveCombat_OnlySchedulesAttackThatActuallyExecutes()
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 5, 1, 1f);
             UnitDefinition target = CreateUnit("target", 3, 1, 1, 1f);
@@ -139,224 +55,184 @@ namespace DeckBattle.Tests
                 });
             simulation.Units[0].SetTarget(simulation.Units[2]);
             simulation.Units[1].SetTarget(simulation.Units[2]);
+            simulation.Units[0].NextAttackTime = 0d;
+            simulation.Units[1].NextAttackTime = 0d;
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f);
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation);
 
             Assert.AreEqual(1, result.Attacks);
-            Assert.AreEqual(1, result.Deaths);
-            Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, simulation.Units[1].TargetUnitId);
-            Assert.IsTrue(simulation.Units[2].IsDefeated);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
+            Assert.That(simulation.Units[1].NextAttackTime, Is.EqualTo(0d).Within(0.000001d));
         }
 
         [Test]
-        public void ResolveCombat_ReadyAttackerGainsAttackAndDamageManaWhenLethallyHitSameTick()
-        {
-            UnitDefinition first = CreateUnit("first", 20, 5, 1, 1f);
-            UnitDefinition second = CreateUnit("second", 5, 2, 1, 1f);
-            first.ManaPerAttack = 11;
-            first.ManaPerDamageTaken = 13;
-            second.ManaPerAttack = 17;
-            second.ManaPerDamageTaken = 19;
-            BattleSimulation simulation = CreateSimulation(
-                first,
-                new HexCoord(1, 1),
-                second,
-                new HexCoord(2, 1));
-            simulation.Units[0].SetTarget(simulation.Units[1]);
-            simulation.Units[1].SetTarget(simulation.Units[0]);
-            simulation.Units[0].AttackCooldownRemaining = 0f;
-            simulation.Units[1].AttackCooldownRemaining = 0f;
-
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 0f);
-
-            Assert.AreEqual(2, result.Attacks);
-            Assert.AreEqual(1, result.Deaths);
-            Assert.AreEqual(18, simulation.Units[0].CurrentHp);
-            Assert.IsTrue(simulation.Units[1].IsDefeated);
-            Assert.AreEqual(24, simulation.Units[0].CurrentMana);
-            Assert.AreEqual(36, simulation.Units[1].CurrentMana);
-        }
-
-        [Test]
-        public void ResolveCombat_OutOfRangeUnitCanMoveBeforeLaterAttack()
-        {
-            UnitDefinition melee = CreateUnit("melee", 10, 2, 1, 1f);
-            UnitDefinition ranged = CreateUnit("ranged", 10, 1, 5, 1f);
-            BattleSimulation simulation = BattleSimulation.Create(
-                new HexBoard(5, 6, 1f),
-                new[]
-                {
-                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
-                    new UnitSpawnData(2, ranged, BattleSide.Enemy, new HexCoord(2, 1))
-                });
-            simulation.Units[0].SetTarget(simulation.Units[1]);
-
-            CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, 1f);
-            int moved = MovementResolver.ResolveMovement(simulation);
-
-            Assert.AreEqual(0, combat.Attacks);
-            Assert.AreEqual(1, moved);
-            Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
-            Assert.IsTrue(simulation.Units[0].IsMoving);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
-        }
-
-        [Test]
-        public void ResolveCombat_ActivatesSpecialAtManaThresholdAndResetsMana()
+        public void ResolveCombat_ActivatesAssignedAttackSpeedSpecialBeforeSchedulingNextAttack()
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
-            UnitDefinition target = CreateUnit("target", 10, 1, 1, 1f);
             attacker.ManaThreshold = 10;
-            BattleSimulation simulation = CreateSimulation(
-                attacker,
-                new HexCoord(1, 1),
-                target,
-                new HexCoord(2, 1));
-            simulation.Units[0].SetTarget(simulation.Units[1]);
-            var events = new BattleEventQueue();
-
-            CombatResolver.ResolveCombat(simulation, 1f, events);
-
-            Assert.AreEqual(0, simulation.Units[0].CurrentMana);
-            Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownMultiplier);
-            Assert.AreEqual(5f, simulation.Units[0].SpecialDurationRemaining);
-            Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownRemaining);
-            AssertEventTypeExists(events, BattleEventType.UnitSpecialActivated);
-            AssertManaChangedEventExists(events, 1, 0);
-        }
-
-        [Test]
-        public void ResolveCombat_EmitsManaChangedAfterAttackManaGain()
-        {
-            UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
-            UnitDefinition target = CreateUnit("target", 10, 1, 1, 1f);
-            target.ManaPerDamageTaken = 0;
-            BattleSimulation simulation = CreateSimulation(
-                attacker,
-                new HexCoord(1, 1),
-                target,
-                new HexCoord(2, 1));
-            simulation.Units[0].SetTarget(simulation.Units[1]);
-            var events = new BattleEventQueue();
-
-            CombatResolver.ResolveCombat(simulation, 1f, events);
-
-            AssertManaChangedEventExists(events, 1, 10);
-        }
-
-        [Test]
-        public void ResolveCombat_EmitsManaChangedAfterDamageTakenManaGain()
-        {
-            UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
-            UnitDefinition target = CreateUnit("target", 10, 1, 1, 1f);
-            attacker.ManaPerAttack = 0;
-            target.ManaPerDamageTaken = 7;
-            BattleSimulation simulation = CreateSimulation(
-                attacker,
-                new HexCoord(1, 1),
-                target,
-                new HexCoord(2, 1));
-            simulation.Units[0].SetTarget(simulation.Units[1]);
-            var events = new BattleEventQueue();
-
-            CombatResolver.ResolveCombat(simulation, 1f, events);
-
-            AssertManaChangedEventExists(events, 2, 7);
-        }
-
-        [Test]
-        public void ResolveCombat_SpecialExpiresAfterFiveSeconds()
-        {
-            BattleSimulation simulation = CreateSimulation(
-                CreateUnit("attacker", 10, 2, 1, 1f),
-                new HexCoord(1, 1),
-                CreateUnit("target", 10, 1, 1, 1f),
-                new HexCoord(2, 1));
-            simulation.Units[0].SpecialDurationRemaining = 5f;
-            simulation.Units[0].AttackCooldownMultiplier = 0.5f;
-            simulation.Units[0].AttackCooldownRemaining = 10f;
-
-            CombatResolver.ResolveCombat(simulation, 5f);
-
-            Assert.AreEqual(0f, simulation.Units[0].SpecialDurationRemaining);
-            Assert.AreEqual(1f, simulation.Units[0].AttackCooldownMultiplier);
-        }
-
-        [Test]
-        public void ResolveCombat_MovingUnitCannotAttackButCanBeAttackedOnCommittedHex()
-        {
-            UnitDefinition melee = CreateUnit("melee", 10, 2, 1, 1f);
-            UnitDefinition ranged = CreateUnit("ranged", 10, 3, 2, 1f);
+            attacker.Special = TestDefinitions.Track(UnityEngine.ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            attacker.Special.Kind = UnitSpecialKind.AttackSpeed;
+            attacker.Special.Duration = 5f;
+            attacker.Special.AttackCooldownMultiplier = 0.5f;
             BattleSimulation simulation = BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(1, 1)),
-                    new UnitSpawnData(2, ranged, BattleSide.Enemy, new HexCoord(3, 1))
+                    new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, CreateUnit("target", 10, 1, 1, 1f), BattleSide.Enemy, new HexCoord(2, 1))
                 });
-            simulation.StartUnitMovement(simulation.Units[0], new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
-            simulation.Units[1].SetTarget(simulation.Units[0]);
+            simulation.Units[0].NextAttackTime = 0d;
+            var events = new BattleEventQueue();
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f);
+            CombatResolver.ResolveCombat(simulation, events);
 
-            Assert.AreEqual(1, result.Attacks);
-            Assert.AreEqual(7, simulation.Units[0].CurrentHp);
-            Assert.AreEqual(10, simulation.Units[1].CurrentHp);
+            Assert.AreSame(attacker.Special, simulation.Units[0].ActiveSpecial);
+            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(5d).Within(0.000001d));
+            Assert.AreEqual(0.5f, simulation.Units[0].SpecialAttackCooldownMultiplier);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(0.5d).Within(0.000001d));
+            AssertSpecialActivation(events, UnitSpecialKind.AttackSpeed);
         }
 
-        private static BattleSimulation CreateSimulation(
-            UnitDefinition attacker,
-            HexCoord attackerHex,
-            UnitDefinition target,
-            HexCoord targetHex)
+        [Test]
+        public void Tick_ExpiresAttackSpeedSpecialAtItsAbsoluteEndTimeWithoutReschedulingAttack()
+        {
+            UnitDefinition attacker = CreateUnit("attacker", 100, 1, 1, 1f);
+            attacker.Special = CreateAttackSpeedSpecial();
+            BattleSimulation simulation = CreateSimulation(attacker, CreateUnit("target", 100, 1, 1, 1f));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].ActiveSpecial = attacker.Special;
+            simulation.Units[0].SpecialEndTime = 5d;
+            simulation.Units[0].SpecialAttackCooldownMultiplier = 0.5f;
+            simulation.Units[0].NextAttackTime = 10d;
+            var loop = new BattleTickLoop(simulation, 5f);
+
+            loop.Tick(simulation, new BattleEventQueue());
+
+            Assert.IsNull(simulation.Units[0].ActiveSpecial);
+            Assert.IsTrue(double.IsPositiveInfinity(simulation.Units[0].SpecialEndTime));
+            Assert.AreEqual(1f, simulation.Units[0].SpecialAttackCooldownMultiplier);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(10d).Within(0.000001d));
+        }
+
+        [Test]
+        public void Tick_ReactivatingAttackSpeedSpecialRefreshesItsAbsoluteEndTime()
+        {
+            UnitDefinition attacker = CreateUnit("attacker", 100, 1, 1, 1f);
+            attacker.ManaThreshold = 10;
+            attacker.Special = CreateAttackSpeedSpecial();
+            BattleSimulation simulation = CreateSimulation(attacker, CreateUnit("target", 100, 1, 1, 1f));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].NextAttackTime = 0d;
+
+            CombatResolver.ResolveCombat(simulation);
+            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(5d).Within(0.000001d));
+
+            var loop = new BattleTickLoop(simulation, 1f);
+            loop.Tick(simulation, new BattleEventQueue());
+
+            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(6d).Within(0.000001d));
+            Assert.AreSame(attacker.Special, simulation.Units[0].ActiveSpecial);
+        }
+
+        [Test]
+        public void ResolveCombat_UnitWithoutSpecialDoesNotGainHaste()
+        {
+            UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
+            attacker.ManaThreshold = 10;
+            BattleSimulation simulation = CreateSimulation(attacker, CreateUnit("target", 10, 1, 1, 1f));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].NextAttackTime = 0d;
+            var events = new BattleEventQueue();
+
+            CombatResolver.ResolveCombat(simulation, events);
+
+            Assert.IsNull(simulation.Units[0].ActiveSpecial);
+            Assert.AreEqual(1f, simulation.Units[0].SpecialAttackCooldownMultiplier);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
+            AssertNoSpecialActivation(events);
+        }
+
+        [Test]
+        public void Tick_MovingUnitKeepsElapsedAttackDeadlineAndAttacksAfterMovementCompletes()
+        {
+            BattleSimulation simulation = CreateSimulation(1f);
+            simulation.StartUnitMovement(simulation.Units[0], new HexCoord(2, 0));
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].NextAttackTime = 0d;
+            var loop = new BattleTickLoop(simulation, 0.35f);
+            var events = new BattleEventQueue();
+
+            BattleTickResult movingTick = loop.Tick(simulation, events);
+            BattleTickResult completedTick = loop.Tick(simulation, events);
+
+            Assert.AreEqual(0, movingTick.Attacks);
+            Assert.AreEqual(1, completedTick.Attacks);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
+        }
+
+        private static BattleSimulation CreateSimulation(float cooldown)
+        {
+            UnitDefinition target = CreateUnit("target", 50, 1, 1, 999f);
+            return BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, CreateUnit("attacker", 50, 1, 1, cooldown), BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, target, BattleSide.Enemy, new HexCoord(2, 1))
+                });
+        }
+
+        private static BattleSimulation CreateSimulation(UnitDefinition attacker, UnitDefinition target)
         {
             return BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),
                 new[]
                 {
-                    new UnitSpawnData(1, attacker, BattleSide.Player, attackerHex),
-                    new UnitSpawnData(2, target, BattleSide.Enemy, targetHex)
+                    new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, target, BattleSide.Enemy, new HexCoord(2, 1))
                 });
         }
 
-        private static UnitDefinition CreateUnit(string unitId, int hp, int attack, int attackRange, float attackCooldown)
+        private static UnitSpecialDefinition CreateAttackSpeedSpecial()
+        {
+            UnitSpecialDefinition special = TestDefinitions.Track(UnityEngine.ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            special.Kind = UnitSpecialKind.AttackSpeed;
+            special.Duration = 5f;
+            special.AttackCooldownMultiplier = 0.5f;
+            return special;
+        }
+
+        private static UnitDefinition CreateUnit(string unitId, int hp, int attack, int range, float cooldown)
         {
             UnitDefinition definition = TestDefinitions.CreateUnit(unitId, 1);
             definition.MaxHp = hp;
             definition.Attack = attack;
-            definition.AttackRange = attackRange;
-            definition.AttackCooldown = attackCooldown;
+            definition.AttackRange = range;
+            definition.AttackCooldown = cooldown;
             return definition;
         }
 
-        private static void AssertEventTypeExists(BattleEventQueue events, BattleEventType type)
-        {
-            for (int i = 0; i < events.Count; i++)
-            {
-                if (events[i].Type == type)
-                {
-                    return;
-                }
-            }
-
-            Assert.Fail("Expected event type was not emitted: " + type);
-        }
-
-        private static void AssertManaChangedEventExists(BattleEventQueue events, int unitId, int currentMana)
+        private static void AssertSpecialActivation(BattleEventQueue events, UnitSpecialKind kind)
         {
             for (int i = 0; i < events.Count; i++)
             {
                 BattleEvent battleEvent = events[i];
-                if (battleEvent.Type == BattleEventType.UnitManaChanged
-                    && battleEvent.UnitId == unitId
-                    && battleEvent.CurrentMana == currentMana)
+                if (battleEvent.Type == BattleEventType.UnitSpecialActivated && battleEvent.SpecialKind == kind)
                 {
                     return;
                 }
             }
 
-            Assert.Fail("Expected mana event was not emitted for unit " + unitId + " with mana " + currentMana + ".");
+            Assert.Fail("Expected special activation was not emitted.");
+        }
+
+        private static void AssertNoSpecialActivation(BattleEventQueue events)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                Assert.AreNotEqual(BattleEventType.UnitSpecialActivated, events[i].Type);
+            }
         }
     }
 }

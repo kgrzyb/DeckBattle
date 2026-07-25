@@ -52,12 +52,15 @@ namespace DeckBattle
                 return new BattleTickResult(0, 0, true, simulation.HasWinner, simulation.Winner);
             }
 
+            simulation.AdvanceTime(TickDuration);
+            UpdateActiveSpecials(simulation);
+
             // Commit completed logical steps before any range or target query.
             MovementResolver.AdvanceActiveMovements(simulation, TickDuration);
             ProjectileResolver.ResolveProjectiles(simulation, TickDuration, eventQueue);
 
             RefreshTargets(simulation);
-            CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, TickDuration, eventQueue, combatWorkspace);
+            CombatResolutionResult combat = CombatResolver.ResolveCombat(simulation, eventQueue, combatWorkspace);
 
             // Melee deaths and projectile/attack side effects can invalidate targets
             // and occupied attack positions before the next movement plan.
@@ -106,6 +109,22 @@ namespace DeckBattle
                 targetSelections[i] = selection;
                 targetSelectionValid[i] = true;
                 unit.SetTarget(selection.Target);
+            }
+        }
+
+        private static void UpdateActiveSpecials(BattleSimulation simulation)
+        {
+            for (int i = 0; i < simulation.Units.Count; i++)
+            {
+                UnitRuntimeState unit = simulation.Units[i];
+                if (unit == null || unit.ActiveSpecial == null || simulation.ElapsedTime < unit.SpecialEndTime)
+                {
+                    continue;
+                }
+
+                unit.ActiveSpecial = null;
+                unit.SpecialEndTime = double.PositiveInfinity;
+                unit.SpecialAttackCooldownMultiplier = 1f;
             }
         }
 

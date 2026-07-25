@@ -33,6 +33,7 @@ namespace DeckBattle
         public HexBoard Board { get; private set; }
         public BattleRuntimeTuning Tuning { get; private set; }
         public DeterministicRandom Random { get; private set; }
+        public double ElapsedTime { get; private set; }
         public bool IsBattleEnded { get; private set; }
         public bool HasWinner { get; private set; }
         public BattleSide Winner { get; private set; }
@@ -79,7 +80,7 @@ namespace DeckBattle
                 ValidateSpawn(board, spawn, unitByHex, unitById);
 
                 var unit = new UnitRuntimeState(spawn.UnitId, spawn.Definition, spawn.Side, spawn.StartHex, spawn.AttackBonusNextCombat);
-                unit.AttackCooldownRemaining = tuning.GetAttackCooldown(spawn.Definition, unit);
+                unit.NextAttackTime = tuning.GetAttackCooldown(spawn.Definition, unit);
                 units.Add(unit);
                 unitByHex.Add(spawn.StartHex, unit);
                 unitById.Add(spawn.UnitId, unit);
@@ -91,6 +92,16 @@ namespace DeckBattle
         public bool TryGetUnitAt(HexCoord hex, out UnitRuntimeState unit)
         {
             return unitByHex.TryGetValue(hex, out unit);
+        }
+
+        internal void AdvanceTime(float duration)
+        {
+            if (duration < 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(duration));
+            }
+
+            ElapsedTime += duration;
         }
 
         public bool TryGetUnitById(int unitId, out UnitRuntimeState unit)

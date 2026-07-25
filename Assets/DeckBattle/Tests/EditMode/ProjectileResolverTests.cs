@@ -12,14 +12,15 @@ namespace DeckBattle.Tests
             attacker.Projectile = CreateProjectile("arrow", 1f);
             BattleSimulation simulation = CreateSimulation(attacker, new HexCoord(1, 1), CreateUnit("target", 10, 1, 1, 1f, UnitType.Melee), new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].NextAttackTime = 0d;
             var events = new BattleEventQueue();
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f, events);
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, events);
 
             Assert.AreEqual(1, result.Attacks);
             Assert.AreEqual(0, result.TotalDamage);
             Assert.AreEqual(10, simulation.Units[1].CurrentHp);
-            Assert.AreEqual(1f, simulation.Units[0].AttackCooldownRemaining);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
             Assert.AreEqual(10, simulation.Units[0].CurrentMana);
             Assert.AreEqual(0, simulation.Units[1].CurrentMana);
             Assert.AreEqual(1, simulation.Projectiles.Count);
@@ -86,9 +87,10 @@ namespace DeckBattle.Tests
             target.ManaPerDamageTaken = 7;
             BattleSimulation simulation = CreateSimulation(attacker, new HexCoord(1, 1), target, new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].NextAttackTime = 0d;
             var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(simulation, 1f, events);
+            CombatResolver.ResolveCombat(simulation, events);
 
             AssertEventTypeDoesNotExist(events, BattleEventType.UnitCrit);
             Assert.AreEqual(0, simulation.Units[1].CurrentMana);
@@ -154,8 +156,9 @@ namespace DeckBattle.Tests
                 CreateUnit("target", 10, 1, 1, 1f, UnitType.Melee),
                 new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[0].NextAttackTime = 0d;
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 1f);
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation);
 
             Assert.AreEqual(1, result.Attacks);
             Assert.AreEqual(3, result.TotalDamage);
@@ -169,7 +172,8 @@ namespace DeckBattle.Tests
             attacker.Projectile = CreateProjectile("arrow", projectileSpeed);
             BattleSimulation simulation = CreateSimulation(attacker, new HexCoord(1, 1), CreateUnit("target", 10, 1, 1, 1f, UnitType.Melee), new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
-            CombatResolver.ResolveCombat(simulation, 1f);
+            simulation.Units[0].NextAttackTime = 0d;
+            CombatResolver.ResolveCombat(simulation);
             return simulation;
         }
 

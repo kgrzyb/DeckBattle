@@ -39,7 +39,7 @@ namespace DeckBattle
                 return 0.01f;
             }
 
-            float runtimeMultiplier = runtimeState != null ? runtimeState.AttackCooldownMultiplier : 1f;
+            float runtimeMultiplier = runtimeState != null ? runtimeState.SpecialAttackCooldownMultiplier : 1f;
             return Math.Max(0.01f, definition.AttackCooldown * AttackCooldownMultiplier * Math.Max(0.01f, runtimeMultiplier));
         }
     }

@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Reflection;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -70,8 +71,9 @@ namespace DeckBattle.Tests
                 serializedItem.FindProperty("button").objectReferenceValue = button;
                 serializedItem.FindProperty("faceView").objectReferenceValue = faceView;
                 serializedItem.ApplyModifiedPropertiesWithoutUndo();
-                itemView.SendMessage("Awake");
-                itemView.SendMessage("OnEnable");
+                typeof(DeckBuilderCardItemView)
+                    .GetMethod("OnEnable", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(itemView, null);
 
                 string clickedCardId = null;
                 UnitDefinition definition = TestDefinitions.CreateUnit("guard", 3);

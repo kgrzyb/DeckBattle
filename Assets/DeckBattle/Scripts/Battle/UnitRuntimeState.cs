@@ -13,13 +13,14 @@ namespace DeckBattle
         public int CurrentHp;
         public HexCoord CurrentHex;
         public int TargetUnitId;
-        public float AttackCooldownRemaining;
+        public double NextAttackTime;
         public int CurrentMana;
         public bool IsMoving;
         public HexCoord MovementDestination;
         public float MovementTimeRemaining;
-        public float SpecialDurationRemaining;
-        public float AttackCooldownMultiplier;
+        public UnitSpecialDefinition ActiveSpecial;
+        public double SpecialEndTime;
+        public float SpecialAttackCooldownMultiplier;
         public int AttackBonusNextCombat;
         public bool IsDefeated;
 
@@ -41,13 +42,14 @@ namespace DeckBattle
             CurrentHex = startHex;
             CurrentHp = definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
-            AttackCooldownRemaining = Math.Max(0.01f, definition.AttackCooldown);
+            NextAttackTime = double.PositiveInfinity;
             CurrentMana = 0;
             IsMoving = false;
             MovementDestination = startHex;
             MovementTimeRemaining = 0f;
-            SpecialDurationRemaining = 0f;
-            AttackCooldownMultiplier = 1f;
+            ActiveSpecial = null;
+            SpecialEndTime = double.PositiveInfinity;
+            SpecialAttackCooldownMultiplier = 1f;
             AttackBonusNextCombat = Math.Max(0, attackBonusNextCombat);
             IsDefeated = false;
         }
@@ -72,13 +74,14 @@ namespace DeckBattle
             CurrentHex = startHex;
             CurrentHp = Definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
-            AttackCooldownRemaining = Math.Max(0.01f, Definition.AttackCooldown);
+            NextAttackTime = double.PositiveInfinity;
             CurrentMana = 0;
             IsMoving = false;
             MovementDestination = startHex;
             MovementTimeRemaining = 0f;
-            SpecialDurationRemaining = 0f;
-            AttackCooldownMultiplier = 1f;
+            ActiveSpecial = null;
+            SpecialEndTime = double.PositiveInfinity;
+            SpecialAttackCooldownMultiplier = 1f;
             AttackBonusNextCombat = 0;
             IsDefeated = false;
         }

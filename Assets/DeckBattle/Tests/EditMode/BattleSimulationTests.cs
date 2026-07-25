@@ -31,7 +31,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(new HexCoord(1, 1), player.CurrentHex);
             Assert.AreEqual(playerDefinition.MaxHp, player.CurrentHp);
             Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, player.TargetUnitId);
-            Assert.AreEqual(playerDefinition.AttackCooldown, player.AttackCooldownRemaining);
+            Assert.That(player.NextAttackTime, Is.EqualTo(playerDefinition.AttackCooldown).Within(0.000001d));
             Assert.AreEqual(0, player.CurrentMana);
             Assert.IsTrue(player.IsAlive);
 
@@ -128,7 +128,7 @@ namespace DeckBattle.Tests
 
             unit.CurrentHp = 1;
             unit.CurrentHex = new HexCoord(2, 2);
-            unit.AttackCooldownRemaining = 0.5f;
+            unit.NextAttackTime = 0.5d;
             unit.CurrentMana = 25;
             unit.SetTarget(target);
 
@@ -139,7 +139,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(new HexCoord(0, 1), unit.CurrentHex);
             Assert.AreEqual(definition.MaxHp, unit.CurrentHp);
             Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, unit.TargetUnitId);
-            Assert.AreEqual(definition.AttackCooldown, unit.AttackCooldownRemaining);
+            Assert.IsTrue(double.IsPositiveInfinity(unit.NextAttackTime));
             Assert.AreEqual(0, unit.CurrentMana);
             Assert.IsTrue(unit.IsAlive);
         }

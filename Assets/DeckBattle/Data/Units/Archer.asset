@@ -29,6 +29,7 @@ MonoBehaviour:
   ManaThreshold: 100
   ManaPerAttack: 10
   ManaPerDamageTaken: 10
+  Special: {fileID: 11400000, guid: f3a42db683f64b8ca4a9e3a2e59fd8b7, type: 2}
   Armor: 0
   ArmorPenetration: 0
   Projectile: {fileID: 11400000, guid: ee570de75d9ef454c9bf51a76c1ddb96, type: 2}

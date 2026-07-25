@@ -200,9 +200,9 @@ namespace DeckBattle.Tests
             UnitRuntimeState attacker = simulation.Units[0];
             UnitRuntimeState target = simulation.Units[1];
             attacker.SetTarget(target);
-            attacker.AttackCooldownRemaining = 0f;
+            attacker.NextAttackTime = 0d;
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, 0f);
+            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation);
 
             Assert.AreEqual(1, result.Attacks);
             Assert.AreEqual(5, result.TotalDamage);

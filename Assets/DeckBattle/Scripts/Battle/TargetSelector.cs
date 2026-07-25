@@ -130,6 +130,23 @@ namespace DeckBattle
             }
 
             workspace.Clear();
+            if (attacker.TargetUnitId != UnitRuntimeState.NoTargetUnitId
+                && simulation.TryGetUnitById(attacker.TargetUnitId, out UnitRuntimeState currentTarget)
+                && IsLiveEnemy(attacker, currentTarget)
+                && AttackPositionSelector.TrySelectAttackPosition(
+                    simulation,
+                    attacker,
+                    currentTarget,
+                    workspace.AttackPosition,
+                    out AttackPositionSelector.AttackPathResult currentTargetPath))
+            {
+                selection = new TargetSelection(currentTarget, currentTargetPath);
+                return true;
+            }
+
+            // The current target is no longer valid or reachable, so choosing a
+            // replacement is the only case that needs a global path search.
+            workspace.Clear();
             return TrySelectTargetByPath(simulation, attacker, workspace, out selection);
         }
 

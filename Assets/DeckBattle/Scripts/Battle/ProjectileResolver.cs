@@ -72,7 +72,7 @@ namespace DeckBattle
 
                     if (projectile.Damage > 0)
                     {
-                        CombatResolver.AddMana(target, target.Definition.ManaPerDamageTaken, eventQueue);
+                CombatResolver.AddMana(simulation, target, target.Definition.ManaPerDamageTaken, eventQueue);
                     }
 
                     if (target.CurrentHp <= 0 && !target.IsDefeated)

@@ -86,8 +86,8 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(3, enemy, BattleSide.Enemy, new HexCoord(0, 1))
                 });
             simulation.Units[0].SetTarget(simulation.Units[1]);
-            simulation.Units[1].AttackCooldownRemaining = 10f;
-            simulation.Units[2].AttackCooldownRemaining = 10f;
+            simulation.Units[1].NextAttackTime = 10d;
+            simulation.Units[2].NextAttackTime = 10d;
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
@@ -167,6 +167,47 @@ namespace DeckBattle.Tests
 
             Assert.IsTrue(second.BattleEnded);
             Assert.AreEqual(0, events.Count);
+        }
+
+        [Test]
+        public void Tick_AdvancesElapsedTimeOncePerActiveTick()
+        {
+            BattleSimulation simulation = CreateMeleeDuel();
+            var loop = new BattleTickLoop(simulation, 0.35f);
+            var events = new BattleEventQueue();
+
+            Assert.That(simulation.ElapsedTime, Is.EqualTo(0d).Within(0.000001d));
+
+            loop.Tick(simulation, events);
+            Assert.That(simulation.ElapsedTime, Is.EqualTo(0.35d).Within(0.000001d));
+
+            loop.Tick(simulation, events);
+            Assert.That(simulation.ElapsedTime, Is.EqualTo(0.70d).Within(0.000001d));
+
+            loop.Tick(simulation, events);
+            Assert.That(simulation.ElapsedTime, Is.EqualTo(1.05d).Within(0.000001d));
+        }
+
+        [Test]
+        public void Tick_DoesNotAdvanceElapsedTimeAfterBattleEnds()
+        {
+            UnitDefinition player = CreateUnit("player-ranged", 5, 4, 3, 1f);
+            UnitDefinition enemy = CreateUnit("enemy-melee", 3, 1, 1, 1f);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 1))
+                });
+            var loop = new BattleTickLoop(simulation, 1f);
+            var events = new BattleEventQueue();
+
+            loop.Tick(simulation, events);
+            Assert.That(simulation.ElapsedTime, Is.EqualTo(1d).Within(0.000001d));
+
+            loop.Tick(simulation, events);
+            Assert.That(simulation.ElapsedTime, Is.EqualTo(1d).Within(0.000001d));
         }
 
         [Test]

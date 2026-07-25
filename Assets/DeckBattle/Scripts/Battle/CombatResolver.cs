@@ -4,31 +4,26 @@ namespace DeckBattle
 {
     public static class CombatResolver
     {
-        public static CombatResolutionResult ResolveCombat(BattleSimulation simulation, float tickDuration)
+        public static CombatResolutionResult ResolveCombat(BattleSimulation simulation)
         {
-            return ResolveCombat(simulation, tickDuration, null);
+            return ResolveCombat(simulation, null);
         }
 
-        public static CombatResolutionResult ResolveCombat(BattleSimulation simulation, float tickDuration, BattleEventQueue eventQueue)
+        public static CombatResolutionResult ResolveCombat(BattleSimulation simulation, BattleEventQueue eventQueue)
         {
             if (simulation == null)
             {
                 throw new ArgumentNullException(nameof(simulation));
             }
 
-            return ResolveCombat(simulation, tickDuration, eventQueue, new Workspace(simulation.Units.Count));
+            return ResolveCombat(simulation, eventQueue, new Workspace(simulation.Units.Count));
         }
 
-        public static CombatResolutionResult ResolveCombat(BattleSimulation simulation, float tickDuration, BattleEventQueue eventQueue, Workspace workspace)
+        public static CombatResolutionResult ResolveCombat(BattleSimulation simulation, BattleEventQueue eventQueue, Workspace workspace)
         {
             if (simulation == null)
             {
                 throw new ArgumentNullException(nameof(simulation));
-            }
-
-            if (tickDuration < 0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(tickDuration));
             }
 
             if (workspace == null)
@@ -49,8 +44,6 @@ namespace DeckBattle
                     continue;
                 }
 
-                ReduceCooldown(attacker, tickDuration);
-                UpdateSpecialDuration(attacker, tickDuration);
                 if (attacker.IsMoving)
                 {
                     continue;
@@ -67,7 +60,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (attacker.AttackCooldownRemaining > 0f)
+                if (simulation.ElapsedTime < attacker.NextAttackTime)
                 {
                     continue;
                 }
@@ -132,11 +125,11 @@ namespace DeckBattle
 
                     if (intent.Damage > 0)
                     {
-                        AddMana(target, target.Definition.ManaPerDamageTaken, eventQueue);
+                        AddMana(simulation, target, target.Definition.ManaPerDamageTaken, eventQueue);
                     }
                 }
 
-                AddMana(attacker, attacker.Definition.ManaPerAttack, eventQueue);
+                AddMana(simulation, attacker, attacker.Definition.ManaPerAttack, eventQueue);
                 workspace.AddCooldownReset(attacker);
             }
 
@@ -148,7 +141,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                attacker.AttackCooldownRemaining += simulation.Tuning.GetAttackCooldown(attacker.Definition, attacker);
+                attacker.NextAttackTime += simulation.Tuning.GetAttackCooldown(attacker.Definition, attacker);
             }
 
             for (int i = 0; i < simulation.Units.Count; i++)
@@ -171,31 +164,7 @@ namespace DeckBattle
             return new CombatResolutionResult(attacks, totalDamage, deaths);
         }
 
-        private static void ReduceCooldown(UnitRuntimeState unit, float tickDuration)
-        {
-            if (unit.AttackCooldownRemaining <= 0f || tickDuration <= 0f)
-            {
-                return;
-            }
-
-            unit.AttackCooldownRemaining -= tickDuration;
-        }
-
-        private static void UpdateSpecialDuration(UnitRuntimeState unit, float tickDuration)
-        {
-            if (unit.SpecialDurationRemaining <= 0f || tickDuration <= 0f)
-            {
-                return;
-            }
-
-            unit.SpecialDurationRemaining = Math.Max(0f, unit.SpecialDurationRemaining - tickDuration);
-            if (unit.SpecialDurationRemaining <= 0f)
-            {
-                unit.AttackCooldownMultiplier = 1f;
-            }
-        }
-
-        internal static void AddMana(UnitRuntimeState unit, int amount, BattleEventQueue eventQueue)
+        internal static void AddMana(BattleSimulation simulation, UnitRuntimeState unit, int amount, BattleEventQueue eventQueue)
         {
             if (unit == null || amount <= 0 || unit.IsDefeated)
             {
@@ -215,12 +184,28 @@ namespace DeckBattle
             }
 
             unit.CurrentMana = 0;
-            unit.AttackCooldownMultiplier = 0.5f;
-            unit.SpecialDurationRemaining = 5f;
             if (eventQueue != null)
             {
                 eventQueue.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
-                eventQueue.Enqueue(BattleEvent.UnitSpecialActivated(unit.UnitId, unit.SpecialDurationRemaining));
+            }
+
+            ActivateSpecial(simulation, unit, eventQueue);
+        }
+
+        private static void ActivateSpecial(BattleSimulation simulation, UnitRuntimeState unit, BattleEventQueue eventQueue)
+        {
+            UnitSpecialDefinition special = unit.Definition.Special;
+            if (special == null || special.Kind != UnitSpecialKind.AttackSpeed || special.Duration <= 0f)
+            {
+                return;
+            }
+
+            unit.ActiveSpecial = special;
+            unit.SpecialEndTime = simulation.ElapsedTime + special.Duration;
+            unit.SpecialAttackCooldownMultiplier = Math.Max(0.01f, special.AttackCooldownMultiplier);
+            if (eventQueue != null)
+            {
+                eventQueue.Enqueue(BattleEvent.UnitSpecialActivated(unit.UnitId, special.Kind, special.Duration));
             }
         }
 

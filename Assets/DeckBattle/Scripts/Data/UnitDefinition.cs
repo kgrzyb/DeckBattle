@@ -2,6 +2,27 @@ using UnityEngine;
 
 namespace DeckBattle
 {
+    public enum UnitSpecialKind
+    {
+        None = 0,
+        AttackSpeed = 1
+    }
+
+    [CreateAssetMenu(fileName = "UnitSpecialDefinition", menuName = "Deck Battle/Unit Special Definition")]
+    public sealed class UnitSpecialDefinition : ScriptableObject
+    {
+        public string SpecialId;
+        public UnitSpecialKind Kind;
+        public float Duration;
+        public float AttackCooldownMultiplier = 1f;
+
+        private void OnValidate()
+        {
+            Duration = Mathf.Max(0f, Duration);
+            AttackCooldownMultiplier = Mathf.Max(0.01f, AttackCooldownMultiplier);
+        }
+    }
+
     [CreateAssetMenu(fileName = "UnitDefinition", menuName = "Deck Battle/Unit Definition")]
     public sealed class UnitDefinition : CardDefinition
     {
@@ -27,6 +48,7 @@ namespace DeckBattle
         public int ManaThreshold = 100;
         public int ManaPerAttack = 10;
         public int ManaPerDamageTaken = 10;
+        public UnitSpecialDefinition Special;
         public float Armor = 0f;
         public float ArmorPenetration = 0f;
         public ProjectileDefinition Projectile;

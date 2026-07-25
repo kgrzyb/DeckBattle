@@ -26,6 +26,7 @@ namespace DeckBattle
         public readonly int CurrentMana;
         public readonly int ProjectileId;
         public readonly float Duration;
+        public readonly UnitSpecialKind SpecialKind;
         public readonly BattleSide Winner;
         public readonly bool HasWinner;
 
@@ -40,6 +41,7 @@ namespace DeckBattle
             int currentMana,
             int projectileId,
             float duration,
+            UnitSpecialKind specialKind,
             BattleSide winner,
             bool hasWinner)
         {
@@ -53,48 +55,49 @@ namespace DeckBattle
             CurrentMana = currentMana;
             ProjectileId = projectileId;
             Duration = duration;
+            SpecialKind = specialKind;
             Winner = winner;
             HasWinner = hasWinner;
         }
 
         public static BattleEvent UnitMoved(int unitId, HexCoord from, HexCoord to)
         {
-            return new BattleEvent(BattleEventType.UnitMoved, unitId, 0, from, to, 0, 0, 0, 0, 0f, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitMoved, unitId, 0, from, to, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
         public static BattleEvent UnitAttackStarted(int attackerId, int targetId)
         {
-            return new BattleEvent(BattleEventType.UnitAttackStarted, attackerId, targetId, default, default, 0, 0, 0, 0, 0f, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitAttackStarted, attackerId, targetId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
         public static BattleEvent UnitDamaged(int targetId, int amount, int remainingHp)
         {
-            return new BattleEvent(BattleEventType.UnitDamaged, targetId, 0, default, default, amount, remainingHp, 0, 0, 0f, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitDamaged, targetId, 0, default, default, amount, remainingHp, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
         public static BattleEvent UnitDied(int unitId)
         {
-            return new BattleEvent(BattleEventType.UnitDied, unitId, 0, default, default, 0, 0, 0, 0, 0f, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitDied, unitId, 0, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
         public static BattleEvent BattleEnded(BattleSide winner, bool hasWinner)
         {
-            return new BattleEvent(BattleEventType.BattleEnded, 0, 0, default, default, 0, 0, 0, 0, 0f, winner, hasWinner);
+            return new BattleEvent(BattleEventType.BattleEnded, 0, 0, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, winner, hasWinner);
         }
 
         public static BattleEvent UnitManaChanged(int unitId, int currentMana)
         {
-            return new BattleEvent(BattleEventType.UnitManaChanged, unitId, 0, default, default, 0, 0, currentMana, 0, 0f, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitManaChanged, unitId, 0, default, default, 0, 0, currentMana, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
-        public static BattleEvent UnitSpecialActivated(int unitId, float duration)
+        public static BattleEvent UnitSpecialActivated(int unitId, UnitSpecialKind specialKind, float duration)
         {
-            return new BattleEvent(BattleEventType.UnitSpecialActivated, unitId, 0, default, default, 0, 0, 0, 0, duration, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitSpecialActivated, unitId, 0, default, default, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false);
         }
 
         public static BattleEvent UnitCrit(int attackerId, int targetId)
         {
-            return new BattleEvent(BattleEventType.UnitCrit, attackerId, targetId, default, default, 0, 0, 0, 0, 0f, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitCrit, attackerId, targetId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
         public static BattleEvent ProjectileLaunched(
@@ -105,12 +108,12 @@ namespace DeckBattle
             HexCoord targetHex,
             float duration)
         {
-            return new BattleEvent(BattleEventType.ProjectileLaunched, attackerId, targetId, from, targetHex, 0, 0, 0, projectileId, duration, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.ProjectileLaunched, attackerId, targetId, from, targetHex, 0, 0, 0, projectileId, duration, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
         public static BattleEvent ProjectileHit(int projectileId, int attackerId, int targetId, HexCoord targetHex)
         {
-            return new BattleEvent(BattleEventType.ProjectileHit, attackerId, targetId, default, targetHex, 0, 0, 0, projectileId, 0f, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.ProjectileHit, attackerId, targetId, default, targetHex, 0, 0, 0, projectileId, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
     }
 }

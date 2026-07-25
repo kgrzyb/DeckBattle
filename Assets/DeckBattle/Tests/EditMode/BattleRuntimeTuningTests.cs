@@ -41,11 +41,11 @@ namespace DeckBattle.Tests
                 },
                 new BattleRuntimeTuning(2f, 0));
             simulation.Units[0].SetTarget(simulation.Units[1]);
-            simulation.Units[0].AttackCooldownRemaining = 0f;
+            simulation.Units[0].NextAttackTime = 0d;
 
-            CombatResolver.ResolveCombat(simulation, 0f);
+            CombatResolver.ResolveCombat(simulation);
 
-            Assert.AreEqual(2f, simulation.Units[0].AttackCooldownRemaining);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(2d).Within(0.000001d));
         }
 
         [Test]
@@ -61,11 +61,12 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 0))
                 });
             simulation.Units[0].SetTarget(simulation.Units[1]);
-            simulation.Units[0].AttackCooldownMultiplier = 0.5f;
+            simulation.Units[0].SpecialAttackCooldownMultiplier = 0.5f;
+            simulation.Units[0].NextAttackTime = 0d;
 
-            CombatResolver.ResolveCombat(simulation, 1f);
+            CombatResolver.ResolveCombat(simulation);
 
-            Assert.AreEqual(0.5f, simulation.Units[0].AttackCooldownRemaining);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(0.5d).Within(0.000001d));
         }
 
         private static UnitDefinition CreateUnit(string unitId, int hp, int attack, int attackRange, float attackCooldown)
