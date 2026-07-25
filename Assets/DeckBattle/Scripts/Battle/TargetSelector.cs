@@ -132,7 +132,7 @@ namespace DeckBattle
             workspace.Clear();
             if (attacker.TargetUnitId != UnitRuntimeState.NoTargetUnitId
                 && simulation.TryGetUnitById(attacker.TargetUnitId, out UnitRuntimeState currentTarget)
-                && IsLiveEnemy(attacker, currentTarget)
+                && TargetingRules.CanBeTargeted(attacker, currentTarget)
                 && AttackPositionSelector.TrySelectAttackPosition(
                     simulation,
                     attacker,
@@ -289,7 +289,7 @@ namespace DeckBattle
             for (int i = 0; i < units.Count; i++)
             {
                 UnitRuntimeState candidate = units[i];
-                if (!IsLiveEnemy(attacker, candidate))
+                if (!TargetingRules.CanBeTargeted(attacker, candidate))
                 {
                     continue;
                 }
@@ -366,11 +366,6 @@ namespace DeckBattle
 
                 occupiedHexes.Add(unit.CurrentHex);
                 dynamicBlockedHexes.Add(unit.CurrentHex);
-                if (unit.IsMoving)
-                {
-                    occupiedHexes.Add(unit.MovementDestination);
-                    dynamicBlockedHexes.Add(unit.MovementDestination);
-                }
             }
         }
 
@@ -401,11 +396,6 @@ namespace DeckBattle
         {
             int qCompare = left.Q.CompareTo(right.Q);
             return qCompare != 0 ? qCompare : left.R.CompareTo(right.R);
-        }
-
-        private static bool IsLiveEnemy(UnitRuntimeState attacker, UnitRuntimeState candidate)
-        {
-            return candidate != null && candidate.IsAlive && candidate.Side != attacker.Side;
         }
 
         private static void ValidateArguments(
@@ -460,6 +450,22 @@ namespace DeckBattle
             {
                 get { return Target != null; }
             }
+        }
+    }
+}
+
+namespace DeckBattle
+{
+    /// <summary>Shared baseline for combat target validity. Future status effects extend this point.</summary>
+    public static class TargetingRules
+    {
+        public static bool CanBeTargeted(UnitRuntimeState attacker, UnitRuntimeState candidate)
+        {
+            return attacker != null
+                && attacker.IsAlive
+                && candidate != null
+                && candidate.IsAlive
+                && attacker.Side != candidate.Side;
         }
     }
 }

@@ -121,6 +121,11 @@ namespace DeckBattle
                 throw new ArgumentException("Destination is not walkable.", nameof(destination));
             }
 
+            if (Board.Distance(unit.CurrentHex, destination) != 1)
+            {
+                throw new ArgumentException("Movement destination must be adjacent to the current hex.", nameof(destination));
+            }
+
             UnitRuntimeState occupyingUnit;
             if (unitByHex.TryGetValue(destination, out occupyingUnit) && occupyingUnit != unit)
             {
@@ -144,6 +149,9 @@ namespace DeckBattle
             unitByHex.Remove(unit.CurrentHex);
             unit.CurrentHex = destination;
             unitByHex[destination] = unit;
+            unit.IsMoving = false;
+            unit.MovementDestination = destination;
+            unit.MovementTimeRemaining = 0f;
         }
 
         public void StartUnitMovement(UnitRuntimeState unit, HexCoord destination)

@@ -12,18 +12,29 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(simulation));
             }
 
-            var workspace = new Workspace(simulation.Board.Width * simulation.Board.Height, simulation.Units.Count);
-            return ResolveMovement(simulation, 1f, workspace, null);
+            return ResolveMovement(simulation, new Workspace(simulation.Board.Width * simulation.Board.Height, simulation.Units.Count));
         }
 
         public static int ResolveMovement(BattleSimulation simulation, Workspace workspace)
         {
-            return ResolveMovement(simulation, 1f, workspace, null);
+            return ResolveMovement(simulation, 0f, workspace, null);
         }
 
+        // tickDuration remains for source compatibility. Logical movement is committed in this call.
         public static int ResolveMovement(BattleSimulation simulation, float tickDuration, Workspace workspace, BattleEventQueue eventQueue)
         {
-            return ResolveMovement(simulation, tickDuration, workspace, eventQueue, null, null);
+            if (simulation == null)
+            {
+                throw new ArgumentNullException(nameof(simulation));
+            }
+
+            if (workspace == null)
+            {
+                throw new ArgumentNullException(nameof(workspace));
+            }
+
+            PrepareTargetSelections(simulation, workspace);
+            return ResolveMovement(simulation, tickDuration, workspace, eventQueue, workspace.TargetSelections, workspace.TargetSelectionValid);
         }
 
         public static int ResolveMovement(
@@ -44,16 +55,20 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(workspace));
             }
 
+            if (targetSelections == null || targetSelectionValid == null)
+            {
+                throw new ArgumentNullException("Prepared target selections are required for movement collection.");
+            }
+
             workspace.Clear();
-            AdvanceActiveMovements(simulation, tickDuration);
-            FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
-            PlanMovementIntents(simulation, workspace, true, targetSelections, targetSelectionValid);
-            return ApplyMovementIntents(simulation, workspace, eventQueue);
+            CollectIntents(simulation, workspace, targetSelections, targetSelectionValid);
+            ResolveConflicts(workspace);
+            return CommitWinners(simulation, workspace, eventQueue);
         }
 
         public static int ResolveMovement(BattleSimulation simulation, Workspace workspace, BattleEventQueue eventQueue)
         {
-            return ResolveMovement(simulation, 1f, workspace, eventQueue);
+            return ResolveMovement(simulation, 0f, workspace, eventQueue);
         }
 
         public static int PlanMovementDestinations(
@@ -61,265 +76,120 @@ namespace DeckBattle
             Workspace workspace,
             Dictionary<int, HexCoord> destinationsByUnitId)
         {
-            if (simulation == null)
-            {
-                throw new ArgumentNullException(nameof(simulation));
-            }
+            if (simulation == null) throw new ArgumentNullException(nameof(simulation));
+            if (workspace == null) throw new ArgumentNullException(nameof(workspace));
+            if (destinationsByUnitId == null) throw new ArgumentNullException(nameof(destinationsByUnitId));
 
-            if (workspace == null)
-            {
-                throw new ArgumentNullException(nameof(workspace));
-            }
-
-            if (destinationsByUnitId == null)
-            {
-                throw new ArgumentNullException(nameof(destinationsByUnitId));
-            }
-
+            PrepareTargetSelections(simulation, workspace);
             workspace.Clear();
             destinationsByUnitId.Clear();
-            FillOccupiedHexes(simulation.Units, workspace.OccupiedHexes);
-            PlanMovementIntents(simulation, workspace, false, null, null);
-            return ReservePlannedDestinations(simulation, workspace, destinationsByUnitId);
+            CollectIntents(simulation, workspace, workspace.TargetSelections, workspace.TargetSelectionValid);
+            ResolveConflicts(workspace);
+            for (int i = 0; i < workspace.Winners.Count; i++)
+            {
+                MovementIntent winner = workspace.Winners[i];
+                destinationsByUnitId[winner.Unit.UnitId] = winner.Destination;
+            }
+
+            return workspace.Winners.Count;
         }
 
-        public static void AdvanceActiveMovements(BattleSimulation simulation, float tickDuration)
+        private static void PrepareTargetSelections(BattleSimulation simulation, Workspace workspace)
         {
-            if (tickDuration <= 0f)
+            workspace.EnsureUnitCapacity(simulation.Units.Count);
+            for (int i = 0; i < simulation.Units.Count; i++)
             {
-                return;
-            }
-
-            IReadOnlyList<UnitRuntimeState> units = simulation.Units;
-            for (int i = 0; i < units.Count; i++)
-            {
-                UnitRuntimeState unit = units[i];
-                if (unit == null || !unit.IsAlive || !unit.IsMoving)
+                workspace.TargetSelectionValid[i] = false;
+                UnitRuntimeState unit = simulation.Units[i];
+                if (unit != null && unit.IsAlive
+                    && TargetSelector.TrySelectTargetOrRetainCurrent(simulation, unit, workspace.Targeting, out TargetSelector.TargetSelection selection))
                 {
-                    continue;
-                }
-
-                unit.MovementTimeRemaining = Math.Max(0f, unit.MovementTimeRemaining - tickDuration);
-                if (unit.MovementTimeRemaining <= 0f)
-                {
-                    simulation.CompleteUnitMovement(unit);
+                    workspace.TargetSelections[i] = selection;
+                    workspace.TargetSelectionValid[i] = true;
                 }
             }
         }
 
-        private static void PlanMovementIntents(
+        private static void CollectIntents(
             BattleSimulation simulation,
             Workspace workspace,
-            bool updateUnitTargets,
             TargetSelector.TargetSelection[] targetSelections,
             bool[] targetSelectionValid)
         {
+            FillOccupiedHexes(simulation.Units, workspace.OccupiedAtCollectStart);
             IReadOnlyList<UnitRuntimeState> units = simulation.Units;
-            for (int i = 0; i < units.Count; i++)
+            int count = Math.Min(units.Count, Math.Min(targetSelections.Length, targetSelectionValid.Length));
+            for (int i = 0; i < count; i++)
             {
                 UnitRuntimeState unit = units[i];
-                if (unit == null || !unit.IsAlive || unit.IsMoving)
+                if (unit == null || !unit.IsAlive || !targetSelectionValid[i])
                 {
                     continue;
                 }
 
-                TargetSelector.TargetSelection selection;
-                bool hasSelection = targetSelections != null
-                    && targetSelectionValid != null
-                    && i < targetSelections.Length
-                    && i < targetSelectionValid.Length
-                    && targetSelectionValid[i];
-                if (hasSelection)
-                {
-                    selection = targetSelections[i];
-                }
-                else if (!TargetSelector.TrySelectTargetOrRetainCurrent(
-                             simulation,
-                             unit,
-                             workspace.Targeting,
-                             out selection))
-                {
-                    if (updateUnitTargets)
-                    {
-                        unit.ClearTarget();
-                    }
-
-                    continue;
-                }
-
-                UnitRuntimeState target = selection.Target;
-
-                if (updateUnitTargets)
-                {
-                    unit.SetTarget(target);
-                }
-
-                AttackPositionSelector.AttackPathResult attackPath = selection.AttackPath;
-                if (attackPath.IsAlreadyInRange || attackPath.NextStep == unit.CurrentHex)
+                TargetSelector.TargetSelection selection = targetSelections[i];
+                AttackPositionSelector.AttackPathResult path = selection.AttackPath;
+                HexCoord destination = path.NextStep;
+                if (!selection.HasTarget || path.IsAlreadyInRange || destination == unit.CurrentHex
+                    || simulation.Board.Distance(unit.CurrentHex, destination) != 1
+                    || !simulation.Board.IsWalkable(destination)
+                    || workspace.OccupiedAtCollectStart.Contains(destination))
                 {
                     continue;
                 }
 
-                HexCoord destination = attackPath.NextStep;
-                if (!CanEndMoveOn(unit, destination, workspace.OccupiedHexes))
-                {
-                    continue;
-                }
-
-                workspace.Intents.Add(new MovementIntent(
-                    unit,
-                    target,
-                    destination,
-                    attackPath.AttackPosition,
-                    attackPath.PathSteps));
+                workspace.DesiredMoves.Add(new MovementIntent(unit, destination));
             }
-
-            workspace.Intents.Sort(CompareIntentPriority);
         }
 
-        private static int ApplyMovementIntents(BattleSimulation simulation, Workspace workspace, BattleEventQueue eventQueue)
+        private static void ResolveConflicts(Workspace workspace)
         {
-            int movedCount = 0;
-            for (int i = 0; i < workspace.Intents.Count; i++)
+            for (int i = 0; i < workspace.DesiredMoves.Count; i++)
             {
-                MovementIntent intent = workspace.Intents[i];
-                if (!intent.Unit.IsAlive)
+                MovementIntent candidate = workspace.DesiredMoves[i];
+                if (!workspace.WinnerByDestination.TryGetValue(candidate.Destination, out MovementIntent winner)
+                    || IsDeployedEarlier(candidate.Unit, winner.Unit))
+                {
+                    workspace.WinnerByDestination[candidate.Destination] = candidate;
+                }
+            }
+
+            for (int i = 0; i < workspace.DesiredMoves.Count; i++)
+            {
+                MovementIntent intent = workspace.DesiredMoves[i];
+                if (workspace.WinnerByDestination.TryGetValue(intent.Destination, out MovementIntent winner)
+                    && winner.Unit == intent.Unit)
+                {
+                    workspace.Winners.Add(intent);
+                }
+            }
+        }
+
+        // Runtime UnitId is allocated when a unit is played; lower means deployed earlier.
+        private static bool IsDeployedEarlier(UnitRuntimeState candidate, UnitRuntimeState currentWinner)
+        {
+            return candidate.UnitId < currentWinner.UnitId;
+        }
+
+        private static int CommitWinners(BattleSimulation simulation, Workspace workspace, BattleEventQueue eventQueue)
+        {
+            for (int i = 0; i < workspace.Winners.Count; i++)
+            {
+                MovementIntent winner = workspace.Winners[i];
+                if (!winner.Unit.IsAlive)
                 {
                     continue;
                 }
 
-                HexCoord destination = intent.Destination;
-                if (!CanReserveDestination(intent.Unit, destination, workspace.OccupiedHexes, workspace.ReservedHexes))
-                {
-                    if (IsReciprocalConflict(simulation, intent, destination, workspace))
-                    {
-                        continue;
-                    }
-
-                    if (!TryFindAlternativeStep(simulation, intent, workspace, out destination))
-                    {
-                        continue;
-                    }
-                }
-
-                HexCoord from = intent.Unit.CurrentHex;
-                workspace.ReservedHexes.Add(destination, intent.Unit.UnitId);
-                workspace.ReservedIntentTargets.Add(destination, intent.Target);
-                workspace.ReservedBlockedHexes.Add(destination);
-                workspace.OccupiedHexes.Add(destination);
-                simulation.StartUnitMovement(intent.Unit, destination);
+                HexCoord from = winner.Unit.CurrentHex;
+                simulation.MoveUnit(winner.Unit, winner.Destination);
                 if (eventQueue != null)
                 {
-                    eventQueue.Enqueue(BattleEvent.UnitMoved(intent.Unit.UnitId, from, destination));
+                    eventQueue.Enqueue(BattleEvent.UnitMoved(winner.Unit.UnitId, from, winner.Destination));
                 }
-
-                movedCount++;
             }
 
-            return movedCount;
-        }
-
-        private static int ReservePlannedDestinations(
-            BattleSimulation simulation,
-            Workspace workspace,
-            Dictionary<int, HexCoord> destinationsByUnitId)
-        {
-            int plannedCount = 0;
-            for (int i = 0; i < workspace.Intents.Count; i++)
-            {
-                MovementIntent intent = workspace.Intents[i];
-                if (!intent.Unit.IsAlive)
-                {
-                    continue;
-                }
-
-                HexCoord destination = intent.Destination;
-                if (!CanReserveDestination(intent.Unit, destination, workspace.OccupiedHexes, workspace.ReservedHexes))
-                {
-                    if (IsReciprocalConflict(simulation, intent, destination, workspace))
-                    {
-                        continue;
-                    }
-
-                    if (!TryFindAlternativeStep(simulation, intent, workspace, out destination))
-                    {
-                        continue;
-                    }
-                }
-
-                workspace.ReservedHexes.Add(destination, intent.Unit.UnitId);
-                workspace.ReservedIntentTargets.Add(destination, intent.Target);
-                workspace.ReservedBlockedHexes.Add(destination);
-                workspace.OccupiedHexes.Add(destination);
-                destinationsByUnitId[intent.Unit.UnitId] = destination;
-                plannedCount++;
-            }
-
-            return plannedCount;
-        }
-
-        private static bool TryFindAlternativeStep(
-            BattleSimulation simulation,
-            MovementIntent intent,
-            Workspace workspace,
-            out HexCoord destination)
-        {
-            destination = default;
-            if (!AttackPositionSelector.TrySelectAttackPosition(
-                    simulation,
-                    intent.Unit,
-                    intent.Target,
-                    workspace.AttackPosition,
-                    workspace.ReservedBlockedHexes,
-                    out AttackPositionSelector.AttackPathResult alternativePath)
-                || alternativePath.IsAlreadyInRange
-                || alternativePath.NextStep == intent.Unit.CurrentHex
-                || !CanReserveDestination(
-                    intent.Unit,
-                    alternativePath.NextStep,
-                    workspace.OccupiedHexes,
-                    workspace.ReservedHexes))
-            {
-                return false;
-            }
-
-            destination = alternativePath.NextStep;
-            return true;
-        }
-
-        private static bool IsReciprocalConflict(
-            BattleSimulation simulation,
-            MovementIntent intent,
-            HexCoord destination,
-            Workspace workspace)
-        {
-            if (!workspace.ReservedHexes.TryGetValue(destination, out int winnerId)
-                || !simulation.TryGetUnitById(winnerId, out UnitRuntimeState winner)
-                || !workspace.ReservedIntentTargets.TryGetValue(destination, out UnitRuntimeState winnerTarget))
-            {
-                return false;
-            }
-
-            return winner != null
-                && winner.Side != intent.Unit.Side
-                && intent.Target == winner
-                && winnerTarget == intent.Unit;
-        }
-
-        private static bool CanEndMoveOn(UnitRuntimeState unit, HexCoord destination, HashSet<HexCoord> occupiedHexes)
-        {
-            return destination == unit.CurrentHex || !occupiedHexes.Contains(destination);
-        }
-
-        private static bool CanReserveDestination(
-            UnitRuntimeState unit,
-            HexCoord destination,
-            HashSet<HexCoord> occupiedHexes,
-            Dictionary<HexCoord, int> reservedHexes)
-        {
-            return destination != unit.CurrentHex
-                && !occupiedHexes.Contains(destination)
-                && !reservedHexes.ContainsKey(destination);
+            return workspace.Winners.Count;
         }
 
         private static void FillOccupiedHexes(IReadOnlyList<UnitRuntimeState> units, HashSet<HexCoord> occupiedHexes)
@@ -330,75 +200,61 @@ namespace DeckBattle
                 if (unit != null && unit.IsAlive)
                 {
                     occupiedHexes.Add(unit.CurrentHex);
-                    if (unit.IsMoving)
-                    {
-                        occupiedHexes.Add(unit.MovementDestination);
-                    }
                 }
             }
-        }
-
-        private static int CompareIntentPriority(MovementIntent left, MovementIntent right)
-        {
-            int pathCompare = left.PathStepsToAttackPosition.CompareTo(right.PathStepsToAttackPosition);
-            if (pathCompare != 0)
-            {
-                return pathCompare;
-            }
-
-            return left.Unit.UnitId.CompareTo(right.Unit.UnitId);
         }
 
         internal readonly struct MovementIntent
         {
             public readonly UnitRuntimeState Unit;
-            public readonly UnitRuntimeState Target;
             public readonly HexCoord Destination;
-            public readonly HexCoord AttackPosition;
-            public readonly int PathStepsToAttackPosition;
 
-            public MovementIntent(UnitRuntimeState unit, UnitRuntimeState target, HexCoord destination, HexCoord attackPosition, int pathStepsToAttackPosition)
+            public MovementIntent(UnitRuntimeState unit, HexCoord destination)
             {
                 Unit = unit;
-                Target = target;
                 Destination = destination;
-                AttackPosition = attackPosition;
-                PathStepsToAttackPosition = pathStepsToAttackPosition;
             }
         }
 
         public sealed class Workspace
         {
-            internal readonly HashSet<HexCoord> OccupiedHexes;
-            internal readonly Dictionary<HexCoord, int> ReservedHexes;
-            internal readonly Dictionary<HexCoord, UnitRuntimeState> ReservedIntentTargets;
-            internal readonly HashSet<HexCoord> ReservedBlockedHexes;
-            internal readonly List<MovementIntent> Intents;
+            internal readonly HashSet<HexCoord> OccupiedAtCollectStart;
+            internal readonly Dictionary<HexCoord, MovementIntent> WinnerByDestination;
+            internal readonly List<MovementIntent> DesiredMoves;
+            internal readonly List<MovementIntent> Winners;
             internal readonly TargetSelector.Workspace Targeting;
-            internal readonly AttackPositionSelector.Workspace AttackPosition;
+            internal TargetSelector.TargetSelection[] TargetSelections;
+            internal bool[] TargetSelectionValid;
 
             public Workspace(int boardCellCapacity, int unitCapacity)
             {
                 int boardCapacity = Math.Max(1, boardCellCapacity);
-                int units = Math.Max(1, unitCapacity);
-                OccupiedHexes = new HashSet<HexCoord>(boardCapacity);
-                ReservedHexes = new Dictionary<HexCoord, int>(units);
-                ReservedIntentTargets = new Dictionary<HexCoord, UnitRuntimeState>(units);
-                ReservedBlockedHexes = new HashSet<HexCoord>(units);
-                Intents = new List<MovementIntent>(units);
+                int capacity = Math.Max(1, unitCapacity);
+                OccupiedAtCollectStart = new HashSet<HexCoord>(boardCapacity);
+                WinnerByDestination = new Dictionary<HexCoord, MovementIntent>(capacity);
+                DesiredMoves = new List<MovementIntent>(capacity);
+                Winners = new List<MovementIntent>(capacity);
                 Targeting = new TargetSelector.Workspace(boardCapacity);
-                AttackPosition = new AttackPositionSelector.Workspace(boardCapacity);
+                TargetSelections = new TargetSelector.TargetSelection[capacity];
+                TargetSelectionValid = new bool[capacity];
+            }
+
+            internal void EnsureUnitCapacity(int unitCount)
+            {
+                if (TargetSelections.Length < unitCount)
+                {
+                    Array.Resize(ref TargetSelections, unitCount);
+                    Array.Resize(ref TargetSelectionValid, unitCount);
+                }
             }
 
             internal void Clear()
             {
-                OccupiedHexes.Clear();
-                ReservedHexes.Clear();
-                ReservedIntentTargets.Clear();
-                ReservedBlockedHexes.Clear();
-                Intents.Clear();
+                OccupiedAtCollectStart.Clear();
+                WinnerByDestination.Clear();
+                DesiredMoves.Clear();
+                Winners.Clear();
                 Targeting.Clear();
-                AttackPosition.Clear();
             }
         }
     }

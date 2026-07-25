@@ -73,7 +73,7 @@ namespace DeckBattle
             }
 
             result = default;
-            if (!attacker.IsAlive || !target.IsAlive || attacker.Side == target.Side)
+            if (!TargetingRules.CanBeTargeted(attacker, target))
             {
                 return false;
             }
@@ -96,14 +96,6 @@ namespace DeckBattle
             HexBoard board = simulation.Board;
             int attackRange = simulation.Tuning.GetAttackRange(attacker.Definition);
             if (board.Distance(attacker.CurrentHex, target.CurrentHex) <= attackRange)
-            {
-                result = new AttackPathResult(attacker.CurrentHex, attacker.CurrentHex, 0, true);
-                return true;
-            }
-
-            // A moving target still occupies its logical hex. This compatibility check
-            // also lets callers query a target's pending destination explicitly.
-            if (target.IsMoving && board.Distance(attacker.CurrentHex, target.MovementDestination) <= attackRange)
             {
                 result = new AttackPathResult(attacker.CurrentHex, attacker.CurrentHex, 0, true);
                 return true;
@@ -173,10 +165,6 @@ namespace DeckBattle
                 }
 
                 occupiedHexes.Add(unit.CurrentHex);
-                if (unit.IsMoving)
-                {
-                    occupiedHexes.Add(unit.MovementDestination);
-                }
             }
         }
 

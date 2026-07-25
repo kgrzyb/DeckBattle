@@ -349,7 +349,6 @@ namespace DeckBattle
                 UnitRuntimeState unit = units[i];
                 if (unit == null
                     || !unit.IsAlive
-                    || unit.IsMoving
                     || unit.TargetUnitId == UnitRuntimeState.NoTargetUnitId)
                 {
                     continue;

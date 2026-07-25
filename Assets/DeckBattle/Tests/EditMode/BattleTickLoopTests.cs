@@ -20,10 +20,9 @@ namespace DeckBattle.Tests
             Assert.IsFalse(firstTick.BattleEnded);
             Assert.AreEqual(0, firstTick.Attacks);
             Assert.AreEqual(1, firstTick.Moves);
-            Assert.AreEqual(new HexCoord(0, 0), first.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].CurrentHex);
             Assert.AreEqual(new HexCoord(2, 0), first.Units[1].CurrentHex);
-            Assert.IsTrue(first.Units[0].IsMoving);
-            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].MovementDestination);
+            Assert.IsFalse(first.Units[0].IsMoving);
             Assert.AreEqual(first.Units[0].CurrentHex, second.Units[0].CurrentHex);
             Assert.AreEqual(first.Units[1].CurrentHex, second.Units[1].CurrentHex);
             Assert.AreEqual(1, firstEvents.Count);
@@ -97,8 +96,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(0, result.Attacks);
             Assert.AreEqual(2, simulation.Units[0].TargetUnitId);
             Assert.AreEqual(5, simulation.Units[2].CurrentHp);
-            Assert.IsTrue(simulation.Units[0].IsMoving);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
         }
 
         [Test]

@@ -1,4 +1,20 @@
-# Plan poprawy targetowania i rozstrzygania ruchu w symulacji walki
+# Plan domknięcia targetowania i rozstrzygania ruchu w symulacji walki
+
+## Status dokumentu
+
+Plan zaktualizowano 2026-07-25 na podstawie aktualnego kodu projektu.
+
+Najważniejsza korekta względem pierwotnej wersji: zachowanie aktualnego celu
+zostało już zaimplementowane i jest używane przez główną pętlę walki. Pozostały
+zakres dotyczy przede wszystkim przebudowy rozstrzygania ruchu oraz
+natychmiastowego commitu logicznej pozycji.
+
+Oznaczenia używane poniżej:
+
+- **gotowe** — zachowanie jest obecne w kodzie i ma podstawowe testy;
+- **częściowo gotowe** — istnieje potrzebna struktura, ale odpowiedzialności albo
+  kontrakt nie są jeszcze docelowe;
+- **do wykonania** — aktualny kod nadal realizuje poprzedni kontrakt.
 
 ## Cel
 
@@ -14,19 +30,32 @@ Celem zmian jest zapewnienie przewidywalnej i deterministycznej symulacji walki,
 
 ## Stan obecny
 
-### Targetowanie
+### Targetowanie — gotowe
 
-Metoda `TargetSelector.TrySelectTargetOrRetainCurrent` nie zachowuje aktualnego celu.
-Wykonuje ten sam globalny wybór co `TrySelectTarget`, dlatego jednostka może porzucić
-żywy i osiągalny cel, gdy pojawi się bliższy albo korzystniejszy przeciwnik.
+`TargetSelector.TrySelectTargetOrRetainCurrent` faktycznie zachowuje aktualny cel.
+Sprawdza `TargetUnitId`, życie i stronę celu, a następnie używa
+`AttackPositionSelector.TrySelectAttackPosition`, aby potwierdzić osiągalność i
+od razu uzyskać `AttackPathResult`. Globalny wybór jest uruchamiany dopiero po
+odrzuceniu aktualnego celu.
 
-Dotyczy:
+`BattleTickLoop.RefreshTargets` wykonuje walidację przed `CombatResolver` i
+ponownie po atakach oraz śmierciach. Przygotowane tablice `TargetSelection` i
+`targetSelectionValid` są przekazywane do głównej ścieżki ruchu.
 
-- `Assets/DeckBattle/Scripts/Battle/TargetSelector.cs`;
-- `Assets/DeckBattle/Scripts/Battle/BattleTickLoop.cs`;
-- `Assets/DeckBattle/Scripts/Battle/MovementResolver.cs`.
+Istniejące testy potwierdzają zachowanie osiągalnego celu mimo bliższego
+przeciwnika, retargetowanie po utracie osiągalności oraz użycie zachowanego celu
+przez pełny tick. Nie należy ponownie planować implementacji podstawowego
+`RetainCurrent`.
 
-### Rozstrzyganie ruchu
+### Własność mutacji celu — częściowo gotowe
+
+W głównej ścieżce `BattleTickLoop` jest właścicielem `SetTarget` i `ClearTarget`.
+Publiczne przeciążenia `MovementResolver.ResolveMovement`, wywołane bez
+przygotowanych selekcji, nadal jednak samodzielnie targetują oraz mutują
+`TargetUnitId`. Debug preview również planuje ruch bez snapshotu selekcji z
+ticka. Docelowo collect ruchu ma być czystym konsumentem gotowych selekcji.
+
+### Rozstrzyganie ruchu — do wykonania
 
 Aktualne intencje ruchu są sortowane najpierw według długości drogi do pozycji
 ataku, a dopiero potem według `UnitId`. Nie odpowiada to regule pierwszeństwa
@@ -43,7 +72,7 @@ Do usunięcia lub zastąpienia:
 - `MovementResolver.IsReciprocalConflict`;
 - rezerwacje używane wyłącznie do sekwencyjnego wybierania alternatywnych tras.
 
-### Commit logicznego ruchu
+### Commit logicznego ruchu — do wykonania
 
 `MovementResolver` wywołuje `BattleSimulation.StartUnitMovement`, ale logiczne
 `CurrentHex` zostaje zmienione dopiero po upływie `MovementStepDuration`.
@@ -53,15 +82,23 @@ geometria może być dostępna dopiero po więcej niż jednym ticku. Jest to
 niezgodne z wymaganiem, aby w następnym ticku przegrany konfliktu mógł ponownie
 ocenić zasięg i zaatakować jednostkę, która weszła na sporny heks.
 
+### Prezentacja ruchu — częściowo gotowe
+
+`BattleView` już reaguje na `UnitMoved`, a `UnitView` posiada bezalokacyjną
+kolejkę do czterech kroków ruchu. Po natychmiastowym logicznym commicie trzeba
+dostosować synchronizację widoku, ale nie jest potrzebny nowy system animacji.
+
 ### Testy
 
-Istniejące testy zawierają sprzeczne kontrakty:
+Testy targetowania są zgodne z kontraktem zachowania aktualnego celu. Do
+przepisania pozostają testy ruchu oczekujące:
 
-- część testów oczekuje zachowania aktualnego, osiągalnego celu;
-- test selektora nadal oczekuje przełączenia na bliższy cel;
-- część testów ruchu utrwala priorytet długości drogi lub opóźniony logiczny commit.
-
-Testy muszą zostać uporządkowane razem z implementacją.
+- `IsMoving == true` po zaakceptowaniu intencji;
+- commitu dopiero po `MovementStepDuration`;
+- blokowania jednocześnie `CurrentHex` i `MovementDestination`;
+- specjalnego przypadku konfliktu wzajemnego;
+- alternatywnego kroku po przegraniu zwykłego konfliktu;
+- priorytetu wynikającego z długości drogi.
 
 ## Docelowy przebieg ticka
 
@@ -71,14 +108,15 @@ Testy muszą zostać uporządkowane razem z implementacją.
 4. Wybrać nowy cel wyłącznie dla jednostek, których aktualny cel jest nieważny lub niedostępny.
 5. Rozstrzygnąć ataki.
 6. Ponownie zweryfikować cele unieważnione przez śmierci i efekty ataków.
-7. Zebrać intencje ruchu bez mutowania stanu symulacji.
+7. Utworzyć snapshot logicznych pozycji i occupancy, a następnie zebrać
+   intencje ruchu bez mutowania stanu symulacji.
 8. Wykryć i rozstrzygnąć konflikty o docelowe heksy.
 9. Zatwierdzić wszystkie zwycięskie ruchy.
 10. Sprawdzić warunki zakończenia walki.
 
-## Etap 1 — jednoznaczny kontrakt celu
+## Etap 1 — domknięcie kontraktu celu
 
-### Walidacja aktualnego celu
+### Walidacja aktualnego celu — gotowe
 
 Aktualny cel pozostaje przypisany, jeżeli:
 
@@ -88,10 +126,11 @@ Aktualny cel pozostaje przypisany, jeżeli:
 - cel może być targetowany według aktualnych reguł i efektów;
 - istnieje osiągalna pozycja, z której atakujący może zaatakować cel, albo cel znajduje się już w zasięgu.
 
-Walidacja powinna korzystać z `AttackPositionSelector`, aby razem z decyzją
-o zachowaniu celu otrzymać aktualny `AttackPathResult`.
+Walidacja korzysta już z `AttackPositionSelector`, dzięki czemu razem z decyzją
+o zachowaniu celu zwraca aktualny `AttackPathResult`. To zachowanie należy
+utrzymać.
 
-### Retargetowanie
+### Retargetowanie — gotowe
 
 Globalny wybór nowego celu jest wykonywany dopiero wtedy, gdy aktualny cel:
 
@@ -100,9 +139,10 @@ Globalny wybór nowego celu jest wykonywany dopiero wtedy, gdy aktualny cel:
 - stał się nietargetowalny;
 - nie posiada żadnej osiągalnej pozycji ataku.
 
-Brak dostępnego nowego celu powoduje wyczyszczenie `TargetUnitId`.
+Brak dostępnego nowego celu powoduje wyczyszczenie `TargetUnitId`. Obecna
+implementacja spełnia ten kontrakt.
 
-### Centralna reguła targetowalności
+### Centralna reguła targetowalności — do wykonania
 
 Należy wprowadzić jeden punkt decyzyjny, na przykład:
 
@@ -110,11 +150,12 @@ Należy wprowadzić jeden punkt decyzyjny, na przykład:
 TargetingRules.CanBeTargeted(attacker, candidate)
 ```
 
-Początkowo reguła może sprawdzać życie i stronę jednostki. Późniejsze efekty,
-takie jak niewidzialność, wyłączenie z walki lub chwilowa nietargetowalność,
-powinny rozszerzać tę regułę bez duplikowania warunków w resolverach.
+Podstawowe warunki żywy/wrogi są obecnie powtórzone w `TargetSelector`,
+`AttackPositionSelector` i `CombatResolver`. Reguła ma jedynie skonsolidować
+aktualny kontrakt. Nie należy w ramach tego zadania budować ogólnego systemu
+statusów; przyszłe efekty mogą później rozszerzyć ten punkt decyzyjny.
 
-### Separacja odpowiedzialności
+### Separacja odpowiedzialności — częściowo gotowe
 
 `MovementResolver` nie powinien:
 
@@ -122,9 +163,11 @@ powinny rozszerzać tę regułę bez duplikowania warunków w resolverach.
 - zmieniać `TargetUnitId`;
 - ponownie obliczać targetowania podczas rozstrzygania konfliktu.
 
-`BattleTickLoop` powinien przygotować stabilne `TargetSelection` przed fazą
-ruchu. Mutacja celu następuje w osobnej fazie targetowania, nie podczas
-zbierania intencji ruchu.
+`BattleTickLoop` już przygotowuje stabilne `TargetSelection` przed fazą ruchu.
+Należy usunąć z `MovementResolver` tryb `updateUnitTargets` oraz fallback do
+samodzielnego targetowania. Jeżeli proste publiczne przeciążenia resolvera są
+potrzebne testom, powinny przygotować selekcje w jawnej fazie pomocniczej przed
+collect, zamiast mieszać mutację celu z rozstrzyganiem konfliktów.
 
 ## Etap 2 — collect movement intents
 
@@ -134,7 +177,9 @@ Nie może zmieniać żadnego stanu jednostek ani planszy.
 W `MovementResolver.Workspace` należy utrzymywać i ponownie wykorzystywać:
 
 ```csharp
-Dictionary<UnitRuntimeState, HexCoord> DesiredMoves
+Dictionary<UnitRuntimeState, HexCoord> DesiredMoves;
+Dictionary<HexCoord, MovementIntent> WinnerByDestination;
+HashSet<HexCoord> OccupiedAtCollectStart;
 ```
 
 Dla każdej żywej jednostki zdolnej do podjęcia akcji:
@@ -162,7 +207,7 @@ W tej fazie nie wolno:
 W workspace należy utrzymywać ponownie wykorzystywaną mapę zwycięzców:
 
 ```csharp
-Dictionary<HexCoord, UnitRuntimeState> WinnerByDestination
+Dictionary<HexCoord, MovementIntent> WinnerByDestination
 ```
 
 Algorytm:
@@ -188,6 +233,11 @@ Nie jest potrzebny specjalny przypadek `IsReciprocalConflict`.
 W produkcyjnym przepływie rosnący `RuntimeId` jest nadawany w chwili zagrania
 jednostki przez `BattleState.AllocateRuntimeUnitId`. Może więc reprezentować
 globalną kolejność wystawienia niezależnie od strony.
+
+Ten przepływ jest już obecny: `UnitPlayService` pobiera identyfikator z
+`BattleState`, a `BattleSimulationFactory` przenosi go do
+`UnitRuntimeState.UnitId`. Fabryka grupuje jednak jednostki według strony,
+dlatego indeks `BattleSimulation.Units` nadal nie może być tie-breakiem.
 
 Reguła:
 
@@ -239,6 +289,19 @@ nie mogą być częścią reguł occupancy i podejmowania decyzji przez symulacj
 Preferowanym kierunkiem jest utrzymywanie czasu animacji wyłącznie w warstwie
 prezentacji.
 
+Po migracji głównej ścieżki należy również:
+
+- usunąć `MovementResolver.AdvanceActiveMovements` z przebiegu ticka;
+- przestać pomijać `IsMoving` w `BattleTickLoop` i `CombatResolver`;
+- usunąć z `AttackPositionSelector` zgodność opartą na
+  `target.MovementDestination`;
+- budować occupancy wyłącznie z logicznych `CurrentHex`.
+
+`StartUnitMovement` i `CompleteUnitMovement` należy usunąć po migracji wszystkich
+produkcyjnych wywołań albo pozostawić tymczasowo wyłącznie jako kod
+kompatybilności nieużywany przez główną symulację. Nie należy utrzymywać dwóch
+równoległych modeli occupancy dłużej niż wymaga migracja testów.
+
 ## Etap 6 — re-ewaluacja w następnym ticku
 
 Przykład dwóch jednostek melee i jednego pustego heksa pomiędzy nimi:
@@ -262,17 +325,23 @@ Przykład dwóch jednostek melee i jednego pustego heksa pomiędzy nimi:
 
 ### `TargetSelector.cs`
 
-- zaimplementować rzeczywiste zachowanie `RetainCurrent`;
-- dodać walidację aktualnego celu;
+- zachować obecną implementację `RetainCurrent` i walidację aktualnego celu;
 - użyć centralnej reguły targetowalności;
-- uruchamiać globalny wybór dopiero po odrzuceniu aktualnego celu;
+- utrzymać globalny wybór dopiero po odrzuceniu aktualnego celu;
 - zachować deterministyczne reguły wyboru nowego celu.
+
+### `AttackPositionSelector.cs`
+
+- użyć centralnej reguły targetowalności;
+- po migracji commitu usunąć logikę pending `MovementDestination`;
+- budować occupancy z `CurrentHex`, bez prezentacyjnego stanu ruchu.
 
 ### `BattleTickLoop.cs`
 
-- uczynić fazę targetowania jednoznacznym właścicielem mutacji `TargetUnitId`;
+- zachować fazę targetowania jako właściciela mutacji `TargetUnitId`;
 - przekazywać stabilne selekcje do ataku i ruchu;
 - zachować drugą walidację po śmierciach i efektach;
+- usunąć `AdvanceActiveMovements`;
 - zapewnić, że następny tick widzi logicznie zatwierdzone pozycje.
 
 ### `MovementResolver.cs`
@@ -283,6 +352,7 @@ Przykład dwóch jednostek melee i jednego pustego heksa pomiędzy nimi:
 - stosować wyłącznie tie-break kolejności wystawienia;
 - usunąć alternatywny pathfinding dla przegranych;
 - usunąć specjalny konflikt wzajemny;
+- usunąć tryb `updateUnitTargets` i fallback do samodzielnego targetowania;
 - współdzielić ten sam resolver pomiędzy symulacją i debug preview.
 
 ### `BattleSimulation.cs`
@@ -291,12 +361,21 @@ Przykład dwóch jednostek melee i jednego pustego heksa pomiędzy nimi:
 - rozdzielić logiczną pozycję od czasu animacji;
 - zachować walidację unikalności i sąsiedztwa docelowych heksów.
 
+### `CombatResolver.cs`
+
+- użyć centralnej reguły targetowalności;
+- po migracji nie blokować ataku przez prezentacyjny stan ruchu.
+
 ### `BattleView.cs`
 
 - nadal animować `UnitMoved`;
 - nie traktować czasu animacji jako czasu oczekiwania symulacji;
 - upewnić się, że animacje kroków i ataków nie powodują wizualnego cofania modelu przy szybszych tickach;
 - w razie potrzeby wykorzystać istniejącą kolejkę ruchów `UnitView`.
+
+Kolejka `UnitView` ma obecnie stałą pojemność czterech kroków. Należy
+przetestować szybkie kolejne ruchy oraz świadomie ustalić zachowanie po jej
+przepełnieniu.
 
 ### Debug
 
@@ -308,19 +387,29 @@ Przykład dwóch jednostek melee i jednego pustego heksa pomiędzy nimi:
 
 ### Targetowanie
 
+Już pokryte i do zachowania:
+
 - zachowanie żywego i osiągalnego celu mimo pojawienia się bliższego wroga;
+- retargetowanie, gdy nie istnieje osiągalna pozycja ataku;
+- deterministyczny wybór nowego celu według dystansu, HP i `UnitId`;
+- użycie zachowanego celu przez pełny tick.
+
+Do uzupełnienia:
+
 - zachowanie celu, gdy inny wróg znajdzie się już w zasięgu;
 - retargetowanie po śmierci celu;
-- retargetowanie, gdy nie istnieje osiągalna pozycja ataku;
-- retargetowanie, gdy cel staje się nietargetowalny;
 - wyczyszczenie celu, gdy nie istnieje prawidłowa alternatywa;
-- deterministyczny wybór nowego celu przy remisie.
+- wspólna reguła targetowalności używana przez selektor, pozycję ataku i combat.
+
+Test nietargetowalności innej niż śmierć i strona należy dodać dopiero wraz z
+rzeczywistym modelem takiego stanu, nie z wyprzedzeniem.
 
 ### Collect
 
 - dokładnie jeden krok na tick;
 - brak intencji dla jednostki w zasięgu;
 - brak mutacji pozycji, celu, ruchu, cooldownu i occupancy;
+- brak zdarzeń w fazie collect;
 - brak intencji na heks zajęty w snapshotcie początku fazy;
 - wynik niezależny od kolejności iteracji jednostek.
 
@@ -334,6 +423,8 @@ Przykład dwóch jednostek melee i jednego pustego heksa pomiędzy nimi:
 - seed RNG nie wpływa na wynik;
 - przegrany nie wybiera alternatywnego heksa;
 - przegrany nie zmienia celu tylko dlatego, że przegrał konflikt.
+- grupowanie jednostek według strony w `BattleSimulationFactory` nie zmienia
+  priorytetu wynikającego z kolejności wystawienia.
 
 ### Commit i kolejne ticki
 
@@ -343,6 +434,8 @@ Przykład dwóch jednostek melee i jednego pustego heksa pomiędzy nimi:
 - przypadek dwóch melee z jednym pustym heksem prowadzi do ataku przegranego w następnym ticku bez dodatkowego ruchu;
 - `UnitMoved` jest emitowany tylko dla zwycięzców;
 - debug preview i właściwy resolver zwracają ten sam zestaw ruchów.
+- szybkie kolejne ruchy nie powodują cofnięcia modelu ani niejawnej utraty
+  istotnego kroku po zapełnieniu kolejki `UnitView`.
 
 ### Regresje
 
@@ -378,18 +471,22 @@ Do profilowania:
 
 ## Kolejność wdrożenia
 
-1. Uporządkować i ujednolicić testy kontraktu targetowania.
-2. Zaimplementować zachowanie aktualnego celu i retargetowanie.
-3. Dodać testy czystości fazy collect.
-4. Przebudować `MovementResolver` na collect, resolve i commit.
-5. Usunąć alternatywne kroki i specjalny konflikt wzajemny.
-6. Ustalić tie-break według globalnej kolejności wystawienia.
-7. Oddzielić logiczny commit pozycji od czasu animacji.
-8. Dostosować `BattleView` i debug preview.
-9. Uruchomić wąskie testy `TargetSelectorTests`, `MovementResolverTests` i `BattleTickLoopTests`.
-10. Uruchomić cały zestaw EditMode.
-11. Zweryfikować pełne walki w Play Mode.
-12. Sprawdzić profil na konfiguracji z maksymalną liczbą jednostek.
+1. Dodać brakujące regresje dla już działającego `RetainCurrent`.
+2. Ujednolicić podstawową regułę prawidłowego celu.
+3. Uczynić selekcje przygotowane przez tick wymaganym wejściem collect ruchu.
+4. Dodać testy czystości i wydzielić fazę collect.
+5. Wydzielić resolve z mapą `WinnerByDestination`.
+6. Zastąpić priorytet drogi priorytetem kolejności wystawienia.
+7. Usunąć alternatywne kroki i specjalny konflikt wzajemny.
+8. Wprowadzić natychmiastowy logiczny commit zwycięskich ruchów.
+9. Usunąć zależności gameplayu od `IsMoving` i pending destination.
+10. Dostosować `BattleView`, `UnitView` i debug preview.
+11. Przepisać testy utrwalające opóźniony commit.
+12. Uruchomić wąskie testy `TargetSelectorTests`, `MovementResolverTests`,
+    `BattleTickLoopTests` i `BattleSimulationTests`.
+13. Uruchomić cały zestaw EditMode w otwartym Unity Editorze.
+14. Zweryfikować pełne walki w Play Mode.
+15. Sprawdzić profil na konfiguracji z maksymalną liczbą jednostek.
 
 ## Kryteria ukończenia
 

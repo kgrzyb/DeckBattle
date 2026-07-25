@@ -44,11 +44,6 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (attacker.IsMoving)
-                {
-                    continue;
-                }
-
                 UnitRuntimeState target;
                 if (!TryGetLiveTarget(simulation, attacker, out target))
                 {
@@ -217,14 +212,8 @@ namespace DeckBattle
                 return false;
             }
 
-            if (!simulation.TryGetUnitById(attacker.TargetUnitId, out target) || target == null || !target.IsAlive)
-            {
-                attacker.ClearTarget();
-                target = null;
-                return false;
-            }
-
-            if (target.Side == attacker.Side)
+            if (!simulation.TryGetUnitById(attacker.TargetUnitId, out target)
+                || !TargetingRules.CanBeTargeted(attacker, target))
             {
                 attacker.ClearTarget();
                 target = null;

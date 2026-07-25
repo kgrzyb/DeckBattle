@@ -154,7 +154,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_MovingUnitKeepsElapsedAttackDeadlineAndAttacksAfterMovementCompletes()
+        public void Tick_MovingUnitDoesNotBlockCombatAfterLogicalMovementMigration()
         {
             BattleSimulation simulation = CreateSimulation(1f);
             simulation.StartUnitMovement(simulation.Units[0], new HexCoord(2, 0));
@@ -164,10 +164,8 @@ namespace DeckBattle.Tests
             var events = new BattleEventQueue();
 
             BattleTickResult movingTick = loop.Tick(simulation, events);
-            BattleTickResult completedTick = loop.Tick(simulation, events);
 
-            Assert.AreEqual(0, movingTick.Attacks);
-            Assert.AreEqual(1, completedTick.Attacks);
+            Assert.AreEqual(1, movingTick.Attacks);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
         }
 

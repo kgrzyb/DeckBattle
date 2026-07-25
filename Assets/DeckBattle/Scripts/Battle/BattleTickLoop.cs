@@ -55,8 +55,6 @@ namespace DeckBattle
             simulation.AdvanceTime(TickDuration);
             UpdateActiveSpecials(simulation);
 
-            // Commit completed logical steps before any range or target query.
-            MovementResolver.AdvanceActiveMovements(simulation, TickDuration);
             ProjectileResolver.ResolveProjectiles(simulation, TickDuration, eventQueue);
 
             RefreshTargets(simulation);
@@ -91,7 +89,7 @@ namespace DeckBattle
             {
                 targetSelectionValid[i] = false;
                 UnitRuntimeState unit = simulation.Units[i];
-                if (unit == null || !unit.IsAlive || unit.IsMoving)
+                if (unit == null || !unit.IsAlive)
                 {
                     continue;
                 }
