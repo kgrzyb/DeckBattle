@@ -1,12 +1,15 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace DeckBattle
 {
     public sealed class BattleUIController : MonoBehaviour
     {
+        private const string MainMenuSceneName = "MainMenu";
+
         [Header("Battle")]
         [SerializeField] private BattleController battleController;
         [SerializeField] private BattleInputController inputController;
@@ -23,7 +26,7 @@ namespace DeckBattle
         [Header("Result")]
         [SerializeField] private GameObject resultPanel;
         [SerializeField] private TextMeshProUGUI resultText;
-        [SerializeField] private Button restartButton;
+        [SerializeField] private Button mainMenuButton;
 
         [Header("Hand")]
         [SerializeField] private RectTransform handRoot;
@@ -63,9 +66,9 @@ namespace DeckBattle
                 readyButton.onClick.AddListener(HandleReadyClicked);
             }
 
-            if (restartButton != null)
+            if (mainMenuButton != null)
             {
-                restartButton.onClick.AddListener(HandleRestartClicked);
+                mainMenuButton.onClick.AddListener(HandleMainMenuClicked);
             }
 
             HideCardGhost();
@@ -403,12 +406,9 @@ namespace DeckBattle
             }
         }
 
-        private void HandleRestartClicked()
+        private void HandleMainMenuClicked()
         {
-            if (battleController != null)
-            {
-                battleController.StartTestBattle();
-            }
+            SceneManager.LoadScene(MainMenuSceneName);
         }
     }
 }
