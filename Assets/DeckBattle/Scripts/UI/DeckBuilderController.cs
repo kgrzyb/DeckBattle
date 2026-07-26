@@ -101,6 +101,17 @@ namespace DeckBattle
             return true;
         }
 
+        public void ResetSavedProfile()
+        {
+            profile = null;
+            dirty = false;
+
+            if (isActiveAndEnabled)
+            {
+                Show();
+            }
+        }
+
         private bool EnsureProfileLoaded()
         {
             if (catalog == null)

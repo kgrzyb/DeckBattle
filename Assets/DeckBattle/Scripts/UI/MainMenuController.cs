@@ -23,6 +23,7 @@ namespace DeckBattle
         [SerializeField] private Button collectionButton;
         [SerializeField] private Button deckButton;
         [SerializeField] private Button backButton;
+        [SerializeField] private Button resetSaveButton;
 
         [Header("Views")]
         [SerializeField] private GameObject menuPanel;
@@ -35,9 +36,12 @@ namespace DeckBattle
 
         private readonly BattleStartDataBuilder battleStartDataBuilder = new BattleStartDataBuilder();
         private PlayerProfileStore profileStore;
+        private TMP_Text resetSaveButtonLabel;
+        private bool resetConfirmationPending;
 
         private void Awake()
         {
+            CreateResetSaveButtonIfNeeded();
             ShowMenu();
         }
 
@@ -61,6 +65,11 @@ namespace DeckBattle
             if (backButton != null)
             {
                 backButton.onClick.AddListener(ShowMenu);
+            }
+
+            if (resetSaveButton != null)
+            {
+                resetSaveButton.onClick.AddListener(HandleResetSaveClicked);
             }
 
             if (deckBuilderBackButton != null)
@@ -89,6 +98,11 @@ namespace DeckBattle
             if (backButton != null)
             {
                 backButton.onClick.RemoveListener(ShowMenu);
+            }
+
+            if (resetSaveButton != null)
+            {
+                resetSaveButton.onClick.RemoveListener(HandleResetSaveClicked);
             }
 
             if (deckBuilderBackButton != null)
@@ -158,6 +172,88 @@ namespace DeckBattle
             }
 
             ShowMenu();
+        }
+
+        private void CreateResetSaveButtonIfNeeded()
+        {
+            if (resetSaveButton != null || deckButton == null || menuPanel == null)
+            {
+                return;
+            }
+
+            resetSaveButton = Instantiate(deckButton, menuPanel.transform);
+            resetSaveButton.name = "ResetSaveButton";
+
+            RectTransform buttonTransform = resetSaveButton.transform as RectTransform;
+            if (buttonTransform != null)
+            {
+                buttonTransform.anchorMin = new Vector2(0.5f, 0.15f);
+                buttonTransform.anchorMax = new Vector2(0.5f, 0.15f);
+                buttonTransform.anchoredPosition = Vector2.zero;
+            }
+
+            Image buttonImage = resetSaveButton.targetGraphic as Image;
+            if (buttonImage != null)
+            {
+                buttonImage.color = new Color(0.55f, 0.2f, 0.2f, 1f);
+            }
+
+            resetSaveButtonLabel = resetSaveButton.GetComponentInChildren<TMP_Text>();
+            SetResetSaveButtonLabel("Reset Save");
+        }
+
+        private void HandleResetSaveClicked()
+        {
+            if (!resetConfirmationPending)
+            {
+                resetConfirmationPending = true;
+                SetResetSaveButtonLabel("Tap Again to Reset");
+                CancelInvoke(nameof(CancelResetConfirmation));
+                Invoke(nameof(CancelResetConfirmation), 3f);
+                return;
+            }
+
+            CancelInvoke(nameof(CancelResetConfirmation));
+            resetConfirmationPending = false;
+
+            if (profileStore == null)
+            {
+                profileStore = new PlayerProfileStore();
+            }
+
+            profileStore.ResetProfile();
+            BattleSession.Clear();
+            if (deckBuilderController != null)
+            {
+                deckBuilderController.ResetSavedProfile();
+            }
+
+            SetResetSaveButtonLabel("Save Reset");
+            Invoke(nameof(RestoreResetSaveButtonLabel), 2f);
+        }
+
+        private void CancelResetConfirmation()
+        {
+            resetConfirmationPending = false;
+            SetResetSaveButtonLabel("Reset Save");
+        }
+
+        private void RestoreResetSaveButtonLabel()
+        {
+            SetResetSaveButtonLabel("Reset Save");
+        }
+
+        private void SetResetSaveButtonLabel(string value)
+        {
+            if (resetSaveButtonLabel == null && resetSaveButton != null)
+            {
+                resetSaveButtonLabel = resetSaveButton.GetComponentInChildren<TMP_Text>();
+            }
+
+            if (resetSaveButtonLabel != null)
+            {
+                resetSaveButtonLabel.text = value;
+            }
         }
 
         private void PrepareBattleSession()
