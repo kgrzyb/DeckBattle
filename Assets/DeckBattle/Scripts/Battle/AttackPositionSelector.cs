@@ -95,17 +95,52 @@ namespace DeckBattle
 
             HexBoard board = simulation.Board;
             int attackRange = simulation.Tuning.GetAttackRange(attacker.Definition);
-            if (board.Distance(attacker.CurrentHex, target.CurrentHex) <= attackRange)
+            HexCoord targetPlanningHex = GetTargetPlanningHex(target);
+            if (board.Distance(attacker.CurrentHex, targetPlanningHex) <= attackRange)
             {
                 result = new AttackPathResult(attacker.CurrentHex, attacker.CurrentHex, 0, true);
                 return true;
             }
 
-            board.FillHexesInRange(target.CurrentHex, attackRange, workspace.AttackPositions);
+            HexCoord previousHex = attacker.PreviousHex;
+            bool avoidImmediateBacktrack = previousHex != attacker.CurrentHex
+                && !workspace.DynamicBlockedHexes.Contains(previousHex);
+            if (avoidImmediateBacktrack)
+            {
+                workspace.DynamicBlockedHexes.Add(previousHex);
+            }
+
+            if (TryFindAttackPath(board, attacker, targetPlanningHex, attackRange, workspace, out result))
+            {
+                return true;
+            }
+
+            if (!avoidImmediateBacktrack)
+            {
+                return false;
+            }
+
+            workspace.DynamicBlockedHexes.Remove(previousHex);
+            return TryFindAttackPath(board, attacker, targetPlanningHex, attackRange, workspace, out result);
+        }
+
+        private static bool TryFindAttackPath(
+            HexBoard board,
+            UnitRuntimeState attacker,
+            HexCoord targetPlanningHex,
+            int attackRange,
+            Workspace workspace,
+            out AttackPathResult result)
+        {
+            result = default;
+            workspace.AttackPositions.Clear();
+            workspace.Path.Clear();
+            workspace.Pathfinding.Clear();
+            board.FillHexesInRange(targetPlanningHex, attackRange, workspace.AttackPositions);
             for (int i = workspace.AttackPositions.Count - 1; i >= 0; i--)
             {
                 HexCoord candidate = workspace.AttackPositions[i];
-                if (!IsCandidateAttackPosition(board, attacker, target, candidate, attackRange, workspace))
+                if (!IsCandidateAttackPosition(board, attacker, targetPlanningHex, candidate, attackRange, workspace))
                 {
                     workspace.AttackPositions.RemoveAt(i);
                 }
@@ -132,14 +167,14 @@ namespace DeckBattle
         private static bool IsCandidateAttackPosition(
             HexBoard board,
             UnitRuntimeState attacker,
-            UnitRuntimeState target,
+            HexCoord targetPlanningHex,
             HexCoord candidate,
             int attackRange,
             Workspace workspace)
         {
             if (!board.IsWalkable(candidate)
-                || board.Distance(candidate, target.CurrentHex) > attackRange
-                || candidate == target.CurrentHex)
+                || board.Distance(candidate, targetPlanningHex) > attackRange
+                || candidate == targetPlanningHex)
             {
                 return false;
             }
@@ -152,6 +187,12 @@ namespace DeckBattle
             }
 
             return true;
+        }
+
+        internal static HexCoord GetTargetPlanningHex(UnitRuntimeState target)
+        {
+            // Movement planning anticipates the reserved step; combat range still validates CurrentHex.
+            return target.IsMoving ? target.MovementDestination : target.CurrentHex;
         }
 
         private static void FillOccupiedHexes(IReadOnlyList<UnitRuntimeState> units, HashSet<HexCoord> occupiedHexes)

@@ -27,7 +27,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void TrySelectAttackPosition_ReservesDestinationOfMovingUnit()
+        public void TrySelectAttackPosition_UsesMovingTargetDestinationForRangePlanning()
         {
             UnitDefinition melee = CreateUnit("melee", 1);
             BattleSimulation simulation = BattleSimulation.Create(
@@ -47,7 +47,7 @@ namespace DeckBattle.Tests
                 out HexCoord attackPosition);
 
             Assert.IsTrue(found);
-            Assert.AreEqual(new HexCoord(0, 1), attackPosition);
+            Assert.AreEqual(new HexCoord(2, 0), attackPosition);
         }
 
         [Test]

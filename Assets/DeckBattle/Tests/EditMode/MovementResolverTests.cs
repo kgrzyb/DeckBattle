@@ -52,6 +52,64 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void PlanMovementDestinations_UsesCollectStartSnapshotAcrossUnitIterationOrders()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            UnitDefinition ranged = CreateUnit("ranged", 5);
+            BattleSimulation first = BattleSimulation.Create(CreateContestedBoard(), new[]
+            {
+                new UnitSpawnData(4, melee, BattleSide.Player, new HexCoord(0, 1)),
+                new UnitSpawnData(2, melee, BattleSide.Player, new HexCoord(1, 0)),
+                new UnitSpawnData(7, ranged, BattleSide.Enemy, new HexCoord(3, 1))
+            });
+            BattleSimulation reordered = BattleSimulation.Create(CreateContestedBoard(), new[]
+            {
+                new UnitSpawnData(7, ranged, BattleSide.Enemy, new HexCoord(3, 1)),
+                new UnitSpawnData(2, melee, BattleSide.Player, new HexCoord(1, 0)),
+                new UnitSpawnData(4, melee, BattleSide.Player, new HexCoord(0, 1))
+            });
+            var firstWorkspace = new MovementResolver.Workspace(30, 3);
+            var reorderedWorkspace = new MovementResolver.Workspace(30, 3);
+            var firstDestinations = new Dictionary<int, HexCoord>();
+            var reorderedDestinations = new Dictionary<int, HexCoord>();
+
+            Assert.AreEqual(
+                1,
+                MovementResolver.PlanMovementDestinations(first, firstWorkspace, firstDestinations));
+            Assert.AreEqual(
+                1,
+                MovementResolver.PlanMovementDestinations(reordered, reorderedWorkspace, reorderedDestinations));
+
+            Assert.AreEqual(firstDestinations.Count, reorderedDestinations.Count);
+            foreach (KeyValuePair<int, HexCoord> entry in firstDestinations)
+            {
+                Assert.IsTrue(reorderedDestinations.TryGetValue(entry.Key, out HexCoord destination));
+                Assert.AreEqual(entry.Value, destination);
+            }
+
+            Assert.AreEqual(new HexCoord(1, 1), firstDestinations[2]);
+            Assert.IsFalse(firstDestinations.ContainsKey(4));
+        }
+
+        [Test]
+        public void ResolveMovement_WaitsWhenMovingTargetWillEnterMeleeRange()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            BattleSimulation simulation = BattleSimulation.Create(new HexBoard(5, 6, 1f), new[]
+            {
+                new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 1)),
+                new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(1, 3))
+            });
+            simulation.StartUnitMovement(simulation.Units[0], new HexCoord(1, 2));
+
+            int moved = MovementResolver.ResolveMovement(simulation);
+
+            Assert.AreEqual(0, moved);
+            Assert.IsFalse(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 3), simulation.Units[1].MovementDestination);
+        }
+
+        [Test]
         public void ResolveMovement_LoserDoesNotChooseAlternativeStep()
         {
             BattleSimulation simulation = CreateDuel(1, 2);

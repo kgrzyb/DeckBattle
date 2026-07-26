@@ -95,6 +95,12 @@ namespace DeckBattle
                     continue;
                 }
 
+                // Keep the committed pursuit target stable until the active movement step finishes.
+                if (unit.IsMoving)
+                {
+                    continue;
+                }
+
                 if (unit.AttackPhase == UnitAttackPhase.Windup)
                 {
                     continue;

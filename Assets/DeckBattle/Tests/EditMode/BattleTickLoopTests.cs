@@ -107,6 +107,79 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Tick_MovingUnitRetainsTargetAcrossTransientPathBlockage()
+        {
+            UnitDefinition melee = CreateUnit("melee", 20, 2, 1, 1f);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(3, melee, BattleSide.Player, new HexCoord(1, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(0, 5)),
+                    new UnitSpawnData(4, melee, BattleSide.Enemy, new HexCoord(2, 4))
+                });
+            var loop = new BattleTickLoop(simulation, 0.15f);
+            var events = new BattleEventQueue();
+
+            for (int tick = 0; tick < 7; tick++)
+            {
+                loop.Tick(simulation, events);
+            }
+
+            UnitRuntimeState enemy = simulation.Units[2];
+            Assert.AreEqual(1, enemy.TargetUnitId);
+            Assert.AreEqual(new HexCoord(0, 3), enemy.CurrentHex);
+            Assert.IsFalse(enemy.IsMoving);
+            Assert.AreEqual(enemy.CurrentHex, enemy.MovementDestination);
+        }
+
+        [Test]
+        public void Tick_CrowdedMeleePursuit_DoesNotOscillateBetweenTwoHexes()
+        {
+            UnitDefinition melee = CreateUnit("melee", 100, 1, 1, 1f);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(3, melee, BattleSide.Player, new HexCoord(3, 0)),
+                    new UnitSpawnData(5, melee, BattleSide.Player, new HexCoord(2, 2)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(4, 5)),
+                    new UnitSpawnData(4, melee, BattleSide.Enemy, new HexCoord(0, 5)),
+                    new UnitSpawnData(6, melee, BattleSide.Enemy, new HexCoord(1, 3))
+                });
+            var loop = new BattleTickLoop(simulation, 0.15f);
+            var events = new BattleEventQueue();
+            HexCoord lastFrom = default;
+            HexCoord lastTo = default;
+            bool hasPreviousMove = false;
+            int consecutiveReversals = 0;
+
+            for (int tick = 0; tick < 12; tick++)
+            {
+                loop.Tick(simulation, events);
+                for (int eventIndex = 0; eventIndex < events.Count; eventIndex++)
+                {
+                    BattleEvent battleEvent = events[eventIndex];
+                    if (battleEvent.Type != BattleEventType.UnitMoved || battleEvent.UnitId != 4)
+                    {
+                        continue;
+                    }
+
+                    bool reversedPreviousMove = hasPreviousMove
+                        && battleEvent.From == lastTo
+                        && battleEvent.To == lastFrom;
+                    consecutiveReversals = reversedPreviousMove ? consecutiveReversals + 1 : 0;
+                    Assert.Less(consecutiveReversals, 2);
+                    hasPreviousMove = true;
+                    lastFrom = battleEvent.From;
+                    lastTo = battleEvent.To;
+                }
+            }
+        }
+
+        [Test]
         public void Tick_MultipleUnits_ProducesStableBattleOutcome()
         {
             BattleSimulation simulation = BattleSimulation.Create(
@@ -130,7 +203,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_ScoutMirrorWithContestedMovement_UsesDeploymentOrder()
+        public void Tick_ScoutMirrorWithContestedMovement_WaitsThenResolvesSimultaneously()
         {
             UnitDefinition player = CreateScout("player-scout");
             UnitDefinition enemy = CreateScout("enemy-scout");
@@ -147,9 +220,8 @@ namespace DeckBattle.Tests
             BattleTickResult result = RunUntilEnded(simulation, loop, events, 30);
 
             Assert.IsTrue(result.BattleEnded);
-            Assert.IsTrue(result.HasWinner);
-            Assert.AreEqual(BattleSide.Player, result.Winner);
-            Assert.IsTrue(simulation.Units[0].IsAlive);
+            Assert.IsFalse(result.HasWinner);
+            Assert.IsTrue(simulation.Units[0].IsDefeated);
             Assert.IsTrue(simulation.Units[1].IsDefeated);
         }
 

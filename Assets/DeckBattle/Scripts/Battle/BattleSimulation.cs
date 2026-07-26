@@ -146,6 +146,7 @@ namespace DeckBattle
                 }
             }
 
+            unit.PreviousHex = unit.CurrentHex;
             unitByHex.Remove(unit.CurrentHex);
             unit.CurrentHex = destination;
             unitByHex[destination] = unit;
@@ -229,6 +230,7 @@ namespace DeckBattle
                 }
             }
 
+            unit.PreviousHex = unit.CurrentHex;
             unit.IsMoving = true;
             unit.MovementDestination = destination;
             unit.MovementTimeRemaining = Tuning.MovementStepDuration;

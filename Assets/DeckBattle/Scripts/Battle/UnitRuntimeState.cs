@@ -19,6 +19,7 @@ namespace DeckBattle
 
         public int CurrentHp;
         public HexCoord CurrentHex;
+        public HexCoord PreviousHex;
         public int TargetUnitId;
         public double NextAttackTime;
         public UnitAttackPhase AttackPhase;
@@ -52,6 +53,7 @@ namespace DeckBattle
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             Side = side;
             CurrentHex = startHex;
+            PreviousHex = startHex;
             CurrentHp = definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
             NextAttackTime = double.PositiveInfinity;
@@ -85,6 +87,7 @@ namespace DeckBattle
         public void ResetForBattle(HexCoord startHex)
         {
             CurrentHex = startHex;
+            PreviousHex = startHex;
             CurrentHp = Definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
             NextAttackTime = double.PositiveInfinity;

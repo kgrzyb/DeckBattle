@@ -294,7 +294,9 @@ namespace DeckBattle
                     continue;
                 }
 
-                int distance = simulation.Board.Distance(attackPosition, candidate.CurrentHex);
+                int distance = simulation.Board.Distance(
+                    attackPosition,
+                    AttackPositionSelector.GetTargetPlanningHex(candidate));
                 if (distance > attackRange)
                 {
                     continue;
@@ -329,7 +331,9 @@ namespace DeckBattle
                 return true;
             }
 
-            int selectedTargetDistance = board.Distance(selectedAttackPosition, selected.CurrentHex);
+            int selectedTargetDistance = board.Distance(
+                selectedAttackPosition,
+                AttackPositionSelector.GetTargetPlanningHex(selected));
             if (candidateTargetDistance != selectedTargetDistance)
             {
                 return candidateTargetDistance < selectedTargetDistance;
