@@ -53,6 +53,7 @@ namespace DeckBattle.Tests
             unit.CritChance = 0f;
             unit.CritMultiplier = 2f;
             unit.AttackCooldown = 1f;
+            unit.AttackWindupPercent = 0.25f;
             unit.ManaThreshold = 100;
             unit.ManaPerAttack = 10;
             unit.ManaPerDamageTaken = 10;
@@ -97,6 +98,26 @@ namespace DeckBattle.Tests
             }
 
             return createdObject;
+        }
+
+        public static BattleTickResult ResolveNextAttack(
+            BattleSimulation simulation,
+            BattleEventQueue events = null,
+            float tickDuration = 0.25f,
+            int maxTicks = 64)
+        {
+            var loop = new BattleTickLoop(simulation, tickDuration);
+            BattleEventQueue resolvedEvents = events ?? new BattleEventQueue();
+            for (int i = 0; i < maxTicks; i++)
+            {
+                BattleTickResult result = loop.Tick(simulation, resolvedEvents);
+                if (result.Attacks > 0 || result.BattleEnded)
+                {
+                    return result;
+                }
+            }
+
+            throw new System.InvalidOperationException("No attack resolved within the test tick budget.");
         }
 
         public static void DestroyCreatedObjects()

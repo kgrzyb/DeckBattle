@@ -20,15 +20,17 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
+            BattleTickResult windup = loop.Tick(simulation, events);
             BattleTickResult result = loop.Tick(simulation, events);
 
+            Assert.AreEqual(0, windup.Attacks);
             Assert.AreEqual(2, result.Attacks);
             Assert.AreEqual(0, result.Moves);
             Assert.IsTrue(simulation.Units[1].IsDefeated);
         }
 
         [Test]
-        public void AttackCooldownMultiplier_AdjustsCooldownAfterAttack()
+        public void AttackCooldownMultiplier_AdjustsCycleScheduledAtWindupStart()
         {
             UnitDefinition player = CreateUnit("player", 10, 1, 3, 1f);
             UnitDefinition enemy = CreateUnit("enemy", 10, 1, 1, 1f);
@@ -42,14 +44,16 @@ namespace DeckBattle.Tests
                 new BattleRuntimeTuning(2f, 0));
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[0].NextAttackTime = 0d;
+            var loop = new BattleTickLoop(simulation, 0.25f);
 
-            CombatResolver.ResolveCombat(simulation);
+            loop.Tick(simulation, new BattleEventQueue());
 
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(2d).Within(0.000001d));
+            Assert.AreEqual(UnitAttackPhase.Windup, simulation.Units[0].AttackPhase);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(2.25d).Within(0.000001d));
         }
 
         [Test]
-        public void RuntimeAttackCooldownMultiplier_AdjustsCooldownAfterAttack()
+        public void RuntimeAttackCooldownMultiplier_AdjustsCycleScheduledAtWindupStart()
         {
             UnitDefinition player = CreateUnit("player", 10, 1, 3, 1f);
             UnitDefinition enemy = CreateUnit("enemy", 5, 1, 1, 1f);
@@ -63,10 +67,12 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[0].SpecialAttackCooldownMultiplier = 0.5f;
             simulation.Units[0].NextAttackTime = 0d;
+            var loop = new BattleTickLoop(simulation, 0.25f);
 
-            CombatResolver.ResolveCombat(simulation);
+            loop.Tick(simulation, new BattleEventQueue());
 
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(0.5d).Within(0.000001d));
+            Assert.AreEqual(UnitAttackPhase.Windup, simulation.Units[0].AttackPhase);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(0.75d).Within(0.000001d));
         }
 
         private static UnitDefinition CreateUnit(string unitId, int hp, int attack, int attackRange, float attackCooldown)

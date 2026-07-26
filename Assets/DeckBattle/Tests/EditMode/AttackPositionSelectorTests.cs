@@ -27,7 +27,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void TrySelectAttackPosition_UsesLogicalHexWhenLegacyMovementStateExists()
+        public void TrySelectAttackPosition_ReservesDestinationOfMovingUnit()
         {
             UnitDefinition melee = CreateUnit("melee", 1);
             BattleSimulation simulation = BattleSimulation.Create(
@@ -47,7 +47,7 @@ namespace DeckBattle.Tests
                 out HexCoord attackPosition);
 
             Assert.IsTrue(found);
-            Assert.AreEqual(new HexCoord(1, 0), attackPosition);
+            Assert.AreEqual(new HexCoord(0, 1), attackPosition);
         }
 
         [Test]

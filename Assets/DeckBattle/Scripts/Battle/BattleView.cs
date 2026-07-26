@@ -413,34 +413,6 @@ namespace DeckBattle
             return Mathf.Ceil(safeDuration / tickLoop.TickDuration) * tickLoop.TickDuration;
         }
 
-        private void HandleUnitAttackStarted(BattleEvent battleEvent)
-        {
-            UnitView attackerView;
-            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out attackerView) && attackerView != null)
-            {
-                UnitRuntimeState target;
-                if (simulation.TryGetUnitById(battleEvent.TargetUnitId, out target) && target != null)
-                {
-                    attackerView.FaceWorldPosition(boardPresenter.GetWorldPosition(target.CurrentHex));
-                }
-
-                UnitRuntimeState attacker;
-                if (simulation.TryGetUnitById(battleEvent.UnitId, out attacker))
-                {
-                    if (attacker.Definition != null && attacker.Definition.UnitType == UnitType.Melee)
-                    {
-                        attackerView.PlayMeleeAttack();
-                    }
-                    else
-                    {
-                        attackerView.PlayAttack();
-                    }
-
-                    SpawnEffect(attackEffectPrefab, boardPresenter.GetWorldPosition(attacker.CurrentHex), activeAttackEffects, pooledAttackEffects);
-                }
-            }
-        }
-
         private void HandleUnitDamaged(BattleEvent battleEvent)
         {
             UnitView targetView;
@@ -735,13 +707,11 @@ namespace DeckBattle
         private void HandleAttackFired(BattleEvent battleEvent)
         {
             if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) || view == null) return;
-            float winddown = 0f;
             if (simulation.TryGetUnitById(battleEvent.UnitId, out UnitRuntimeState attacker) && attacker != null)
             {
-                winddown = attacker.Definition.AttackWinddownDuration;
                 SpawnEffect(attackEffectPrefab, boardPresenter.GetWorldPosition(attacker.CurrentHex), activeAttackEffects, pooledAttackEffects);
             }
-            view.PlayAttackFire(battleEvent.SequenceId, winddown);
+            view.PlayAttackFire(battleEvent.SequenceId);
         }
 
         private float ResolveStandaloneTickDuration()

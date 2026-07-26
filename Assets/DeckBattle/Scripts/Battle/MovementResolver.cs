@@ -66,6 +66,25 @@ namespace DeckBattle
             return CommitWinners(simulation, workspace, eventQueue);
         }
 
+        public static void AdvanceActiveMovements(BattleSimulation simulation, float tickDuration)
+        {
+            if (simulation == null)
+            {
+                throw new ArgumentNullException(nameof(simulation));
+            }
+
+            if (tickDuration <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tickDuration));
+            }
+
+            IReadOnlyList<UnitRuntimeState> units = simulation.Units;
+            for (int i = 0; i < units.Count; i++)
+            {
+                simulation.AdvanceMovement(units[i], tickDuration);
+            }
+        }
+
         public static int ResolveMovement(BattleSimulation simulation, Workspace workspace, BattleEventQueue eventQueue)
         {
             return ResolveMovement(simulation, 0f, workspace, eventQueue);
@@ -122,7 +141,11 @@ namespace DeckBattle
             for (int i = 0; i < count; i++)
             {
                 UnitRuntimeState unit = units[i];
-                if (unit == null || !unit.IsAlive || unit.AttackPhase != UnitAttackPhase.AcquireReload || !targetSelectionValid[i])
+                if (unit == null
+                    || !unit.IsAlive
+                    || unit.IsMoving
+                    || unit.AttackPhase != UnitAttackPhase.AcquireReload
+                    || !targetSelectionValid[i])
                 {
                     continue;
                 }
@@ -182,7 +205,7 @@ namespace DeckBattle
                 }
 
                 HexCoord from = winner.Unit.CurrentHex;
-                simulation.MoveUnit(winner.Unit, winner.Destination);
+                simulation.StartUnitMovement(winner.Unit, winner.Destination);
                 if (eventQueue != null)
                 {
                     eventQueue.Enqueue(BattleEvent.UnitMoved(winner.Unit.UnitId, from, winner.Destination));
@@ -200,6 +223,10 @@ namespace DeckBattle
                 if (unit != null && unit.IsAlive)
                 {
                     occupiedHexes.Add(unit.CurrentHex);
+                    if (unit.IsMoving)
+                    {
+                        occupiedHexes.Add(unit.MovementDestination);
+                    }
                 }
             }
         }

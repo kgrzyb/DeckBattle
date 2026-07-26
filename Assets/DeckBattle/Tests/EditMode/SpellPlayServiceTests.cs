@@ -184,7 +184,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void CombatResolver_ConsumesAttackBonusOnFirstAttack()
+        public void AttackCycle_ConsumesAttackBonusOnFirstAttack()
         {
             UnitDefinition attackerDefinition = TestDefinitions.CreateUnit("attacker", 1);
             attackerDefinition.Attack = 2;
@@ -202,10 +202,11 @@ namespace DeckBattle.Tests
             attacker.SetTarget(target);
             attacker.NextAttackTime = 0d;
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation);
+            int hpBefore = target.CurrentHp;
+            BattleTickResult result = TestDefinitions.ResolveNextAttack(simulation);
 
             Assert.AreEqual(1, result.Attacks);
-            Assert.AreEqual(5, result.TotalDamage);
+            Assert.AreEqual(5, hpBefore - target.CurrentHp);
             Assert.AreEqual(5, target.CurrentHp);
             Assert.AreEqual(0, attacker.AttackBonusNextCombat);
         }

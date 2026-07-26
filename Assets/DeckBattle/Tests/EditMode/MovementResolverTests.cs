@@ -6,16 +6,20 @@ namespace DeckBattle.Tests
     public sealed class MovementResolverTests
     {
         [Test]
-        public void ResolveMovement_CommitsOneLogicalStepImmediately()
+        public void ResolveMovement_StartsOneStepAndKeepsSourceOccupiedForStepDuration()
         {
             BattleSimulation simulation = CreateDuel(1, 3);
 
             int moved = MovementResolver.ResolveMovement(simulation);
 
             Assert.AreEqual(1, moved);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
-            Assert.IsFalse(simulation.Units[0].IsMoving);
-            Assert.IsTrue(simulation.TryGetUnitAt(new HexCoord(1, 0), out UnitRuntimeState occupant));
+            Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+            Assert.That(
+                simulation.Units[0].MovementTimeRemaining,
+                Is.EqualTo(simulation.Tuning.MovementStepDuration).Within(0.000001f));
+            Assert.IsTrue(simulation.TryGetUnitAt(new HexCoord(0, 0), out UnitRuntimeState occupant));
             Assert.AreSame(simulation.Units[0], occupant);
         }
 
@@ -43,7 +47,8 @@ namespace DeckBattle.Tests
 
             Assert.AreEqual(1, MovementResolver.ResolveMovement(simulation));
             Assert.AreEqual(new HexCoord(0, 1), simulation.Units[0].CurrentHex);
-            Assert.AreEqual(new HexCoord(1, 1), simulation.Units[1].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[1].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 1), simulation.Units[1].MovementDestination);
         }
 
         [Test]
@@ -52,7 +57,8 @@ namespace DeckBattle.Tests
             BattleSimulation simulation = CreateDuel(1, 2);
 
             Assert.AreEqual(1, MovementResolver.ResolveMovement(simulation));
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
             Assert.AreEqual(new HexCoord(2, 0), simulation.Units[1].CurrentHex);
         }
 
@@ -69,7 +75,9 @@ namespace DeckBattle.Tests
             Assert.AreEqual(new HexCoord(1, 0), destinations[1]);
 
             Assert.AreEqual(1, MovementResolver.ResolveMovement(simulation, workspace));
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
         }
 
         private static BattleSimulation CreateDuel(int playerId, int enemyId, int enemyQ = 2)

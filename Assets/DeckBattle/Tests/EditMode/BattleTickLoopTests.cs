@@ -20,16 +20,19 @@ namespace DeckBattle.Tests
             Assert.IsFalse(firstTick.BattleEnded);
             Assert.AreEqual(0, firstTick.Attacks);
             Assert.AreEqual(1, firstTick.Moves);
-            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(0, 0), first.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 0), first.Units[0].MovementDestination);
             Assert.AreEqual(new HexCoord(2, 0), first.Units[1].CurrentHex);
-            Assert.IsFalse(first.Units[0].IsMoving);
+            Assert.IsTrue(first.Units[0].IsMoving);
             Assert.AreEqual(first.Units[0].CurrentHex, second.Units[0].CurrentHex);
             Assert.AreEqual(first.Units[1].CurrentHex, second.Units[1].CurrentHex);
             Assert.AreEqual(1, firstEvents.Count);
             Assert.AreEqual(BattleEventType.UnitMoved, firstEvents[0].Type);
 
+            BattleTickResult windupTick = firstLoop.Tick(first, firstEvents);
             BattleTickResult commitTick = firstLoop.Tick(first, firstEvents);
 
+            Assert.AreEqual(0, windupTick.Attacks);
             Assert.IsTrue(commitTick.BattleEnded);
             Assert.AreEqual(2, commitTick.Attacks);
             Assert.AreEqual(new HexCoord(1, 0), first.Units[0].CurrentHex);
@@ -61,8 +64,10 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
+            BattleTickResult windup = loop.Tick(simulation, events);
             BattleTickResult result = loop.Tick(simulation, events);
 
+            Assert.AreEqual(0, windup.Attacks);
             Assert.IsTrue(result.BattleEnded);
             Assert.AreEqual(1, result.Attacks);
             Assert.AreEqual(0, result.Moves);
@@ -96,7 +101,9 @@ namespace DeckBattle.Tests
             Assert.AreEqual(0, result.Attacks);
             Assert.AreEqual(2, simulation.Units[0].TargetUnitId);
             Assert.AreEqual(5, simulation.Units[2].CurrentHp);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
         }
 
         [Test]
@@ -123,7 +130,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_ScoutMirrorFromOffsetHexes_DefeatsBothUnitsTogether()
+        public void Tick_ScoutMirrorWithContestedMovement_UsesDeploymentOrder()
         {
             UnitDefinition player = CreateScout("player-scout");
             UnitDefinition enemy = CreateScout("enemy-scout");
@@ -140,8 +147,9 @@ namespace DeckBattle.Tests
             BattleTickResult result = RunUntilEnded(simulation, loop, events, 30);
 
             Assert.IsTrue(result.BattleEnded);
-            Assert.IsFalse(result.HasWinner);
-            Assert.IsTrue(simulation.Units[0].IsDefeated);
+            Assert.IsTrue(result.HasWinner);
+            Assert.AreEqual(BattleSide.Player, result.Winner);
+            Assert.IsTrue(simulation.Units[0].IsAlive);
             Assert.IsTrue(simulation.Units[1].IsDefeated);
         }
 
@@ -161,9 +169,11 @@ namespace DeckBattle.Tests
             var events = new BattleEventQueue();
 
             loop.Tick(simulation, events);
-            BattleTickResult second = loop.Tick(simulation, events);
+            BattleTickResult fireTick = loop.Tick(simulation, events);
+            BattleTickResult endedTick = loop.Tick(simulation, events);
 
-            Assert.IsTrue(second.BattleEnded);
+            Assert.IsTrue(fireTick.BattleEnded);
+            Assert.IsTrue(endedTick.BattleEnded);
             Assert.AreEqual(0, events.Count);
         }
 
@@ -205,7 +215,10 @@ namespace DeckBattle.Tests
             Assert.That(simulation.ElapsedTime, Is.EqualTo(1d).Within(0.000001d));
 
             loop.Tick(simulation, events);
-            Assert.That(simulation.ElapsedTime, Is.EqualTo(1d).Within(0.000001d));
+            Assert.That(simulation.ElapsedTime, Is.EqualTo(2d).Within(0.000001d));
+
+            loop.Tick(simulation, events);
+            Assert.That(simulation.ElapsedTime, Is.EqualTo(2d).Within(0.000001d));
         }
 
         [Test]

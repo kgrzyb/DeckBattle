@@ -154,6 +154,29 @@ namespace DeckBattle
             unit.MovementTimeRemaining = 0f;
         }
 
+        internal void AdvanceMovement(UnitRuntimeState unit, float duration)
+        {
+            if (unit == null || !unit.IsMoving)
+            {
+                return;
+            }
+
+            unit.MovementTimeRemaining = Math.Max(0f, unit.MovementTimeRemaining - duration);
+            if (unit.MovementTimeRemaining > 0f)
+            {
+                return;
+            }
+
+            if (unit.CurrentHex != unit.MovementDestination)
+            {
+                CompleteUnitMovement(unit);
+                return;
+            }
+
+            unit.IsMoving = false;
+            unit.MovementDestination = unit.CurrentHex;
+        }
+
         public void StartUnitMovement(UnitRuntimeState unit, HexCoord destination)
         {
             if (unit == null)
@@ -169,6 +192,11 @@ namespace DeckBattle
             if (unit.IsMoving)
             {
                 throw new InvalidOperationException("Unit is already moving.");
+            }
+
+            if (unit.AttackPhase != UnitAttackPhase.AcquireReload)
+            {
+                throw new InvalidOperationException("Unit cannot start moving during an attack.");
             }
 
             if (!Board.IsWalkable(destination))

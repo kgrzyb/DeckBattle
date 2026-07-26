@@ -5,7 +5,7 @@ namespace DeckBattle.Tests
     public sealed class CombatResolverTests
     {
         [Test]
-        public void Tick_WaitsForInitialCooldownThenSchedulesFromPreviousDeadline()
+        public void Tick_WaitsForInitialCooldownThenSchedulesFromWindupStart()
         {
             BattleSimulation simulation = CreateSimulation(0.5f);
             var loop = new BattleTickLoop(simulation, 0.35f);
@@ -14,15 +14,19 @@ namespace DeckBattle.Tests
             BattleTickResult first = loop.Tick(simulation, events);
             BattleTickResult second = loop.Tick(simulation, events);
             BattleTickResult third = loop.Tick(simulation, events);
+            BattleTickResult fourth = loop.Tick(simulation, events);
+            BattleTickResult fifth = loop.Tick(simulation, events);
 
             Assert.AreEqual(0, first.Attacks);
-            Assert.AreEqual(1, second.Attacks);
+            Assert.AreEqual(0, second.Attacks);
             Assert.AreEqual(1, third.Attacks);
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.5d).Within(0.000001d));
+            Assert.AreEqual(0, fourth.Attacks);
+            Assert.AreEqual(1, fifth.Attacks);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.9d).Within(0.000001d));
         }
 
         [Test]
-        public void Tick_PreservesOvershootForCooldownPointSeven()
+        public void Tick_SchedulesCooldownPointSevenFromActualWindupStart()
         {
             BattleSimulation simulation = CreateSimulation(0.7f);
             var loop = new BattleTickLoop(simulation, 0.35f);
@@ -32,16 +36,18 @@ namespace DeckBattle.Tests
             BattleTickResult second = loop.Tick(simulation, events);
             BattleTickResult third = loop.Tick(simulation, events);
             BattleTickResult fourth = loop.Tick(simulation, events);
+            BattleTickResult fifth = loop.Tick(simulation, events);
 
             Assert.AreEqual(0, first.Attacks);
-            Assert.AreEqual(1, second.Attacks);
-            Assert.AreEqual(0, third.Attacks);
-            Assert.AreEqual(1, fourth.Attacks);
+            Assert.AreEqual(0, second.Attacks);
+            Assert.AreEqual(1, third.Attacks);
+            Assert.AreEqual(0, fourth.Attacks);
+            Assert.AreEqual(1, fifth.Attacks);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(2.1d).Within(0.000001d));
         }
 
         [Test]
-        public void ResolveCombat_OnlySchedulesAttackThatActuallyExecutes()
+        public void Tick_CommitsAttackersThatFinishWindupTogether()
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 5, 1, 1f);
             UnitDefinition target = CreateUnit("target", 3, 1, 1, 1f);
@@ -58,15 +64,15 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
             simulation.Units[1].NextAttackTime = 0d;
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation);
+            BattleTickResult result = TestDefinitions.ResolveNextAttack(simulation);
 
-            Assert.AreEqual(1, result.Attacks);
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
-            Assert.That(simulation.Units[1].NextAttackTime, Is.EqualTo(0d).Within(0.000001d));
+            Assert.AreEqual(2, result.Attacks);
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
+            Assert.That(simulation.Units[1].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
         }
 
         [Test]
-        public void ResolveCombat_ActivatesAssignedAttackSpeedSpecialBeforeSchedulingNextAttack()
+        public void Tick_AttackSpeedActivatedAtFireAffectsFollowingCycle()
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
             attacker.ManaThreshold = 10;
@@ -85,12 +91,12 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
             var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(simulation, events);
+            TestDefinitions.ResolveNextAttack(simulation, events);
 
             Assert.AreSame(attacker.Special, simulation.Units[0].ActiveSpecial);
-            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(5d).Within(0.000001d));
+            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(5.5d).Within(0.000001d));
             Assert.AreEqual(0.5f, simulation.Units[0].SpecialAttackCooldownMultiplier);
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(0.5d).Within(0.000001d));
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
             AssertSpecialActivation(events, UnitSpecialKind.AttackSpeed);
         }
 
@@ -125,18 +131,17 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[0].NextAttackTime = 0d;
 
-            CombatResolver.ResolveCombat(simulation);
-            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(5d).Within(0.000001d));
+            TestDefinitions.ResolveNextAttack(simulation);
+            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(5.5d).Within(0.000001d));
 
-            var loop = new BattleTickLoop(simulation, 1f);
-            loop.Tick(simulation, new BattleEventQueue());
+            TestDefinitions.ResolveNextAttack(simulation);
 
-            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(6d).Within(0.000001d));
+            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(6.25d).Within(0.000001d));
             Assert.AreSame(attacker.Special, simulation.Units[0].ActiveSpecial);
         }
 
         [Test]
-        public void ResolveCombat_UnitWithoutSpecialDoesNotGainHaste()
+        public void Tick_UnitWithoutSpecialDoesNotGainHaste()
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
             attacker.ManaThreshold = 10;
@@ -145,11 +150,11 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
             var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(simulation, events);
+            TestDefinitions.ResolveNextAttack(simulation, events);
 
             Assert.IsNull(simulation.Units[0].ActiveSpecial);
             Assert.AreEqual(1f, simulation.Units[0].SpecialAttackCooldownMultiplier);
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
             AssertNoSpecialActivation(events);
         }
 

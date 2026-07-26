@@ -6,7 +6,7 @@ namespace DeckBattle.Tests
     public sealed class ProjectileResolverTests
     {
         [Test]
-        public void ResolveCombat_RangedWithProjectileLaunchesWithoutImmediateDamage()
+        public void Tick_RangedWithProjectileLaunchesWithoutImmediateDamage()
         {
             UnitDefinition attacker = CreateUnit("archer", 10, 3, 3, 1f, UnitType.Range);
             attacker.Projectile = CreateProjectile("arrow", 1f);
@@ -15,12 +15,11 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
             var events = new BattleEventQueue();
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation, events);
+            BattleTickResult result = TestDefinitions.ResolveNextAttack(simulation, events);
 
             Assert.AreEqual(1, result.Attacks);
-            Assert.AreEqual(0, result.TotalDamage);
             Assert.AreEqual(10, simulation.Units[1].CurrentHp);
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1d).Within(0.000001d));
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
             Assert.AreEqual(10, simulation.Units[0].CurrentMana);
             Assert.AreEqual(0, simulation.Units[1].CurrentMana);
             Assert.AreEqual(1, simulation.Projectiles.Count);
@@ -90,7 +89,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
             var events = new BattleEventQueue();
 
-            CombatResolver.ResolveCombat(simulation, events);
+            TestDefinitions.ResolveNextAttack(simulation, events);
 
             AssertEventTypeDoesNotExist(events, BattleEventType.UnitCrit);
             Assert.AreEqual(0, simulation.Units[1].CurrentMana);
@@ -112,8 +111,10 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
+            BattleTickResult windupTick = loop.Tick(simulation, events);
             BattleTickResult launchTick = loop.Tick(simulation, events);
 
+            Assert.AreEqual(0, windupTick.Attacks);
             Assert.IsFalse(launchTick.BattleEnded);
             Assert.IsTrue(simulation.Units[1].IsAlive);
             Assert.AreEqual(1, simulation.Projectiles.Count);
@@ -134,8 +135,10 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
+            BattleTickResult windupTick = loop.Tick(simulation, events);
             BattleTickResult launchTick = loop.Tick(simulation, events);
 
+            Assert.AreEqual(0, windupTick.Attacks);
             Assert.IsFalse(launchTick.BattleEnded);
             Assert.IsTrue(simulation.Units[0].IsDefeated);
             Assert.AreEqual(1, simulation.Projectiles.Count);
@@ -148,7 +151,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void ResolveCombat_RangedWithoutProjectileKeepsImmediateDamageFallback()
+        public void Tick_RangedWithoutProjectileKeepsImmediateDamageFallback()
         {
             BattleSimulation simulation = CreateSimulation(
                 CreateUnit("ranged", 10, 3, 3, 1f, UnitType.Range),
@@ -158,10 +161,11 @@ namespace DeckBattle.Tests
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[0].NextAttackTime = 0d;
 
-            CombatResolutionResult result = CombatResolver.ResolveCombat(simulation);
+            int hpBefore = simulation.Units[1].CurrentHp;
+            BattleTickResult result = TestDefinitions.ResolveNextAttack(simulation);
 
             Assert.AreEqual(1, result.Attacks);
-            Assert.AreEqual(3, result.TotalDamage);
+            Assert.AreEqual(3, hpBefore - simulation.Units[1].CurrentHp);
             Assert.AreEqual(7, simulation.Units[1].CurrentHp);
             Assert.AreEqual(0, simulation.Projectiles.Count);
         }
@@ -173,7 +177,7 @@ namespace DeckBattle.Tests
             BattleSimulation simulation = CreateSimulation(attacker, new HexCoord(1, 1), CreateUnit("target", 10, 1, 1, 1f, UnitType.Melee), new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[0].NextAttackTime = 0d;
-            CombatResolver.ResolveCombat(simulation);
+            TestDefinitions.ResolveNextAttack(simulation);
             return simulation;
         }
 

@@ -366,6 +366,11 @@ namespace DeckBattle
 
                 occupiedHexes.Add(unit.CurrentHex);
                 dynamicBlockedHexes.Add(unit.CurrentHex);
+                if (unit.IsMoving)
+                {
+                    occupiedHexes.Add(unit.MovementDestination);
+                    dynamicBlockedHexes.Add(unit.MovementDestination);
+                }
             }
         }
 

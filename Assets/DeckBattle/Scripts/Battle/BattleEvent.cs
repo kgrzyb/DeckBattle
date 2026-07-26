@@ -88,9 +88,9 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.AttackWindupCancelled, attackerId, targetId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, sequenceId);
         }
 
-        public static BattleEvent AttackFired(int attackerId, int targetId, int sequenceId)
+        public static BattleEvent AttackFired(int attackerId, int targetId, int sequenceId, float winddownDuration)
         {
-            return new BattleEvent(BattleEventType.AttackFired, attackerId, targetId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, sequenceId);
+            return new BattleEvent(BattleEventType.AttackFired, attackerId, targetId, default, default, 0, 0, 0, 0, winddownDuration, UnitSpecialKind.None, BattleSide.Player, false, sequenceId);
         }
 
         public static BattleEvent AttackWinddownEnded(int attackerId, int sequenceId)

@@ -54,11 +54,12 @@ namespace DeckBattle
 
             simulation.AdvanceTime(TickDuration);
             UpdateActiveSpecials(simulation);
+            MovementResolver.AdvanceActiveMovements(simulation, TickDuration);
 
             ProjectileResolver.ResolveProjectiles(simulation, eventQueue);
 
             RefreshTargets(simulation);
-            CombatResolutionResult combat = AttackCycleResolver.Resolve(simulation, eventQueue, attackCycleWorkspace);
+            CombatResolutionResult combat = AttackCycleResolver.Resolve(simulation, eventQueue, attackCycleWorkspace, TickDuration);
 
             // Melee deaths and projectile/attack side effects can invalidate targets
             // and occupied attack positions before the next movement plan.

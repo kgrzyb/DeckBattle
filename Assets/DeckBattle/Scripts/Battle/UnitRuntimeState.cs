@@ -26,7 +26,6 @@ namespace DeckBattle
         public int AttackSequenceId;
         public double AttackCycleStartTime;
         public double WindupEndTime;
-        public double WinddownEndTime;
         public int CurrentMana;
         public bool IsMoving;
         public HexCoord MovementDestination;
@@ -108,7 +107,6 @@ namespace DeckBattle
             AttackSequenceId = 0;
             AttackCycleStartTime = double.PositiveInfinity;
             WindupEndTime = double.PositiveInfinity;
-            WinddownEndTime = double.PositiveInfinity;
         }
     }
 }

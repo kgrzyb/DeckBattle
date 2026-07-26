@@ -11,7 +11,6 @@ namespace DeckBattle
         [SerializeField] private Transform modelRoot;
         [SerializeField] private float groundOffset = 0.65f;
         [SerializeField] private float attackPulseDuration = 0.14f;
-        [SerializeField] private float meleeAttackDuration = 0.3f;
         [SerializeField] private float meleeAttackLeanBackAngle = -7f;
         [SerializeField] private float meleeAttackStrikeAngle = 14f;
         [SerializeField] private float damageFlashDuration = 0.12f;
@@ -43,7 +42,8 @@ namespace DeckBattle
         private int queuedMoveCount;
         private bool isMoving;
         private bool isDying;
-        private Sequence meleeAttackSequence;
+        private Sequence attackSequence;
+        private Quaternion attackSequenceStartRotation;
         private int activeAttackSequenceId;
 
         private void Awake()
@@ -76,12 +76,12 @@ namespace DeckBattle
 
         private void OnDisable()
         {
-            KillMeleeAttackSequence();
+            KillAttackSequence();
         }
 
         private void OnDestroy()
         {
-            KillMeleeAttackSequence();
+            KillAttackSequence();
         }
 
         public void Bind(RuntimeUnit unit, Vector3 worldPosition)
@@ -129,51 +129,51 @@ namespace DeckBattle
             StartMove(target, safeDuration);
         }
 
-        public void PlayAttack()
-        {
-            attackTimer = Mathf.Max(attackPulseDuration, 0.01f);
-        }
-
-        public void PlayMeleeAttack()
+        private void PlayAttackSequence(float duration)
         {
             if (modelRoot == null)
             {
                 return;
             }
 
-            KillMeleeAttackSequence();
+            KillAttackSequence();
 
-            Quaternion startRotation = modelRoot.localRotation;
-            Quaternion leanBackRotation = startRotation * Quaternion.Euler(meleeAttackLeanBackAngle, 0f, 0f);
-            Quaternion strikeRotation = startRotation * Quaternion.Euler(meleeAttackStrikeAngle, 0f, 0f);
-            float duration = Mathf.Max(0.01f, meleeAttackDuration);
+            attackSequenceStartRotation = modelRoot.localRotation;
+            Quaternion leanBackRotation = attackSequenceStartRotation * Quaternion.Euler(meleeAttackLeanBackAngle, 0f, 0f);
+            Quaternion strikeRotation = attackSequenceStartRotation * Quaternion.Euler(meleeAttackStrikeAngle, 0f, 0f);
+            float safeDuration = Mathf.Max(0.01f, duration);
 
-            meleeAttackSequence = DOTween.Sequence()
+            attackSequence = DOTween.Sequence()
                 .SetTarget(modelRoot)
-                .Append(modelRoot.DOLocalRotateQuaternion(leanBackRotation, duration * 0.25f).SetEase(Ease.OutQuad))
-                .Append(modelRoot.DOLocalRotateQuaternion(strikeRotation, duration * 0.35f).SetEase(Ease.InQuad))
-                .Append(modelRoot.DOLocalRotateQuaternion(startRotation, duration * 0.4f).SetEase(Ease.OutQuad))
-                .OnKill(() => meleeAttackSequence = null);
+                .Append(modelRoot.DOLocalRotateQuaternion(leanBackRotation, safeDuration * 0.25f).SetEase(Ease.OutQuad))
+                .Append(modelRoot.DOLocalRotateQuaternion(strikeRotation, safeDuration * 0.35f).SetEase(Ease.InQuad))
+                .Append(modelRoot.DOLocalRotateQuaternion(attackSequenceStartRotation, safeDuration * 0.4f).SetEase(Ease.OutQuad))
+                .OnKill(() => attackSequence = null);
         }
 
         public void BeginAttackWindup(int sequenceId, float duration)
         {
             activeAttackSequenceId = sequenceId;
-            attackTimer = Mathf.Max(duration, 0.01f);
+            attackTimer = 0f;
+            PlayAttackSequence(duration);
         }
 
-        public void PlayAttackFire(int sequenceId, float winddownDuration)
+        public void PlayAttackFire(int sequenceId)
         {
             if (sequenceId != activeAttackSequenceId) return;
+            if (attackSequence != null && attackSequence.IsActive())
+            {
+                attackSequence.Complete();
+            }
+
             attackTimer = Mathf.Max(attackPulseDuration, 0.01f);
-            PlayMeleeAttack();
         }
 
         public void CancelAttackWindup(int sequenceId)
         {
             if (sequenceId != activeAttackSequenceId) return;
             attackTimer = 0f;
-            KillMeleeAttackSequence();
+            KillAttackSequence();
         }
 
         public void FaceWorldPosition(Vector3 worldPosition)
@@ -206,7 +206,7 @@ namespace DeckBattle
                 return;
             }
 
-            KillMeleeAttackSequence();
+            KillAttackSequence();
             isDying = true;
             deathTimer = Mathf.Max(deathDuration, 0.01f);
             deathStartPosition = transform.position;
@@ -240,7 +240,7 @@ namespace DeckBattle
             attackTimer = 0f;
             damageTimer = 0f;
             deathTimer = 0f;
-            KillMeleeAttackSequence();
+            KillAttackSequence();
             if (modelRoot != null)
             {
                 modelRoot.localScale = baseModelScale;
@@ -278,7 +278,7 @@ namespace DeckBattle
             moveTo = target;
             moveElapsed = 0f;
             moveDuration = duration;
-            KillMeleeAttackSequence();
+            KillAttackSequence();
             FaceWorldPosition(target);
             isMoving = true;
         }
@@ -338,7 +338,7 @@ namespace DeckBattle
 
                 if (deathTimer <= 0f)
                 {
-                    KillMeleeAttackSequence();
+                    KillAttackSequence();
                     gameObject.SetActive(false);
                     return;
                 }
@@ -362,15 +362,20 @@ namespace DeckBattle
             return side + "_Unit_" + runtimeId + "_" + displayName;
         }
 
-        private void KillMeleeAttackSequence()
+        private void KillAttackSequence()
         {
-            if (meleeAttackSequence == null)
+            if (attackSequence == null)
             {
                 return;
             }
 
-            meleeAttackSequence.Kill();
-            meleeAttackSequence = null;
+            Sequence sequence = attackSequence;
+            attackSequence = null;
+            sequence.Kill();
+            if (modelRoot != null)
+            {
+                modelRoot.localRotation = attackSequenceStartRotation;
+            }
         }
     }
 }
