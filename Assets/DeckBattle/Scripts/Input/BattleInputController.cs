@@ -65,6 +65,8 @@ namespace DeckBattle
 
         private void OnDisable()
         {
+            RestoreDraggedCardView();
+
             if (battleController != null)
             {
                 battleController.StateChanged -= HandleBattleStateChanged;
@@ -121,7 +123,7 @@ namespace DeckBattle
             if (uiController != null)
             {
                 uiController.ShowCardDetails(card);
-                uiController.ShowCardGhost(card, screenPosition);
+                uiController.BeginCardDragVisual(cardView, screenPosition);
             }
 
             UpdateCardDrag(cardView, screenPosition);
@@ -137,10 +139,13 @@ namespace DeckBattle
 
             if (uiController != null)
             {
-                uiController.MoveCardGhost(screenPosition);
+                uiController.MoveCardDragVisual(cardView, screenPosition);
             }
 
-            HexTileView tile = RaycastForTile(screenPosition);
+            Vector2 hexScreenPosition = uiController != null
+                ? uiController.GetCardDragHexScreenPosition(screenPosition)
+                : screenPosition;
+            HexTileView tile = RaycastForTile(hexScreenPosition);
             bool legal = false;
             RuntimeUnit spellTargetUnit = null;
             BattleState state = battleController != null ? battleController.State : null;
@@ -178,6 +183,8 @@ namespace DeckBattle
 
             UpdateCardDrag(cardView, screenPosition);
 
+            RestoreDraggedCardView();
+
             if (currentDragTile != null && currentDragTileLegal && battleController != null)
             {
                 PlayDraggedCard();
@@ -185,7 +192,6 @@ namespace DeckBattle
 
             if (uiController != null)
             {
-                uiController.HideCardGhost();
                 uiController.HideCardDetails();
             }
 
@@ -735,6 +741,7 @@ namespace DeckBattle
             }
 
             RestorePressedUnitView();
+            RestoreDraggedCardView();
 
             mode = InputMode.Idle;
             draggedCard = null;
@@ -763,6 +770,21 @@ namespace DeckBattle
             if (boardPresenter != null)
             {
                 boardPresenter.ClearAllHighlights();
+            }
+        }
+
+        private void RestoreDraggedCardView()
+        {
+            if (draggedCardView == null)
+            {
+                return;
+            }
+
+            CardView cardView = draggedCardView;
+            draggedCardView = null;
+            if (uiController != null)
+            {
+                uiController.EndCardDragVisual(cardView);
             }
         }
 

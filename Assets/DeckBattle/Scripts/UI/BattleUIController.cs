@@ -31,20 +31,20 @@ namespace DeckBattle
         [Header("Hand")]
         [SerializeField] private RectTransform handRoot;
         [SerializeField] private CardView cardViewPrefab;
+        [SerializeField] private float handSidePadding = 18f;
+        [SerializeField] private float preferredHandSpacing = 14f;
+        [SerializeField] private float selectedCardLift = 22f;
 
         [Header("Card Details")]
         [SerializeField] private CardDetailsPopupView cardDetailsPopup;
 
-        [Header("Drag Ghost")]
-        [SerializeField] private RectTransform cardGhostRoot;
-        [SerializeField] private CardFaceView ghostCardFaceView;
-        [SerializeField] private TextMeshProUGUI ghostNameText;
-        [SerializeField] private TextMeshProUGUI ghostCostText;
-        [SerializeField] private CanvasGroup ghostCanvasGroup;
+        [Header("Card Drag")]
+        [SerializeField] private float dragHexOffsetUi = 72f;
 
         private readonly List<CardView> cardViews = new List<CardView>(8);
         private readonly List<CardRuntimeState> shownHand = new List<CardRuntimeState>(8);
         private CardRuntimeState selectedCard;
+        private Canvas uiCanvas;
 
         private int shownPlayerHp = int.MinValue;
         private int shownEnemyHp = int.MinValue;
@@ -61,6 +61,8 @@ namespace DeckBattle
 
         private void Awake()
         {
+            uiCanvas = GetComponent<Canvas>();
+
             if (readyButton != null)
             {
                 readyButton.onClick.AddListener(HandleReadyClicked);
@@ -71,8 +73,20 @@ namespace DeckBattle
                 mainMenuButton.onClick.AddListener(HandleMainMenuClicked);
             }
 
-            HideCardGhost();
             HideCardDetails();
+        }
+
+        private void OnValidate()
+        {
+            handSidePadding = Mathf.Max(0f, handSidePadding);
+            preferredHandSpacing = Mathf.Max(0f, preferredHandSpacing);
+            selectedCardLift = Mathf.Max(0f, selectedCardLift);
+            dragHexOffsetUi = Mathf.Max(0f, dragHexOffsetUi);
+        }
+
+        private void OnRectTransformDimensionsChange()
+        {
+            LayoutHand();
         }
 
         private void OnEnable()
@@ -109,58 +123,43 @@ namespace DeckBattle
             RefreshHand(state.Player.Hand);
         }
 
-        public void ShowCardGhost(CardRuntimeState card, Vector2 screenPosition)
+        public void BeginCardDragVisual(CardView cardView, Vector2 screenPosition)
         {
-            if (cardGhostRoot == null)
+            if (cardView == null)
             {
                 return;
             }
 
-            CardDefinition definition = card != null ? card.Definition : null;
-            if (ghostCardFaceView != null)
-            {
-                ghostCardFaceView.Bind(card);
-                ghostCardFaceView.SetVisualState(CardVisualState.Dragging);
-            }
-            else
-            {
-                if (ghostNameText != null)
-                {
-                    ghostNameText.text = definition != null ? definition.DisplayName : string.Empty;
-                }
-
-                if (ghostCostText != null)
-                {
-                    ghostCostText.text = definition != null ? definition.ApCost.ToString() : string.Empty;
-                }
-            }
-
-            if (ghostCanvasGroup != null)
-            {
-                ghostCanvasGroup.alpha = 0.86f;
-                ghostCanvasGroup.blocksRaycasts = false;
-            }
-
-            cardGhostRoot.gameObject.SetActive(true);
-            MoveCardGhost(screenPosition);
+            cardView.transform.SetParent(transform, true);
+            cardView.transform.SetAsLastSibling();
+            MoveCardDragVisual(cardView, screenPosition);
         }
 
-        public void MoveCardGhost(Vector2 screenPosition)
+        public void MoveCardDragVisual(CardView cardView, Vector2 screenPosition)
         {
-            if (cardGhostRoot == null)
+            if (cardView == null)
             {
                 return;
             }
 
-            cardGhostRoot.position = screenPosition;
+            cardView.transform.position = screenPosition;
         }
 
-        public void HideCardGhost()
+        public void EndCardDragVisual(CardView cardView)
         {
-            if (cardGhostRoot != null)
+            if (cardView == null || handRoot == null)
             {
-                cardGhostRoot.gameObject.SetActive(false);
+                return;
             }
+
+            cardView.transform.SetParent(handRoot, false);
+            LayoutHand();
+        }
+
+        public Vector2 GetCardDragHexScreenPosition(Vector2 screenPosition)
+        {
+            float scaleFactor = uiCanvas != null ? uiCanvas.scaleFactor : 1f;
+            return screenPosition + Vector2.up * dragHexOffsetUi * scaleFactor;
         }
 
         public void ShowCardDetails(CardRuntimeState card)
@@ -190,6 +189,8 @@ namespace DeckBattle
                     view.SetSelected(card != null && view.Card == card);
                 }
             }
+
+            LayoutHand();
         }
 
         private void RefreshHud(BattleState state)
@@ -312,6 +313,8 @@ namespace DeckBattle
                 cardViews[i].Bind(card, inputController);
                 cardViews[i].SetSelected(card == selectedCard);
             }
+
+            LayoutHand();
         }
 
         private void HideCardDetailsIfMissingFromHand(List<CardRuntimeState> hand)
@@ -384,6 +387,84 @@ namespace DeckBattle
             {
                 CardView view = Instantiate(cardViewPrefab, handRoot);
                 cardViews.Add(view);
+            }
+        }
+
+        private void LayoutHand()
+        {
+            if (handRoot == null)
+            {
+                return;
+            }
+
+            int activeCount = 0;
+            float cardWidth = 0f;
+            for (int i = 0; i < cardViews.Count; i++)
+            {
+                CardView view = cardViews[i];
+                if (view == null || !view.gameObject.activeSelf || view.transform.parent != handRoot)
+                {
+                    continue;
+                }
+
+                if (activeCount == 0)
+                {
+                    RectTransform cardRect = view.transform as RectTransform;
+                    if (cardRect != null)
+                    {
+                        cardWidth = cardRect.rect.width;
+                    }
+                }
+
+                activeCount++;
+            }
+
+            if (activeCount == 0 || cardWidth <= 0f)
+            {
+                return;
+            }
+
+            float availableWidth = Mathf.Max(0f, handRoot.rect.width - handSidePadding * 2f);
+            float step = 0f;
+            if (activeCount > 1)
+            {
+                float maximumStep = Mathf.Max(0f, (availableWidth - cardWidth) / (activeCount - 1));
+                step = Mathf.Min(cardWidth + preferredHandSpacing, maximumStep);
+            }
+
+            float span = cardWidth + step * (activeCount - 1);
+            float firstCardX = -span * 0.5f + cardWidth * 0.5f;
+            int layoutIndex = 0;
+            CardView selectedView = null;
+
+            for (int i = 0; i < cardViews.Count; i++)
+            {
+                CardView view = cardViews[i];
+                if (view == null || !view.gameObject.activeSelf || view.transform.parent != handRoot)
+                {
+                    continue;
+                }
+
+                RectTransform cardRect = view.transform as RectTransform;
+                if (cardRect == null)
+                {
+                    continue;
+                }
+
+                bool isSelected = selectedCard != null && view.Card == selectedCard;
+                cardRect.anchoredPosition = new Vector2(firstCardX + step * layoutIndex, isSelected ? selectedCardLift : 0f);
+                view.transform.SetSiblingIndex(layoutIndex);
+                if (isSelected)
+                {
+                    selectedView = view;
+                }
+
+                layoutIndex++;
+            }
+
+            if (selectedView != null)
+            {
+                selectedView.transform.SetAsLastSibling();
             }
         }
 
