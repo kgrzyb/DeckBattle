@@ -21,6 +21,8 @@ namespace DeckBattle
         public HexCoord CurrentHex;
         public HexCoord PreviousHex;
         public int TargetUnitId;
+        public int EngagedTargetUnitId;
+        public int PursuitStepsUsed;
         public double NextAttackTime;
         public UnitAttackPhase AttackPhase;
         public int LockedAttackTargetUnitId;
@@ -56,6 +58,7 @@ namespace DeckBattle
             PreviousHex = startHex;
             CurrentHp = definition.MaxHp;
             TargetUnitId = NoTargetUnitId;
+            ResetPursuit();
             NextAttackTime = double.PositiveInfinity;
             ResetAttackCycle();
             CurrentMana = 0;
@@ -76,12 +79,54 @@ namespace DeckBattle
 
         public void SetTarget(UnitRuntimeState target)
         {
-            TargetUnitId = target != null ? target.UnitId : NoTargetUnitId;
+            int targetUnitId = target != null ? target.UnitId : NoTargetUnitId;
+            if (TargetUnitId != targetUnitId)
+            {
+                TargetUnitId = targetUnitId;
+                ResetPursuit();
+            }
         }
 
         public void ClearTarget()
         {
             TargetUnitId = NoTargetUnitId;
+            ResetPursuit();
+        }
+
+        public void MarkTargetEngaged(int targetUnitId)
+        {
+            if (targetUnitId == NoTargetUnitId || TargetUnitId != targetUnitId)
+            {
+                return;
+            }
+
+            EngagedTargetUnitId = targetUnitId;
+            PursuitStepsUsed = 0;
+        }
+
+        public void RecordPursuitStep(int targetUnitId)
+        {
+            if (targetUnitId == NoTargetUnitId
+                || TargetUnitId != targetUnitId
+                || EngagedTargetUnitId != targetUnitId)
+            {
+                return;
+            }
+
+            PursuitStepsUsed = Math.Min(int.MaxValue, PursuitStepsUsed + 1);
+        }
+
+        public bool CanPursueTarget(int targetUnitId, int maxPursuitSteps)
+        {
+            return targetUnitId != NoTargetUnitId
+                && (EngagedTargetUnitId != targetUnitId
+                    || PursuitStepsUsed < Math.Max(0, maxPursuitSteps));
+        }
+
+        public void ResetPursuit()
+        {
+            EngagedTargetUnitId = NoTargetUnitId;
+            PursuitStepsUsed = 0;
         }
 
         public void ResetForBattle(HexCoord startHex)
@@ -89,7 +134,7 @@ namespace DeckBattle
             CurrentHex = startHex;
             PreviousHex = startHex;
             CurrentHp = Definition.MaxHp;
-            TargetUnitId = NoTargetUnitId;
+            ClearTarget();
             NextAttackTime = double.PositiveInfinity;
             ResetAttackCycle();
             CurrentMana = 0;

@@ -109,6 +109,7 @@ namespace DeckBattle
                 attacker.AttackPhase = UnitAttackPhase.Winddown;
                 attacker.LockedAttackTargetUnitId = UnitRuntimeState.NoTargetUnitId;
                 attacker.WindupEndTime = double.PositiveInfinity;
+                attacker.MarkTargetEngaged(target.UnitId);
 
                 float remainingWinddown = (float)Math.Max(0d, attacker.NextAttackTime - simulation.ElapsedTime);
                 eventQueue?.Enqueue(BattleEvent.AttackFired(attacker.UnitId, target.UnitId, sequenceId, remainingWinddown));

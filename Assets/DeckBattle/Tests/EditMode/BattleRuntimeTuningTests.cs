@@ -5,6 +5,14 @@ namespace DeckBattle.Tests
     public sealed class BattleRuntimeTuningTests
     {
         [Test]
+        public void PursuitLimit_DefaultsToTwoAndClampsNegativeValues()
+        {
+            Assert.AreEqual(2, BattleRuntimeTuning.Default.MaxPursuitStepsAfterAttack);
+            Assert.AreEqual(2, new BattleRuntimeTuning(1f, 0).MaxPursuitStepsAfterAttack);
+            Assert.AreEqual(0, new BattleRuntimeTuning(1f, 0, 0.4f, -1).MaxPursuitStepsAfterAttack);
+        }
+
+        [Test]
         public void AttackRangeBonus_AllowsUnitToAttackFromTunedRange()
         {
             UnitDefinition player = CreateUnit("player", 5, 5, 1, 1f);

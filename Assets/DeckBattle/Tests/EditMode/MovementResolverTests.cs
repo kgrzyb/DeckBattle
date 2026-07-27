@@ -51,6 +51,61 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void ResolveMovement_AllowsInitialApproachBeyondTwoStepsBeforeFirstAttack()
+        {
+            BattleSimulation simulation = CreateStationaryTargetDuel();
+            UnitRuntimeState attacker = simulation.Units[0];
+
+            for (int step = 0; step < 3; step++)
+            {
+                Assert.AreEqual(1, MovementResolver.ResolveMovement(simulation));
+                simulation.CompleteUnitMovement(attacker);
+            }
+
+            Assert.AreEqual(new HexCoord(3, 0), attacker.CurrentHex);
+            Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, attacker.EngagedTargetUnitId);
+            Assert.AreEqual(0, attacker.PursuitStepsUsed);
+        }
+
+        [Test]
+        public void ResolveMovement_StopsAfterTwoCommittedPursuitSteps()
+        {
+            BattleSimulation simulation = CreateStationaryTargetDuel();
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
+            attacker.MarkTargetEngaged(target.UnitId);
+
+            Assert.AreEqual(1, MovementResolver.ResolveMovement(simulation));
+            simulation.CompleteUnitMovement(attacker);
+            Assert.AreEqual(1, attacker.PursuitStepsUsed);
+
+            Assert.AreEqual(1, MovementResolver.ResolveMovement(simulation));
+            simulation.CompleteUnitMovement(attacker);
+            Assert.AreEqual(2, attacker.PursuitStepsUsed);
+
+            Assert.AreEqual(0, MovementResolver.ResolveMovement(simulation));
+            Assert.AreEqual(new HexCoord(2, 0), attacker.CurrentHex);
+            Assert.AreEqual(target.UnitId, attacker.TargetUnitId);
+        }
+
+        [Test]
+        public void PlanMovementDestinations_DoesNotSpendPursuitStep()
+        {
+            BattleSimulation simulation = CreateStationaryTargetDuel();
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
+            attacker.MarkTargetEngaged(target.UnitId);
+            attacker.RecordPursuitStep(target.UnitId);
+            var workspace = new MovementResolver.Workspace(25, 2);
+            var destinations = new Dictionary<int, HexCoord>();
+
+            Assert.AreEqual(1, MovementResolver.PlanMovementDestinations(simulation, workspace, destinations));
+
+            Assert.AreEqual(1, attacker.PursuitStepsUsed);
+            Assert.AreEqual(new HexCoord(1, 0), destinations[attacker.UnitId]);
+        }
+
+        [Test]
         public void ResolveMovement_ContestedDestinationUsesDeploymentOrderNotPathLength()
         {
             HexBoard board = CreateContestedBoard();
@@ -164,6 +219,19 @@ namespace DeckBattle.Tests
                 new UnitSpawnData(playerId, melee, BattleSide.Player, new HexCoord(0, 0)),
                 new UnitSpawnData(enemyId, melee, BattleSide.Enemy, new HexCoord(enemyQ, 0))
             });
+        }
+
+        private static BattleSimulation CreateStationaryTargetDuel()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            BattleSimulation simulation = BattleSimulation.Create(new HexBoard(5, 5, 1f), new[]
+            {
+                new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(4, 0))
+            });
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+            simulation.Units[1].AttackPhase = UnitAttackPhase.Windup;
+            return simulation;
         }
 
         private static HexBoard CreateContestedBoard()

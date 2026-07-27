@@ -4,17 +4,23 @@ namespace DeckBattle
 {
     public readonly struct BattleRuntimeTuning
     {
-        public static readonly BattleRuntimeTuning Default = new BattleRuntimeTuning(1f, 0, 0.4f);
+        public static readonly BattleRuntimeTuning Default = new BattleRuntimeTuning(1f, 0, 0.4f, 2);
 
         public readonly float AttackCooldownMultiplier;
         public readonly int AttackRangeBonus;
         public readonly float MovementStepDuration;
+        public readonly int MaxPursuitStepsAfterAttack;
 
-        public BattleRuntimeTuning(float attackCooldownMultiplier, int attackRangeBonus, float movementStepDuration = 0.4f)
+        public BattleRuntimeTuning(
+            float attackCooldownMultiplier,
+            int attackRangeBonus,
+            float movementStepDuration = 0.4f,
+            int maxPursuitStepsAfterAttack = 2)
         {
             AttackCooldownMultiplier = Math.Max(0.01f, attackCooldownMultiplier);
             AttackRangeBonus = attackRangeBonus;
             MovementStepDuration = Math.Max(0.01f, movementStepDuration);
+            MaxPursuitStepsAfterAttack = Math.Max(0, maxPursuitStepsAfterAttack);
         }
 
         public int GetAttackRange(UnitDefinition definition)

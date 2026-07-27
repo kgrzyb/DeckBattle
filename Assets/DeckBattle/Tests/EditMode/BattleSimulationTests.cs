@@ -125,6 +125,7 @@ namespace DeckBattle.Tests
             UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
             var unit = new UnitRuntimeState(1, definition, BattleSide.Player, new HexCoord(0, 0));
             var target = new UnitRuntimeState(2, definition, BattleSide.Enemy, new HexCoord(1, 0));
+            var replacementTarget = new UnitRuntimeState(3, definition, BattleSide.Enemy, new HexCoord(1, 1));
 
             unit.CurrentHp = 1;
             unit.CurrentHex = new HexCoord(2, 2);
@@ -133,12 +134,34 @@ namespace DeckBattle.Tests
             unit.SetTarget(target);
 
             Assert.AreEqual(2, unit.TargetUnitId);
+            Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, unit.EngagedTargetUnitId);
+            Assert.AreEqual(0, unit.PursuitStepsUsed);
+
+            unit.MarkTargetEngaged(target.UnitId);
+            unit.RecordPursuitStep(target.UnitId);
+
+            Assert.AreEqual(target.UnitId, unit.EngagedTargetUnitId);
+            Assert.AreEqual(1, unit.PursuitStepsUsed);
+            Assert.IsTrue(unit.CanPursueTarget(target.UnitId, 2));
+
+            unit.SetTarget(target);
+
+            Assert.AreEqual(target.UnitId, unit.EngagedTargetUnitId);
+            Assert.AreEqual(1, unit.PursuitStepsUsed);
+
+            unit.SetTarget(replacementTarget);
+
+            Assert.AreEqual(replacementTarget.UnitId, unit.TargetUnitId);
+            Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, unit.EngagedTargetUnitId);
+            Assert.AreEqual(0, unit.PursuitStepsUsed);
 
             unit.ResetForBattle(new HexCoord(0, 1));
 
             Assert.AreEqual(new HexCoord(0, 1), unit.CurrentHex);
             Assert.AreEqual(definition.MaxHp, unit.CurrentHp);
             Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, unit.TargetUnitId);
+            Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, unit.EngagedTargetUnitId);
+            Assert.AreEqual(0, unit.PursuitStepsUsed);
             Assert.IsTrue(double.IsPositiveInfinity(unit.NextAttackTime));
             Assert.AreEqual(0, unit.CurrentMana);
             Assert.IsTrue(unit.IsAlive);

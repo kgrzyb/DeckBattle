@@ -155,7 +155,11 @@ namespace DeckBattle
                 TargetSelector.TargetSelection selection = targetSelections[i];
                 AttackPositionSelector.AttackPathResult path = selection.AttackPath;
                 HexCoord destination = path.NextStep;
-                if (!selection.HasTarget || path.IsAlreadyInRange || destination == unit.CurrentHex
+                if (!selection.HasTarget
+                    || !unit.CanPursueTarget(
+                        selection.Target.UnitId,
+                        simulation.Tuning.MaxPursuitStepsAfterAttack)
+                    || path.IsAlreadyInRange || destination == unit.CurrentHex
                     || simulation.Board.Distance(unit.CurrentHex, destination) != 1
                     || !simulation.Board.IsWalkable(destination)
                     || workspace.OccupiedAtCollectStart.Contains(destination))
@@ -208,6 +212,7 @@ namespace DeckBattle
 
                 HexCoord from = winner.Unit.CurrentHex;
                 simulation.StartUnitMovement(winner.Unit, winner.Destination);
+                winner.Unit.RecordPursuitStep(winner.Unit.TargetUnitId);
                 if (eventQueue != null)
                 {
                     eventQueue.Enqueue(BattleEvent.UnitMoved(winner.Unit.UnitId, from, winner.Destination));

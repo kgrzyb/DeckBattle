@@ -40,6 +40,8 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1, fireTick.Attacks);
             Assert.AreEqual(UnitAttackPhase.Winddown, simulation.Units[0].AttackPhase);
             Assert.AreEqual(4, simulation.Units[1].CurrentHp);
+            Assert.AreEqual(simulation.Units[1].UnitId, simulation.Units[0].EngagedTargetUnitId);
+            Assert.AreEqual(0, simulation.Units[0].PursuitStepsUsed);
             Assert.That(FindEvent(events, BattleEventType.AttackFired).Duration, Is.EqualTo(0.75f).Within(0.000001f));
         }
 
