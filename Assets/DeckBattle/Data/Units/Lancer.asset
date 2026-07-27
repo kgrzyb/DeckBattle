@@ -12,27 +12,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
   m_Name: Lancer
   m_EditorClassIdentifier: 
-  CardId: tankbuster
-  DisplayName: Tankbuster
+  CardId: lancer
+  DisplayName: Lancer
   Rarity: 0
-  ApCost: 2
+  ApCost: 3
   CardArt: {fileID: 0}
   cardKind: 0
   UnitType: 0
-  MaxHp: 60
-  Attack: 15
-  Power: 2
-  AttackRange: 1
-  CritChance: 0
+  MaxHp: 50
+  Attack: 10
+  Power: 3
+  AttackRange: 2
+  CritChance: 25
   CritMultiplier: 2
-  AttackCooldown: 1.1
+  AttackCooldown: 1.5
   AttackWindupPercent: 0.25
   ManaThreshold: 100
   ManaPerAttack: 10
   ManaPerDamageTaken: 10
   Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
-  Armor: 20
-  ArmorPenetration: 75
+  Armor: 0
+  ArmorPenetration: 0
   Projectile: {fileID: 0}
   UnitPrefab: {fileID: 7506552908754966910, guid: 4af6bc9af37bc3044a281834f8ca89b6,
     type: 3}

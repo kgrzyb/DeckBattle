@@ -15,7 +15,7 @@ MonoBehaviour:
   CardId: tankbuster
   DisplayName: Tankbuster
   Rarity: 0
-  ApCost: 2
+  ApCost: 4
   CardArt: {fileID: 0}
   cardKind: 0
   UnitType: 0
