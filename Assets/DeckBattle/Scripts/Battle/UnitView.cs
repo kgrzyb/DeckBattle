@@ -69,9 +69,19 @@ namespace DeckBattle
 
         private void Update()
         {
+            if (!HasActiveFrameWork)
+            {
+                return;
+            }
+
             float deltaTime = Time.deltaTime;
             UpdateMovement(deltaTime);
             UpdateVisualTimers(deltaTime);
+        }
+
+        private bool HasActiveFrameWork
+        {
+            get { return isMoving || attackTimer > 0f || damageTimer > 0f || isDying; }
         }
 
         private void OnDisable()
@@ -190,7 +200,11 @@ namespace DeckBattle
                 return;
             }
 
-            modelRoot.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up) * baseModelRotation;
+            Quaternion targetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up) * baseModelRotation;
+            if (Quaternion.Angle(modelRoot.rotation, targetRotation) > 0.01f)
+            {
+                modelRoot.rotation = targetRotation;
+            }
         }
 
         public void PlayDamage(int remainingHp)
@@ -321,12 +335,14 @@ namespace DeckBattle
                 return;
             }
 
+            bool updateScale = false;
             float pulseScale = 1f;
             if (attackTimer > 0f)
             {
                 attackTimer = Mathf.Max(0f, attackTimer - deltaTime);
                 float normalized = attackPulseDuration > 0f ? attackTimer / attackPulseDuration : 0f;
                 pulseScale += Mathf.Sin((1f - normalized) * Mathf.PI) * 0.12f;
+                updateScale = true;
             }
 
             if (isDying)
@@ -335,6 +351,7 @@ namespace DeckBattle
                 float normalized = deathDuration > 0f ? deathTimer / deathDuration : 0f;
                 pulseScale *= Mathf.Clamp01(normalized);
                 transform.position = deathStartPosition + Vector3.down * ((1f - normalized) * deathSinkDistance);
+                updateScale = true;
 
                 if (deathTimer <= 0f)
                 {
@@ -344,7 +361,14 @@ namespace DeckBattle
                 }
             }
 
-            modelRoot.localScale = baseModelScale * pulseScale;
+            if (updateScale)
+            {
+                modelRoot.localScale = baseModelScale * pulseScale;
+            }
+            else if (modelRoot.localScale != baseModelScale)
+            {
+                modelRoot.localScale = baseModelScale;
+            }
 
             if (damageTimer > 0f)
             {

@@ -120,7 +120,7 @@ namespace DeckBattle
             state.BeginRoundStart();
             lastCombatResult = null;
             lastRoundResolutionResult = null;
-            boardPresenter.Build(state.Board);
+            boardPresenter.EnsureBuilt(state.Board);
 
             ProgressAutomaticFlow();
             RefreshUnits();

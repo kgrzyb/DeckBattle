@@ -14,6 +14,13 @@ namespace DeckBattle
         private readonly Stack<UnitStatusOverlayView> pooledOverlays = new Stack<UnitStatusOverlayView>(16);
 
         private RectTransform cachedRoot;
+        private Matrix4x4 lastWorldToCameraMatrix;
+        private Matrix4x4 lastProjectionMatrix;
+        private Rect lastCameraPixelRect;
+        private Rect lastRootRect;
+        private int lastScreenWidth;
+        private int lastScreenHeight;
+        private bool projectionStateInitialized;
 
         private void Awake()
         {
@@ -30,9 +37,10 @@ namespace DeckBattle
                 return;
             }
 
+            bool cameraOrRootChanged = HasProjectionStateChanged(root, camera);
             foreach (TrackedOverlay tracked in activeOverlays.Values)
             {
-                UpdateOverlayPosition(tracked, root, camera);
+                UpdateOverlayPosition(tracked, root, camera, cameraOrRootChanged);
             }
         }
 
@@ -120,6 +128,7 @@ namespace DeckBattle
             tracked.Target = target;
             tracked.MaxHp = Mathf.Max(1, maxHp);
             tracked.MaxMana = Mathf.Max(1, maxMana);
+            tracked.ResetPositionCache();
             tracked.View.Bind(unitId, target, displayName, currentHp, tracked.MaxHp, currentMana, tracked.MaxMana);
         }
 
@@ -168,7 +177,33 @@ namespace DeckBattle
             return worldCamera;
         }
 
-        private void UpdateOverlayPosition(TrackedOverlay tracked, RectTransform root, Camera camera)
+        private bool HasProjectionStateChanged(RectTransform root, Camera camera)
+        {
+            Matrix4x4 worldToCameraMatrix = camera.worldToCameraMatrix;
+            Matrix4x4 projectionMatrix = camera.projectionMatrix;
+            Rect cameraPixelRect = camera.pixelRect;
+            Rect rootRect = root.rect;
+            int screenWidth = Screen.width;
+            int screenHeight = Screen.height;
+            bool changed = !projectionStateInitialized
+                || lastWorldToCameraMatrix != worldToCameraMatrix
+                || lastProjectionMatrix != projectionMatrix
+                || lastCameraPixelRect != cameraPixelRect
+                || lastRootRect != rootRect
+                || lastScreenWidth != screenWidth
+                || lastScreenHeight != screenHeight;
+
+            lastWorldToCameraMatrix = worldToCameraMatrix;
+            lastProjectionMatrix = projectionMatrix;
+            lastCameraPixelRect = cameraPixelRect;
+            lastRootRect = rootRect;
+            lastScreenWidth = screenWidth;
+            lastScreenHeight = screenHeight;
+            projectionStateInitialized = true;
+            return changed;
+        }
+
+        private void UpdateOverlayPosition(TrackedOverlay tracked, RectTransform root, Camera camera, bool cameraOrRootChanged)
         {
             UnitStatusOverlayView view = tracked.View;
             if (view == null)
@@ -179,26 +214,51 @@ namespace DeckBattle
             Transform target = tracked.Target;
             if (target == null)
             {
-                view.SetVisible(false);
+                SetVisible(tracked, false);
                 return;
             }
 
-            Vector3 screenPosition = camera.WorldToScreenPoint(target.position + worldOffset);
+            Vector3 targetPosition = target.position;
+            if (!cameraOrRootChanged && tracked.HasPositionCache && tracked.LastTargetPosition == targetPosition)
+            {
+                return;
+            }
+
+            tracked.LastTargetPosition = targetPosition;
+            tracked.HasPositionCache = true;
+            Vector3 screenPosition = camera.WorldToScreenPoint(targetPosition + worldOffset);
             if (screenPosition.z <= 0f)
             {
-                view.SetVisible(false);
+                SetVisible(tracked, false);
                 return;
             }
 
             Vector2 anchoredPosition;
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screenPosition, null, out anchoredPosition))
             {
-                view.SetVisible(false);
+                SetVisible(tracked, false);
                 return;
             }
 
-            view.RectTransform.anchoredPosition = anchoredPosition;
-            view.SetVisible(true);
+            if (!tracked.HasAnchoredPosition || (tracked.LastAnchoredPosition - anchoredPosition).sqrMagnitude > 0.0001f)
+            {
+                view.RectTransform.anchoredPosition = anchoredPosition;
+                tracked.LastAnchoredPosition = anchoredPosition;
+                tracked.HasAnchoredPosition = true;
+            }
+
+            SetVisible(tracked, true);
+        }
+
+        private static void SetVisible(TrackedOverlay tracked, bool visible)
+        {
+            if (tracked.IsVisible == visible)
+            {
+                return;
+            }
+
+            tracked.View.SetVisible(visible);
+            tracked.IsVisible = visible;
         }
 
         private sealed class TrackedOverlay
@@ -207,10 +267,22 @@ namespace DeckBattle
             public Transform Target;
             public int MaxHp;
             public int MaxMana;
+            public Vector3 LastTargetPosition;
+            public Vector2 LastAnchoredPosition;
+            public bool HasPositionCache;
+            public bool HasAnchoredPosition;
+            public bool IsVisible;
 
             public TrackedOverlay(UnitStatusOverlayView view)
             {
                 View = view;
+            }
+
+            public void ResetPositionCache()
+            {
+                HasPositionCache = false;
+                HasAnchoredPosition = false;
+                IsVisible = false;
             }
         }
     }

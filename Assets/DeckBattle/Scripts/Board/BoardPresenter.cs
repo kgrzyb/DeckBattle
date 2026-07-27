@@ -19,16 +19,27 @@ namespace DeckBattle
             get { return board; }
         }
 
-        public void Build(HexBoard sourceBoard)
+        public void EnsureBuilt(HexBoard sourceBoard)
         {
-            board = sourceBoard;
-            ClearExistingTiles();
-
-            if (board == null || tilePrefab == null)
+            if (sourceBoard == null || tilePrefab == null)
             {
                 Debug.LogError("BoardPresenter requires a board and tile prefab.", this);
                 return;
             }
+
+            if (HasMatchingTopology(sourceBoard))
+            {
+                board = sourceBoard;
+                return;
+            }
+
+            Rebuild(sourceBoard);
+        }
+
+        private void Rebuild(HexBoard sourceBoard)
+        {
+            board = sourceBoard;
+            ClearExistingTiles();
 
             Transform parent = tileRoot != null ? tileRoot : transform;
             Quaternion tileRotation = tilePrefab.transform.localRotation;
@@ -130,6 +141,41 @@ namespace DeckBattle
             {
                 selectedTile.SetSelectedHighlight();
             }
+        }
+
+        private bool HasMatchingTopology(HexBoard sourceBoard)
+        {
+            if (board == null || board.Width != sourceBoard.Width || board.Height != sourceBoard.Height)
+            {
+                return false;
+            }
+
+            int expectedTileCount = sourceBoard.Width * sourceBoard.Height;
+            if (tiles.Count != expectedTileCount || tileByCoord.Count != expectedTileCount)
+            {
+                return false;
+            }
+
+            Transform parent = tileRoot != null ? tileRoot : transform;
+            if (parent.childCount != expectedTileCount)
+            {
+                return false;
+            }
+
+            for (int r = 0; r < sourceBoard.Height; r++)
+            {
+                for (int q = 0; q < sourceBoard.Width; q++)
+                {
+                    HexCoord coord = new HexCoord(q, r);
+                    HexTileView tile;
+                    if (!tileByCoord.TryGetValue(coord, out tile) || tile == null || tile.Coord != coord)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         public void HighlightCardPlayableTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
@@ -260,23 +306,15 @@ namespace DeckBattle
 
         private void ClearExistingTiles()
         {
-            for (int i = tiles.Count - 1; i >= 0; i--)
-            {
-                if (tiles[i] != null)
-                {
-                    DestroyTileObject(tiles[i].gameObject);
-                }
-            }
-
-            tiles.Clear();
-            tileByCoord.Clear();
-            highlightedTile = null;
-
             Transform parent = tileRoot != null ? tileRoot : transform;
             for (int i = parent.childCount - 1; i >= 0; i--)
             {
                 DestroyTileObject(parent.GetChild(i).gameObject);
             }
+
+            tiles.Clear();
+            tileByCoord.Clear();
+            highlightedTile = null;
         }
 
         private static void DestroyTileObject(GameObject tileObject)

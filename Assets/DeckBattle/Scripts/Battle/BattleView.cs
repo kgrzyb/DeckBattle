@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Conditional = System.Diagnostics.ConditionalAttribute;
 using UnityEngine;
 
 namespace DeckBattle
@@ -26,6 +27,10 @@ namespace DeckBattle
         [SerializeField] private PooledBattleEffect attackEffectPrefab;
         [SerializeField] private PooledBattleEffect damageEffectPrefab;
         [SerializeField] private Transform effectRoot;
+
+#if DEVELOPMENT_BUILD && !UNITY_EDITOR
+        [SerializeField] private bool captureDebugSnapshots;
+#endif
 
         private readonly List<UnitSpawnData> spawnBuffer = new List<UnitSpawnData>(16);
         private readonly List<UnitView> activeUnitViews = new List<UnitView>(16);
@@ -183,14 +188,14 @@ namespace DeckBattle
             maxTicksReached = false;
             lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
 
-            boardPresenter.Build(simulation.Board);
+            boardPresenter.EnsureBuilt(simulation.Board);
             if (statusOverlayController != null)
             {
                 statusOverlayController.ReleaseAll();
             }
 
             ReleaseAllUnitViews(reusableUnitViews);
-            debugSnapshot.Capture(simulation, null);
+            CaptureDebugSnapshot(simulation, null);
             for (int i = 0; i < simulation.Units.Count; i++)
             {
                 UnitRuntimeState unit = simulation.Units[i];
@@ -229,7 +234,7 @@ namespace DeckBattle
             maxTicksReached = false;
             lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
             eventQueue.Clear();
-            debugSnapshot.Capture(null, null);
+            CaptureDebugSnapshot(null, null);
             if (releaseUnitViews)
             {
                 if (statusOverlayController != null)
@@ -271,7 +276,7 @@ namespace DeckBattle
                 BattleTickResult result = tickLoop.Tick(simulation, eventQueue);
                 ticksElapsed++;
                 lastTickResult = result;
-                debugSnapshot.Capture(simulation, eventQueue.Events);
+                CaptureDebugSnapshot(simulation, eventQueue.Events);
                 ProcessEvents(eventQueue.Events);
                 FaceIdleUnitsTowardTargets();
                 if (TickProcessed != null)
@@ -347,6 +352,20 @@ namespace DeckBattle
                         break;
                 }
             }
+        }
+
+        [Conditional("UNITY_EDITOR")]
+        [Conditional("DEVELOPMENT_BUILD")]
+        private void CaptureDebugSnapshot(BattleSimulation sourceSimulation, IReadOnlyList<BattleEvent> events)
+        {
+#if UNITY_EDITOR
+            debugSnapshot.Capture(sourceSimulation, events);
+#elif DEVELOPMENT_BUILD
+            if (captureDebugSnapshots)
+            {
+                debugSnapshot.Capture(sourceSimulation, events);
+            }
+#endif
         }
 
         private void FaceIdleUnitsTowardTargets()
