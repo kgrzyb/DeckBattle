@@ -144,7 +144,9 @@ namespace DeckBattle
                 if (unit == null
                     || !unit.IsAlive
                     || unit.IsMoving
-                    || unit.AttackPhase != UnitAttackPhase.AcquireReload
+                    // Once the hit has been committed, the remaining attack cooldown
+                    // must not leave a unit standing still after its target dies.
+                    || unit.AttackPhase == UnitAttackPhase.Windup
                     || !targetSelectionValid[i])
                 {
                     continue;

@@ -33,6 +33,24 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void ResolveMovement_MovesDuringWinddownWhenNextTargetIsOutOfRange()
+        {
+            UnitDefinition melee = CreateUnit("melee", 1);
+            BattleSimulation simulation = BattleSimulation.Create(new HexBoard(5, 5, 1f), new[]
+            {
+                new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(3, 0))
+            });
+            simulation.Units[0].AttackPhase = UnitAttackPhase.Winddown;
+
+            int moved = MovementResolver.ResolveMovement(simulation);
+
+            Assert.AreEqual(1, moved);
+            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+        }
+
+        [Test]
         public void ResolveMovement_ContestedDestinationUsesDeploymentOrderNotPathLength()
         {
             HexBoard board = CreateContestedBoard();

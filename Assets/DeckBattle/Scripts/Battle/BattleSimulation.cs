@@ -195,9 +195,9 @@ namespace DeckBattle
                 throw new InvalidOperationException("Unit is already moving.");
             }
 
-            if (unit.AttackPhase != UnitAttackPhase.AcquireReload)
+            if (unit.AttackPhase == UnitAttackPhase.Windup)
             {
-                throw new InvalidOperationException("Unit cannot start moving during an attack.");
+                throw new InvalidOperationException("Unit cannot start moving during attack windup.");
             }
 
             if (!Board.IsWalkable(destination))
