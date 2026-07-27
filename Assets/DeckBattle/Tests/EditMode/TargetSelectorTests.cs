@@ -112,7 +112,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void SelectTargetOrRetainCurrent_KeepsReachableCurrentTarget_WhenAnotherEnemyIsCloser()
+        public void TrySelectTarget_SelectsCloserReachableEnemyOverCurrentTarget()
         {
             var board = new HexBoard(5, 6, 1f);
             UnitDefinition melee = CreateUnit("melee", 5, 1);
@@ -128,16 +128,20 @@ namespace DeckBattle.Tests
             simulation.Units[2].CurrentHp = 1;
             simulation.Units[0].SetTarget(simulation.Units[1]);
 
-            UnitRuntimeState target = TargetSelector.SelectTargetOrRetainCurrent(
+            bool found = TargetSelector.TrySelectTarget(
                 simulation,
                 simulation.Units[0],
-                new TargetSelector.Workspace(board.Width * board.Height));
+                new TargetSelector.Workspace(board.Width * board.Height),
+                simulation.Units[0].TargetUnitId,
+                out TargetSelector.TargetSelection selection);
 
-            Assert.AreSame(simulation.Units[1], target);
+            Assert.IsTrue(found);
+            Assert.AreSame(simulation.Units[2], selection.Target);
+            Assert.AreEqual(0, selection.AttackPath.PathSteps);
         }
 
         [Test]
-        public void SelectTargetOrRetainCurrent_SelectsNewTarget_WhenCurrentTargetCannotBeReached()
+        public void TrySelectTarget_SelectsNewTarget_WhenCurrentTargetCannotBeReached()
         {
             var board = new HexBoard(5, 6, 1f);
             BlockAttackRing(board, new HexCoord(2, 0), 1);
@@ -153,12 +157,41 @@ namespace DeckBattle.Tests
                 });
             simulation.Units[0].SetTarget(simulation.Units[1]);
 
-            UnitRuntimeState target = TargetSelector.SelectTargetOrRetainCurrent(
+            bool found = TargetSelector.TrySelectTarget(
                 simulation,
                 simulation.Units[0],
-                new TargetSelector.Workspace(board.Width * board.Height));
+                new TargetSelector.Workspace(board.Width * board.Height),
+                simulation.Units[0].TargetUnitId,
+                out TargetSelector.TargetSelection selection);
 
-            Assert.AreSame(simulation.Units[2], target);
+            Assert.IsTrue(found);
+            Assert.AreSame(simulation.Units[2], selection.Target);
+        }
+
+        [Test]
+        public void TrySelectTarget_PrefersCurrentTargetWhenReachableInSameNumberOfSteps()
+        {
+            UnitDefinition melee = CreateUnit("melee", 5, 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(3, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(0, 3))
+                });
+            simulation.Units[0].SetTarget(simulation.Units[1]);
+
+            bool found = TargetSelector.TrySelectTarget(
+                simulation,
+                simulation.Units[0],
+                new TargetSelector.Workspace(30),
+                simulation.Units[0].TargetUnitId,
+                out TargetSelector.TargetSelection selection);
+
+            Assert.IsTrue(found);
+            Assert.AreSame(simulation.Units[1], selection.Target);
+            Assert.AreEqual(2, selection.AttackPath.PathSteps);
         }
 
         [Test]

@@ -3,7 +3,7 @@
 ## Status
 
 Status: zaimplementowany  
-Data aktualizacji: 2026-07-26
+Data aktualizacji: 2026-07-27
 
 Ten dokument opisuje autorytatywny cykl podstawowego ataku używany przez
 `BattleTickLoop`. Starsze plany dotyczące stałych czasów windupu i winddownu
@@ -114,8 +114,13 @@ Jednostka w ruchu:
 
 Jeśli stan ruchu zostanie wykryty podczas windupu, windup jest anulowany i
 emitowany jest `AttackWindupCancelled`. Normalny resolver ruchu nie dopuszcza
-do rozpoczęcia ruchu podczas `Windup` ani `Winddown`; anulowanie jest
-dodatkowym zabezpieczeniem spójności symulacji.
+do rozpoczęcia ruchu podczas `Windup`; anulowanie jest dodatkowym
+zabezpieczeniem spójności symulacji.
+
+Po wykonaniu `Fire` jednostka może rozpocząć ruch również podczas `Winddown`.
+Pozostała część cooldownu nadal odlicza się przez `NextAttackTime`, ale nie
+blokuje dojścia do kolejnego celu, także gdy poprzedni cel właśnie zginął.
+Jednostka w ruchu nadal nie może rozpocząć następnego windupu.
 
 ## Obliczenie czasu cyklu
 
@@ -246,6 +251,11 @@ ElapsedTime >= NextAttackTime
 Po zakończeniu emitowany jest `AttackWinddownEnded`, a jednostka wraca do
 `AcquireReload`. Jeżeli nadal ma legalny cel w zasięgu, może rozpocząć następny
 windup w tym samym wywołaniu resolvera.
+
+Podczas winddownu jednostka może wybrać kolejny cel i rozpocząć krok ruchu,
+jeśli ten cel jest poza zasięgiem. Nie skraca to winddownu ani nie pozwala na
+`Fire` podczas ruchu; jedynie wykorzystuje czas pozostałego cooldownu na
+przemieszczenie.
 
 Maksymalna częstotliwość pozostaje ograniczona przez minimalny jednotickowy
 windup, więc jednostka nie może wykonać dwóch `Fire` w jednym ticku.
@@ -409,6 +419,9 @@ Testy Edit Mode są podstawowym kontraktem implementacji.
 12. Anulowanie windupu, jeśli atakujący znajdzie się w ruchu.
 13. Odrzucenie próby rozpoczęcia ruchu podczas windupu.
 
+`MovementResolverTests` obejmuje ruch podczas `Winddown`, gdy kolejny cel jest
+poza zasięgiem.
+
 Pozostałe zestawy testów weryfikują:
 
 - deterministyczną kolejność ataków;
@@ -422,8 +435,7 @@ Pozostałe zestawy testów weryfikują:
 Aktualny wynik regresji:
 
 ```text
-Edit Mode: 206 / 206 testów zaliczonych
-Kompilacja Unity: 0 błędów, 0 ostrzeżeń
+Edit Mode: 213 / 213 testów zaliczonych
 ```
 
 Projekt nie zawiera obecnie testów Play Mode dla prezentacji ataku.

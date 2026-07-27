@@ -56,40 +56,25 @@ namespace DeckBattle
             return selection.Target;
         }
 
-        public static UnitRuntimeState SelectTargetOrRetainCurrent(BattleSimulation simulation, UnitRuntimeState attacker, Workspace workspace)
+        public static bool TrySelectTarget(
+            BattleSimulation simulation,
+            UnitRuntimeState attacker,
+            Workspace workspace,
+            out TargetSelection selection)
         {
-            if (simulation == null)
-            {
-                throw new ArgumentNullException(nameof(simulation));
-            }
-
-            if (attacker == null)
-            {
-                throw new ArgumentNullException(nameof(attacker));
-            }
-
-            if (workspace == null)
-            {
-                throw new ArgumentNullException(nameof(workspace));
-            }
-
-            if (!attacker.IsAlive)
-            {
-                return null;
-            }
-
-            if (TrySelectTargetOrRetainCurrent(simulation, attacker, workspace, out TargetSelection selection))
-            {
-                return selection.Target;
-            }
-
-            return null;
+            return TrySelectTarget(
+                simulation,
+                attacker,
+                workspace,
+                UnitRuntimeState.NoTargetUnitId,
+                out selection);
         }
 
         public static bool TrySelectTarget(
             BattleSimulation simulation,
             UnitRuntimeState attacker,
             Workspace workspace,
+            int preferredTargetUnitId,
             out TargetSelection selection)
         {
             ValidateArguments(simulation, attacker, workspace);
@@ -100,7 +85,7 @@ namespace DeckBattle
             }
 
             workspace.Clear();
-            return TrySelectTargetByPath(simulation, attacker, workspace, out selection);
+            return TrySelectTargetByPath(simulation, attacker, workspace, preferredTargetUnitId, out selection);
         }
 
         public static TargetSelection SelectTargetSelection(
@@ -116,57 +101,11 @@ namespace DeckBattle
             return selection;
         }
 
-        public static bool TrySelectTargetOrRetainCurrent(
-            BattleSimulation simulation,
-            UnitRuntimeState attacker,
-            Workspace workspace,
-            out TargetSelection selection)
-        {
-            ValidateArguments(simulation, attacker, workspace);
-            if (!attacker.IsAlive)
-            {
-                selection = default;
-                return false;
-            }
-
-            workspace.Clear();
-            if (attacker.TargetUnitId != UnitRuntimeState.NoTargetUnitId
-                && simulation.TryGetUnitById(attacker.TargetUnitId, out UnitRuntimeState currentTarget)
-                && TargetingRules.CanBeTargeted(attacker, currentTarget)
-                && AttackPositionSelector.TrySelectAttackPosition(
-                    simulation,
-                    attacker,
-                    currentTarget,
-                    workspace.AttackPosition,
-                    out AttackPositionSelector.AttackPathResult currentTargetPath))
-            {
-                selection = new TargetSelection(currentTarget, currentTargetPath);
-                return true;
-            }
-
-            // The current target is no longer valid or reachable, so choosing a
-            // replacement is the only case that needs a global path search.
-            workspace.Clear();
-            return TrySelectTargetByPath(simulation, attacker, workspace, out selection);
-        }
-
-        public static TargetSelection SelectTargetOrRetainCurrentSelection(
-            BattleSimulation simulation,
-            UnitRuntimeState attacker,
-            Workspace workspace)
-        {
-            if (!TrySelectTargetOrRetainCurrent(simulation, attacker, workspace, out TargetSelection selection))
-            {
-                return default;
-            }
-
-            return selection;
-        }
-
         private static bool TrySelectTargetByPath(
             BattleSimulation simulation,
             UnitRuntimeState attacker,
             Workspace workspace,
+            int preferredTargetUnitId,
             out TargetSelection selection)
         {
             if (!attacker.IsAlive)
@@ -209,6 +148,7 @@ namespace DeckBattle
                         simulation,
                         attacker,
                         current,
+                        preferredTargetUnitId,
                         out int targetDistance,
                         out int targetHp);
                     if (targetAtPosition != null
@@ -219,6 +159,7 @@ namespace DeckBattle
                             current,
                             levelTarget,
                             levelAttackPosition,
+                            preferredTargetUnitId,
                             board))
                     {
                         levelTarget = targetAtPosition;
@@ -277,6 +218,7 @@ namespace DeckBattle
             BattleSimulation simulation,
             UnitRuntimeState attacker,
             HexCoord attackPosition,
+            int preferredTargetUnitId,
             out int targetDistance,
             out int targetHp)
         {
@@ -302,10 +244,17 @@ namespace DeckBattle
                     continue;
                 }
 
+                bool candidateIsPreferred = candidate.UnitId == preferredTargetUnitId;
+                bool selectedIsPreferred = selected != null && selected.UnitId == preferredTargetUnitId;
                 if (selected == null
-                    || distance < targetDistance
-                    || (distance == targetDistance && candidate.CurrentHp < targetHp)
-                    || (distance == targetDistance && candidate.CurrentHp == targetHp && candidate.UnitId < selectedUnitId))
+                    || (candidateIsPreferred && !selectedIsPreferred)
+                    || (!candidateIsPreferred
+                        && !selectedIsPreferred
+                        && (distance < targetDistance
+                            || (distance == targetDistance && candidate.CurrentHp < targetHp)
+                            || (distance == targetDistance
+                                && candidate.CurrentHp == targetHp
+                                && candidate.UnitId < selectedUnitId))))
                 {
                     selected = candidate;
                     targetDistance = distance;
@@ -324,11 +273,19 @@ namespace DeckBattle
             HexCoord candidateAttackPosition,
             UnitRuntimeState selected,
             HexCoord selectedAttackPosition,
+            int preferredTargetUnitId,
             HexBoard board)
         {
             if (selected == null)
             {
                 return true;
+            }
+
+            bool candidateIsPreferred = candidate.UnitId == preferredTargetUnitId;
+            bool selectedIsPreferred = selected.UnitId == preferredTargetUnitId;
+            if (candidateIsPreferred != selectedIsPreferred)
+            {
+                return candidateIsPreferred;
             }
 
             int selectedTargetDistance = board.Distance(

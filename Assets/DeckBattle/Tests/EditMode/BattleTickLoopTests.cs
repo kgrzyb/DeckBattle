@@ -77,7 +77,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_DoesNotAttackCloserEnemy_WhenCurrentTargetIsReachable()
+        public void Tick_RetargetsToCloserEnemy_WhenCurrentTargetIsReachable()
         {
             UnitDefinition player = CreateUnit("player-melee", 5, 5, 1, 1f);
             UnitDefinition enemy = CreateUnit("enemy-melee", 5, 1, 1, 1f);
@@ -99,11 +99,11 @@ namespace DeckBattle.Tests
 
             Assert.IsFalse(result.BattleEnded);
             Assert.AreEqual(0, result.Attacks);
-            Assert.AreEqual(2, simulation.Units[0].TargetUnitId);
+            Assert.AreEqual(3, simulation.Units[0].TargetUnitId);
             Assert.AreEqual(5, simulation.Units[2].CurrentHp);
             Assert.AreEqual(new HexCoord(0, 0), simulation.Units[0].CurrentHex);
-            Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
-            Assert.IsTrue(simulation.Units[0].IsMoving);
+            Assert.AreEqual(simulation.Units[0].CurrentHex, simulation.Units[0].MovementDestination);
+            Assert.IsFalse(simulation.Units[0].IsMoving);
         }
 
         [Test]

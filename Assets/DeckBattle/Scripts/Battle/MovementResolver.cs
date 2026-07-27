@@ -121,7 +121,12 @@ namespace DeckBattle
                 workspace.TargetSelectionValid[i] = false;
                 UnitRuntimeState unit = simulation.Units[i];
                 if (unit != null && unit.IsAlive
-                    && TargetSelector.TrySelectTargetOrRetainCurrent(simulation, unit, workspace.Targeting, out TargetSelector.TargetSelection selection))
+                    && TargetSelector.TrySelectTarget(
+                        simulation,
+                        unit,
+                        workspace.Targeting,
+                        unit.TargetUnitId,
+                        out TargetSelector.TargetSelection selection))
                 {
                     workspace.TargetSelections[i] = selection;
                     workspace.TargetSelectionValid[i] = true;

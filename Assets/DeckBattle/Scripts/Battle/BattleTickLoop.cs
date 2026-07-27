@@ -106,10 +106,11 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (!TargetSelector.TrySelectTargetOrRetainCurrent(
+                if (!TargetSelector.TrySelectTarget(
                         simulation,
                         unit,
                         targetWorkspace,
+                        unit.TargetUnitId,
                         out TargetSelector.TargetSelection selection))
                 {
                     unit.ClearTarget();
