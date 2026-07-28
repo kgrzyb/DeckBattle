@@ -77,6 +77,41 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Tick_MirroredSimulationsEmitIdenticalEventsAndFinalState()
+        {
+            BattleSimulation first = CreateMeleeDuel();
+            BattleSimulation second = CreateMeleeDuel();
+            var firstLoop = new BattleTickLoop(first, 0.25f);
+            var secondLoop = new BattleTickLoop(second, 0.25f);
+            var firstEvents = new BattleEventQueue();
+            var secondEvents = new BattleEventQueue();
+
+            for (int tick = 0; tick < 16 && !first.IsBattleEnded; tick++)
+            {
+                BattleTickResult firstResult = firstLoop.Tick(first, firstEvents);
+                BattleTickResult secondResult = secondLoop.Tick(second, secondEvents);
+
+                Assert.AreEqual(firstResult.Attacks, secondResult.Attacks);
+                Assert.AreEqual(firstResult.Moves, secondResult.Moves);
+                Assert.AreEqual(firstEvents.Count, secondEvents.Count);
+                for (int eventIndex = 0; eventIndex < firstEvents.Count; eventIndex++)
+                {
+                    AssertEventsEqual(firstEvents[eventIndex], secondEvents[eventIndex]);
+                }
+            }
+
+            Assert.IsTrue(first.IsBattleEnded);
+            Assert.AreEqual(first.HasWinner, second.HasWinner);
+            Assert.AreEqual(first.Winner, second.Winner);
+            for (int i = 0; i < first.Units.Count; i++)
+            {
+                Assert.AreEqual(first.Units[i].CurrentHp, second.Units[i].CurrentHp);
+                Assert.AreEqual(first.Units[i].CurrentHex, second.Units[i].CurrentHex);
+                Assert.AreEqual(first.Units[i].IsDefeated, second.Units[i].IsDefeated);
+            }
+        }
+
+        [Test]
         public void Tick_RetargetsToCloserEnemy_WhenCurrentTargetIsReachable()
         {
             UnitDefinition player = CreateUnit("player-melee", 5, 5, 1, 1f);
@@ -360,6 +395,20 @@ namespace DeckBattle.Tests
             }
 
             Assert.Fail("Expected event type was not emitted: " + type);
+        }
+
+        private static void AssertEventsEqual(BattleEvent first, BattleEvent second)
+        {
+            Assert.AreEqual(first.Type, second.Type);
+            Assert.AreEqual(first.UnitId, second.UnitId);
+            Assert.AreEqual(first.TargetUnitId, second.TargetUnitId);
+            Assert.AreEqual(first.From, second.From);
+            Assert.AreEqual(first.To, second.To);
+            Assert.AreEqual(first.Amount, second.Amount);
+            Assert.AreEqual(first.RemainingHp, second.RemainingHp);
+            Assert.AreEqual(first.CurrentMana, second.CurrentMana);
+            Assert.AreEqual(first.SequenceId, second.SequenceId);
+            Assert.AreEqual(first.StatusKind, second.StatusKind);
         }
 
         private static UnitDefinition CreateUnit(string unitId, int hp, int attack, int attackRange, float attackCooldown)

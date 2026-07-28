@@ -1,15 +1,21 @@
 using System;
+using Unity.Profiling;
 
 namespace DeckBattle
 {
     public static class StatusResolver
     {
+        private static readonly ProfilerMarker ApplyMarker = new ProfilerMarker("DeckBattle.Status.Apply");
+        private static readonly ProfilerMarker ExpiryMarker = new ProfilerMarker("DeckBattle.Status.Expiry");
+
         public static StatusApplicationResult TryApply(
             BattleSimulation simulation,
             UnitRuntimeState target,
             StatusApplicationRequest request,
             BattleEventQueue eventQueue = null)
         {
+            using (ApplyMarker.Auto())
+            {
             if (simulation == null) throw new ArgumentNullException(nameof(simulation));
             if (target == null || !target.IsAlive || request.Definition == null || request.Definition.Kind == StatusKind.None)
             {
@@ -109,10 +115,13 @@ namespace DeckBattle
             StatusInstance applied = target.Statuses[index < target.Statuses.Count ? index : target.Statuses.Count - 1];
             eventQueue?.Enqueue(BattleEvent.StatusApplied(target.UnitId, request.SourceUnitId, definition.Kind, applied.Stacks, duration));
             return StatusApplicationResult.Applied;
+            }
         }
 
         public static void ExpireStatuses(BattleSimulation simulation, BattleEventQueue eventQueue = null)
         {
+            using (ExpiryMarker.Auto())
+            {
             if (simulation == null) throw new ArgumentNullException(nameof(simulation));
             for (int unitIndex = 0; unitIndex < simulation.Units.Count; unitIndex++)
             {
@@ -128,6 +137,7 @@ namespace DeckBattle
                     changed = true;
                 }
                 if (changed) RebuildSnapshot(unit);
+            }
             }
         }
 

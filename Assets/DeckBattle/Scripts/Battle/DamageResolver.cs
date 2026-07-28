@@ -1,11 +1,16 @@
 using System;
+using Unity.Profiling;
 
 namespace DeckBattle
 {
     public static class DamageResolver
     {
+        private static readonly ProfilerMarker ResolveMarker = new ProfilerMarker("DeckBattle.Damage.Resolve");
+
         public static HitResolutionResult Resolve(BattleSimulation simulation, UnitRuntimeState target, DamageRequest request, BattleEventQueue eventQueue)
         {
+            using (ResolveMarker.Auto())
+            {
             if (simulation == null) throw new ArgumentNullException(nameof(simulation));
             if (target == null || !target.IsAlive) return default;
             if (request.IsCritical) eventQueue?.Enqueue(BattleEvent.UnitCrit(request.Source != null ? request.Source.UnitId : 0, target.UnitId));
@@ -48,6 +53,7 @@ namespace DeckBattle
             if (request.CanApplyLifesteal && request.Kind == DamageKind.Direct) ApplyLifesteal(request.Source, remaining, eventQueue);
             if (!died) ResolveMark(simulation, target, request.Source, markDamage, eventQueue);
             return new HitResolutionResult(true, remaining, died);
+            }
         }
 
         private static bool IsGuardable(DamageKind kind)

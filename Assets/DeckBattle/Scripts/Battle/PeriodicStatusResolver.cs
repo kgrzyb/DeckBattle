@@ -1,11 +1,16 @@
 using System;
+using Unity.Profiling;
 
 namespace DeckBattle
 {
     public static class PeriodicStatusResolver
     {
+        private static readonly ProfilerMarker ResolveMarker = new ProfilerMarker("DeckBattle.Status.PeriodicTick");
+
         public static void Resolve(BattleSimulation simulation, BattleEventQueue eventQueue)
         {
+            using (ResolveMarker.Auto())
+            {
             for (int unitIndex = 0; unitIndex < simulation.Units.Count; unitIndex++)
             {
                 UnitRuntimeState target = simulation.Units[unitIndex];
@@ -28,6 +33,7 @@ namespace DeckBattle
                     eventQueue?.Enqueue(BattleEvent.PeriodicEffectTicked(target.UnitId, status.SourceUnitId, status.Kind, amount));
                     if (!target.IsAlive) break;
                 }
+            }
             }
         }
     }

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 459876c70a4d24649aedad3cb8a20ac2, type: 3}
+  m_Name: BattleRuntimeTuningConfig_MVP
+  m_EditorClassIdentifier: 
+  AttackCooldownMultiplier: 1
+  AttackRangeBonus: 0
+  MovementStepDuration: 0.6
+  MaxPursuitStepsAfterAttack: 2
+  MaxStatusesPerUnit: 8
+  MinDamageMultiplier: 0.1
+  MaxDamageMultiplier: 5
+  MinAttackCooldownMultiplier: 0.1
+  MaxAttackCooldownMultiplier: 4
+  MaxMovementSlowMultiplier: 3

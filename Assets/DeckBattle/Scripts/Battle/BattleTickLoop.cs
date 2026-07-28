@@ -1,9 +1,11 @@
 using System;
+using Unity.Profiling;
 
 namespace DeckBattle
 {
     public sealed class BattleTickLoop
     {
+        private static readonly ProfilerMarker TickMarker = new ProfilerMarker("DeckBattle.BattleTickLoop.Tick");
         private readonly MovementResolver.Workspace movementWorkspace;
         private readonly TargetSelector.Workspace targetWorkspace;
         private readonly AttackCycleResolver.Workspace attackCycleWorkspace;
@@ -35,6 +37,8 @@ namespace DeckBattle
 
         public BattleTickResult Tick(BattleSimulation simulation, BattleEventQueue eventQueue)
         {
+            using (TickMarker.Auto())
+            {
             if (simulation == null)
             {
                 throw new ArgumentNullException(nameof(simulation));
@@ -85,6 +89,7 @@ namespace DeckBattle
             }
 
             return new BattleTickResult(combat.Attacks, moved, ended, hasWinner, winner);
+            }
         }
 
         private void RefreshTargets(BattleSimulation simulation)

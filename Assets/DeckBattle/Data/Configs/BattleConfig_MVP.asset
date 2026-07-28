@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50d436c73a860e442b2c17d868dcf1fa, type: 3}
   m_Name: BattleConfig_MVP
   m_EditorClassIdentifier: 
+  RuntimeTuningConfig: {fileID: 11400000, guid: 90132d9d2ea834f4cab6261b6937daad,
+    type: 2}
   StartingPlayerHp: 30
   StartingEnemyHp: 30
   StartingAp: 3

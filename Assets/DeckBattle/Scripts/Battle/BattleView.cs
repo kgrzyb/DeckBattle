@@ -756,6 +756,11 @@ namespace DeckBattle
 
         private BattleRuntimeTuning CreateRuntimeTuning()
         {
+            if (battleConfig != null && battleConfig.RuntimeTuningConfig != null)
+            {
+                return battleConfig.RuntimeTuningConfig.CreateRuntimeTuning();
+            }
+
             return new BattleRuntimeTuning(attackCooldownMultiplier, attackRangeBonus, movementStepDuration);
         }
 

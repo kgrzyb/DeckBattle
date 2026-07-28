@@ -5,6 +5,10 @@ namespace DeckBattle
     [CreateAssetMenu(fileName = "BattleConfig", menuName = "Deck Battle/Battle Config")]
     public sealed class BattleConfig : ScriptableObject
     {
+        [Header("Realtime Combat")]
+        public BattleRuntimeTuningConfig RuntimeTuningConfig;
+
+        [Header("Match Setup")]
         public int StartingPlayerHp = 30;
         public int StartingEnemyHp = 30;
         public int StartingAp = 3;

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 
 namespace DeckBattle
 {
     public static class TargetSelector
     {
+        private static readonly ProfilerMarker SelectMarker = new ProfilerMarker("DeckBattle.Targeting.Select");
         public static UnitRuntimeState SelectTarget(BattleSimulation simulation, UnitRuntimeState attacker)
         {
             if (simulation == null)
@@ -77,6 +79,8 @@ namespace DeckBattle
             int preferredTargetUnitId,
             out TargetSelection selection)
         {
+            using (SelectMarker.Auto())
+            {
             ValidateArguments(simulation, attacker, workspace);
             if (!UnitActionRules.CanAcquireTarget(attacker))
             {
@@ -86,6 +90,7 @@ namespace DeckBattle
 
             workspace.Clear();
             return TrySelectTargetByPath(simulation, attacker, workspace, preferredTargetUnitId, out selection);
+            }
         }
 
         public static TargetSelection SelectTargetSelection(
