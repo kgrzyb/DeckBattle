@@ -53,6 +53,9 @@ namespace DeckBattle
             }
 
             simulation.AdvanceTime(TickDuration);
+            PeriodicStatusResolver.Resolve(simulation, eventQueue);
+            StatusResolver.ExpireStatuses(simulation, eventQueue);
+            ActivateReadySpecials(simulation, eventQueue);
             UpdateActiveSpecials(simulation);
             MovementResolver.AdvanceActiveMovements(simulation, TickDuration);
 
@@ -90,8 +93,9 @@ namespace DeckBattle
             {
                 targetSelectionValid[i] = false;
                 UnitRuntimeState unit = simulation.Units[i];
-                if (unit == null || !unit.IsAlive)
+                if (!UnitActionRules.CanAcquireTarget(unit))
                 {
+                    if (unit != null) unit.ClearTarget();
                     continue;
                 }
 
@@ -136,6 +140,14 @@ namespace DeckBattle
                 unit.ActiveSpecial = null;
                 unit.SpecialEndTime = double.PositiveInfinity;
                 unit.SpecialAttackCooldownMultiplier = 1f;
+            }
+        }
+
+        private static void ActivateReadySpecials(BattleSimulation simulation, BattleEventQueue eventQueue)
+        {
+            for (int i = 0; i < simulation.Units.Count; i++)
+            {
+                CombatResolver.TryActivateReadySpecial(simulation, simulation.Units[i], eventQueue);
             }
         }
 

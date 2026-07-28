@@ -75,7 +75,9 @@ namespace DeckBattle
                             projectile.LastKnownTargetHex));
 
                     }
-                    HitResolutionResult hit = HitResolver.ResolveHit(simulation, null, target, projectile.Damage, projectile.IsCritical, eventQueue);
+                    UnitRuntimeState attacker;
+                    simulation.TryGetUnitById(projectile.AttackerUnitId, out attacker);
+                    HitResolutionResult hit = HitResolver.ResolveHit(simulation, attacker, target, projectile.Damage, projectile.IsCritical, eventQueue);
                     if (hit.DidHit) { hits++; totalDamage += hit.Damage; if (hit.Died) deaths++; }
                 }
                 else if (eventQueue != null)

@@ -79,7 +79,7 @@ namespace DeckBattle
                 UnitSpawnData spawn = spawnData[i];
                 ValidateSpawn(board, spawn, unitByHex, unitById);
 
-                var unit = new UnitRuntimeState(spawn.UnitId, spawn.Definition, spawn.Side, spawn.StartHex, spawn.AttackBonusNextCombat);
+                var unit = new UnitRuntimeState(spawn.UnitId, spawn.Definition, spawn.Side, spawn.StartHex, spawn.AttackBonusNextCombat, tuning.MaxStatusesPerUnit);
                 unit.NextAttackTime = tuning.GetAttackCooldown(spawn.Definition, unit);
                 units.Add(unit);
                 unitByHex.Add(spawn.StartHex, unit);
@@ -185,9 +185,9 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(unit));
             }
 
-            if (!unit.IsAlive)
+            if (!UnitActionRules.CanStartMovement(unit))
             {
-                throw new ArgumentException("Defeated units cannot move.", nameof(unit));
+                throw new ArgumentException("Unit cannot start movement in its current state.", nameof(unit));
             }
 
             if (unit.IsMoving)
@@ -233,7 +233,7 @@ namespace DeckBattle
             unit.PreviousHex = unit.CurrentHex;
             unit.IsMoving = true;
             unit.MovementDestination = destination;
-            unit.MovementTimeRemaining = Tuning.MovementStepDuration;
+            unit.MovementTimeRemaining = EffectiveStatsResolver.GetMovementStepDuration(unit, Tuning);
         }
 
         public void CompleteUnitMovement(UnitRuntimeState unit)
@@ -301,6 +301,9 @@ namespace DeckBattle
             unit.MovementDestination = unit.CurrentHex;
             unit.MovementTimeRemaining = 0f;
             unitByHex.Remove(unit.CurrentHex);
+            unit.Statuses.Clear();
+            unit.StatusSnapshot = default;
+            unit.StatusVersion++;
         }
 
         public ProjectileRuntimeState SpawnProjectile(

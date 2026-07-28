@@ -26,6 +26,7 @@ namespace DeckBattle
         [SerializeField] private UnitStatusOverlayController statusOverlayController;
         [SerializeField] private PooledBattleEffect attackEffectPrefab;
         [SerializeField] private PooledBattleEffect damageEffectPrefab;
+        [SerializeField] private PooledBattleEffect statusEffectPrefab;
         [SerializeField] private Transform effectRoot;
 
 #if DEVELOPMENT_BUILD && !UNITY_EDITOR
@@ -39,8 +40,10 @@ namespace DeckBattle
         private readonly BattleEventQueue eventQueue = new BattleEventQueue(32);
         private readonly List<PooledBattleEffect> activeAttackEffects = new List<PooledBattleEffect>(8);
         private readonly List<PooledBattleEffect> activeDamageEffects = new List<PooledBattleEffect>(8);
+        private readonly List<PooledBattleEffect> activeStatusEffects = new List<PooledBattleEffect>(4);
         private readonly Stack<PooledBattleEffect> pooledAttackEffects = new Stack<PooledBattleEffect>(8);
         private readonly Stack<PooledBattleEffect> pooledDamageEffects = new Stack<PooledBattleEffect>(8);
+        private readonly Stack<PooledBattleEffect> pooledStatusEffects = new Stack<PooledBattleEffect>(4);
         private readonly List<ProjectileView> activeProjectileViews = new List<ProjectileView>(8);
         private readonly Dictionary<int, ProjectileView> projectileViewById = new Dictionary<int, ProjectileView>(8);
         private readonly Dictionary<ProjectileView, Stack<ProjectileView>> pooledProjectileViews = new Dictionary<ProjectileView, Stack<ProjectileView>>(4);
@@ -105,6 +108,7 @@ namespace DeckBattle
             UpdateSimulation(Time.deltaTime);
             ReleaseCompletedEffects(activeAttackEffects, pooledAttackEffects);
             ReleaseCompletedEffects(activeDamageEffects, pooledDamageEffects);
+            ReleaseCompletedEffects(activeStatusEffects, pooledStatusEffects);
             ReleaseCompletedProjectiles();
         }
 
@@ -252,6 +256,7 @@ namespace DeckBattle
 
             ReleaseAllEffects(activeAttackEffects, pooledAttackEffects);
             ReleaseAllEffects(activeDamageEffects, pooledDamageEffects);
+            ReleaseAllEffects(activeStatusEffects, pooledStatusEffects);
             ReleaseAllProjectiles();
         }
 
@@ -343,6 +348,16 @@ namespace DeckBattle
                         break;
                     case BattleEventType.UnitManaChanged:
                         HandleUnitManaChanged(battleEvent);
+                        break;
+                    case BattleEventType.StatusApplied:
+                        HandleStatusApplied(battleEvent);
+                        HandleStatusChanged(battleEvent);
+                        break;
+                    case BattleEventType.StatusRefreshed:
+                    case BattleEventType.StatusStackChanged:
+                    case BattleEventType.StatusRemoved:
+                    case BattleEventType.ShieldChanged:
+                        HandleStatusChanged(battleEvent);
                         break;
                     case BattleEventType.ProjectileLaunched:
                         HandleProjectileLaunched(battleEvent);
@@ -482,6 +497,41 @@ namespace DeckBattle
             }
 
             statusOverlayController.SetMana(unit.UnitId, battleEvent.CurrentMana, unit.Definition.ManaThreshold);
+        }
+
+        private void HandleStatusChanged(BattleEvent battleEvent)
+        {
+            if (statusOverlayController == null || simulation == null)
+            {
+                return;
+            }
+
+            if (simulation.TryGetUnitById(battleEvent.UnitId, out UnitRuntimeState unit) && unit != null && unit.IsAlive)
+            {
+                statusOverlayController.SetStatuses(unit);
+            }
+        }
+
+        private void HandleStatusApplied(BattleEvent battleEvent)
+        {
+            if (!IsKeyStatusVisual(battleEvent.StatusKind)
+                || simulation == null
+                || boardPresenter == null
+                || !simulation.TryGetUnitById(battleEvent.UnitId, out UnitRuntimeState target)
+                || target == null)
+            {
+                return;
+            }
+
+            SpawnEffect(statusEffectPrefab, boardPresenter.GetWorldPosition(target.CurrentHex), activeStatusEffects, pooledStatusEffects);
+        }
+
+        private static bool IsKeyStatusVisual(StatusKind kind)
+        {
+            return kind == StatusKind.Stun
+                || kind == StatusKind.Shield
+                || kind == StatusKind.Invulnerability
+                || kind == StatusKind.Mark;
         }
 
         private void HandleProjectileLaunched(BattleEvent battleEvent)

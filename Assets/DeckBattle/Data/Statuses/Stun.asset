@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dab0a5f97aff96d4cb88c19ced567045, type: 3}
+  m_Name: Stun
+  m_EditorClassIdentifier: 
+  Kind: 1
+  Category: 1
+  StackingRule: 0
+  DefaultDuration: 1
+  DefaultInterval: 0
+  DefaultMagnitude: 0
+  MaxStacks: 1
+  DisplayName: Stun
+  Description: Runtime status definition. Not assigned to production content.
+  Icon: {fileID: 0}
+  DisplayColor: {r: 0.85, g: 0.3, b: 0.25, a: 1}

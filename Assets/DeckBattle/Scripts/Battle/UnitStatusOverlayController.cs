@@ -70,6 +70,7 @@ namespace DeckBattle
             int maxMana = definition != null ? definition.ManaThreshold : 0;
             string displayName = definition != null ? definition.DisplayName : null;
             Bind(unit.UnitId, view.transform, displayName, unit.CurrentHp, maxHp, unit.CurrentMana, maxMana);
+            SetStatuses(unit);
         }
 
         public void SetHealth(int unitId, int currentHp, int maxHp)
@@ -92,6 +93,22 @@ namespace DeckBattle
             }
 
             tracked.View.SetMana(currentMana, maxMana);
+        }
+
+        public void SetStatuses(UnitRuntimeState unit)
+        {
+            if (unit == null)
+            {
+                return;
+            }
+
+            TrackedOverlay tracked;
+            if (!activeOverlays.TryGetValue(unit.UnitId, out tracked) || tracked.View == null)
+            {
+                return;
+            }
+
+            tracked.View.SetStatuses(unit.Statuses, unit.StatusSnapshot.TotalShield);
         }
 
         public void Release(int unitId)
@@ -130,6 +147,7 @@ namespace DeckBattle
             tracked.MaxMana = Mathf.Max(1, maxMana);
             tracked.ResetPositionCache();
             tracked.View.Bind(unitId, target, displayName, currentHp, tracked.MaxHp, currentMana, tracked.MaxMana);
+            tracked.View.SetStatuses(null, 0);
         }
 
         private UnitStatusOverlayView GetOverlay()

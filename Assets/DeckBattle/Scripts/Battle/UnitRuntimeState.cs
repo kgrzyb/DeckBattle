@@ -38,13 +38,16 @@ namespace DeckBattle
         public float SpecialAttackCooldownMultiplier;
         public int AttackBonusNextCombat;
         public bool IsDefeated;
+        public readonly UnitStatusCollection Statuses;
+        public UnitStatusSnapshot StatusSnapshot;
+        public int StatusVersion;
 
         public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex)
             : this(unitId, definition, side, startHex, 0)
         {
         }
 
-        public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex, int attackBonusNextCombat)
+        public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex, int attackBonusNextCombat, int maxStatusesPerUnit = 8)
         {
             if (unitId <= 0)
             {
@@ -70,6 +73,9 @@ namespace DeckBattle
             SpecialAttackCooldownMultiplier = 1f;
             AttackBonusNextCombat = Math.Max(0, attackBonusNextCombat);
             IsDefeated = false;
+            Statuses = new UnitStatusCollection(maxStatusesPerUnit);
+            StatusSnapshot = default;
+            StatusVersion = 0;
         }
 
         public bool IsAlive
@@ -146,6 +152,9 @@ namespace DeckBattle
             SpecialAttackCooldownMultiplier = 1f;
             AttackBonusNextCombat = 0;
             IsDefeated = false;
+            Statuses.Clear();
+            StatusSnapshot = default;
+            StatusVersion = 0;
         }
 
         public void ResetAttackCycle()

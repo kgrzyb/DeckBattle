@@ -120,7 +120,7 @@ namespace DeckBattle
             {
                 workspace.TargetSelectionValid[i] = false;
                 UnitRuntimeState unit = simulation.Units[i];
-                if (unit != null && unit.IsAlive
+                if (UnitActionRules.CanAcquireTarget(unit)
                     && TargetSelector.TrySelectTarget(
                         simulation,
                         unit,
@@ -146,8 +146,7 @@ namespace DeckBattle
             for (int i = 0; i < count; i++)
             {
                 UnitRuntimeState unit = units[i];
-                if (unit == null
-                    || !unit.IsAlive
+                if (!UnitActionRules.CanStartMovement(unit)
                     || unit.IsMoving
                     // Once the hit has been committed, the remaining attack cooldown
                     // must not leave a unit standing still after its target dies.

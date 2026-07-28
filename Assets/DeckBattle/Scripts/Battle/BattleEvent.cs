@@ -16,7 +16,17 @@ namespace DeckBattle
         AttackWindupCancelled = 11,
         AttackFired = 12,
         AttackWinddownEnded = 13,
-        ProjectileResolved = 14
+        ProjectileResolved = 14,
+        StatusApplied = 15,
+        StatusRefreshed = 16,
+        StatusStackChanged = 17,
+        StatusRemoved = 18,
+        StatusRejected = 19,
+        PeriodicEffectTicked = 20,
+        ShieldChanged = 21,
+        UnitHealed = 22,
+        ManaDrained = 23,
+        DamageRedirected = 24
     }
 
     public readonly struct BattleEvent
@@ -35,6 +45,8 @@ namespace DeckBattle
         public readonly BattleSide Winner;
         public readonly bool HasWinner;
         public readonly int SequenceId;
+        public readonly StatusKind StatusKind;
+        public readonly int StatusStackCount;
 
         private BattleEvent(
             BattleEventType type,
@@ -50,7 +62,9 @@ namespace DeckBattle
             UnitSpecialKind specialKind,
             BattleSide winner,
             bool hasWinner,
-            int sequenceId = 0)
+            int sequenceId = 0,
+            StatusKind statusKind = StatusKind.None,
+            int statusStackCount = 0)
         {
             Type = type;
             UnitId = unitId;
@@ -66,6 +80,8 @@ namespace DeckBattle
             Winner = winner;
             HasWinner = hasWinner;
             SequenceId = sequenceId;
+            StatusKind = statusKind;
+            StatusStackCount = statusStackCount;
         }
 
         public static BattleEvent UnitMoved(int unitId, HexCoord from, HexCoord to)
@@ -147,6 +163,51 @@ namespace DeckBattle
         public static BattleEvent ProjectileResolved(int projectileId, int attackerId, int targetId, HexCoord targetHex, bool didHit)
         {
             return new BattleEvent(BattleEventType.ProjectileResolved, attackerId, targetId, default, targetHex, didHit ? 1 : 0, 0, 0, projectileId, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+        }
+
+        public static BattleEvent StatusApplied(int targetId, int sourceId, StatusKind kind, int stacks, float duration)
+        {
+            return new BattleEvent(BattleEventType.StatusApplied, targetId, sourceId, default, default, 0, 0, 0, 0, duration, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks);
+        }
+
+        public static BattleEvent StatusRefreshed(int targetId, int sourceId, StatusKind kind, int stacks, float duration)
+        {
+            return new BattleEvent(BattleEventType.StatusRefreshed, targetId, sourceId, default, default, 0, 0, 0, 0, duration, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks);
+        }
+
+        public static BattleEvent StatusRemoved(int targetId, int sourceId, StatusKind kind, int stacks)
+        {
+            return new BattleEvent(BattleEventType.StatusRemoved, targetId, sourceId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks);
+        }
+
+        public static BattleEvent StatusRejected(int targetId, int sourceId, StatusKind kind, StatusApplicationResult reason)
+        {
+            return new BattleEvent(BattleEventType.StatusRejected, targetId, sourceId, default, default, (int)reason, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, 0);
+        }
+
+        public static BattleEvent PeriodicEffectTicked(int targetId, int sourceId, StatusKind kind, int amount)
+        {
+            return new BattleEvent(BattleEventType.PeriodicEffectTicked, targetId, sourceId, default, default, amount, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, 0);
+        }
+
+        public static BattleEvent ShieldChanged(int unitId, int remainingShield)
+        {
+            return new BattleEvent(BattleEventType.ShieldChanged, unitId, 0, default, default, remainingShield, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+        }
+
+        public static BattleEvent UnitHealed(int unitId, int amount, int currentHp)
+        {
+            return new BattleEvent(BattleEventType.UnitHealed, unitId, 0, default, default, amount, currentHp, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+        }
+
+        public static BattleEvent ManaDrained(int unitId, int sourceId, int amount, int currentMana)
+        {
+            return new BattleEvent(BattleEventType.ManaDrained, unitId, sourceId, default, default, amount, 0, currentMana, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+        }
+
+        public static BattleEvent DamageRedirected(int protectedUnitId, int guardUnitId, int amount)
+        {
+            return new BattleEvent(BattleEventType.DamageRedirected, protectedUnitId, guardUnitId, default, default, amount, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
     }
 }

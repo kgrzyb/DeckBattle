@@ -17,7 +17,7 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(attacker));
             }
 
-            if (!attacker.IsAlive)
+            if (!UnitActionRules.CanAcquireTarget(attacker))
             {
                 return null;
             }
@@ -43,7 +43,7 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(workspace));
             }
 
-            if (!attacker.IsAlive)
+            if (!UnitActionRules.CanAcquireTarget(attacker))
             {
                 return null;
             }
@@ -78,7 +78,7 @@ namespace DeckBattle
             out TargetSelection selection)
         {
             ValidateArguments(simulation, attacker, workspace);
-            if (!attacker.IsAlive)
+            if (!UnitActionRules.CanAcquireTarget(attacker))
             {
                 selection = default;
                 return false;
@@ -108,7 +108,7 @@ namespace DeckBattle
             int preferredTargetUnitId,
             out TargetSelection selection)
         {
-            if (!attacker.IsAlive)
+            if (!UnitActionRules.CanAcquireTarget(attacker))
             {
                 selection = default;
                 return false;
@@ -128,9 +128,17 @@ namespace DeckBattle
             Dictionary<HexCoord, HexCoord> cameFrom = pathfinding.CameFrom;
             List<HexCoord> frontier = pathfinding.Frontier;
             List<HexCoord> neighbors = pathfinding.Neighbors;
+            bool hasTaunt = HasTaunt(attacker);
             cameFrom.Add(attacker.CurrentHex, attacker.CurrentHex);
             frontier.Add(attacker.CurrentHex);
 
+            UnitRuntimeState bestTauntTarget = null;
+            HexCoord bestTauntAttackPosition = default;
+            int bestTauntSteps = int.MaxValue;
+            int bestTauntSequence = int.MaxValue;
+            UnitRuntimeState bestNormalTarget = null;
+            HexCoord bestNormalAttackPosition = default;
+            int bestNormalSteps = int.MaxValue;
             int readIndex = 0;
             int levelEnd = frontier.Count;
             int pathSteps = 0;
@@ -186,31 +194,80 @@ namespace DeckBattle
 
                 if (levelTarget != null)
                 {
-                    BuildPath(
-                        attacker.CurrentHex,
-                        levelAttackPosition,
-                        attackWorkspace.Path,
-                        pathfinding.ReversedPath,
-                        cameFrom);
+                    if (!hasTaunt)
+                    {
+                        BuildPath(attacker.CurrentHex, levelAttackPosition, attackWorkspace.Path, pathfinding.ReversedPath, cameFrom);
+                        HexCoord immediateNextStep = attackWorkspace.Path.Count > 1 ? attackWorkspace.Path[1] : attacker.CurrentHex;
+                        selection = new TargetSelection(levelTarget, new AttackPositionSelector.AttackPathResult(levelAttackPosition, immediateNextStep, pathSteps, pathSteps == 0));
+                        return true;
+                    }
 
-                    HexCoord nextStep = attackWorkspace.Path.Count > 1
-                        ? attackWorkspace.Path[1]
-                        : attacker.CurrentHex;
-                    selection = new TargetSelection(
-                        levelTarget,
-                        new AttackPositionSelector.AttackPathResult(
-                            levelAttackPosition,
-                            nextStep,
-                            pathSteps,
-                            pathSteps == 0));
-                    return true;
+                    if (TryGetTauntSequence(attacker, levelTarget, out int tauntSequence)
+                        && (bestTauntTarget == null
+                            || pathSteps < bestTauntSteps
+                            || (pathSteps == bestTauntSteps && levelTarget.UnitId < bestTauntTarget.UnitId)
+                            || (pathSteps == bestTauntSteps && levelTarget.UnitId == bestTauntTarget.UnitId && tauntSequence < bestTauntSequence)))
+                    {
+                        bestTauntTarget = levelTarget;
+                        bestTauntAttackPosition = levelAttackPosition;
+                        bestTauntSteps = pathSteps;
+                        bestTauntSequence = tauntSequence;
+                    }
+
+                    if (bestNormalTarget == null)
+                    {
+                        bestNormalTarget = levelTarget;
+                        bestNormalAttackPosition = levelAttackPosition;
+                        bestNormalSteps = pathSteps;
+                    }
                 }
 
                 pathSteps++;
                 levelEnd = frontier.Count;
             }
 
-            selection = default;
+            UnitRuntimeState selectedTarget = bestTauntTarget ?? bestNormalTarget;
+            if (selectedTarget == null)
+            {
+                selection = default;
+                return false;
+            }
+
+            HexCoord selectedAttackPosition = bestTauntTarget != null ? bestTauntAttackPosition : bestNormalAttackPosition;
+            int selectedSteps = bestTauntTarget != null ? bestTauntSteps : bestNormalSteps;
+            BuildPath(attacker.CurrentHex, selectedAttackPosition, attackWorkspace.Path, pathfinding.ReversedPath, cameFrom);
+            HexCoord nextStep = attackWorkspace.Path.Count > 1 ? attackWorkspace.Path[1] : attacker.CurrentHex;
+            selection = new TargetSelection(selectedTarget, new AttackPositionSelector.AttackPathResult(selectedAttackPosition, nextStep, selectedSteps, selectedSteps == 0));
+            return true;
+        }
+
+        private static bool TryGetTauntSequence(UnitRuntimeState attacker, UnitRuntimeState candidate, out int sequence)
+        {
+            sequence = int.MaxValue;
+            for (int i = 0; i < attacker.Statuses.Count; i++)
+            {
+                StatusInstance status = attacker.Statuses[i];
+                if (status.Kind == StatusKind.Taunt
+                    && status.LinkedUnitId == candidate.UnitId
+                    && status.ApplicationSequenceId < sequence)
+                {
+                    sequence = status.ApplicationSequenceId;
+                }
+            }
+
+            return sequence != int.MaxValue;
+        }
+
+        private static bool HasTaunt(UnitRuntimeState attacker)
+        {
+            for (int i = 0; i < attacker.Statuses.Count; i++)
+            {
+                if (attacker.Statuses[i].Kind == StatusKind.Taunt)
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
 
@@ -430,7 +487,7 @@ namespace DeckBattle
             return attacker != null
                 && attacker.IsAlive
                 && candidate != null
-                && candidate.IsAlive
+                && UnitActionRules.CanBeSelectedAsTarget(candidate)
                 && attacker.Side != candidate.Side;
         }
     }

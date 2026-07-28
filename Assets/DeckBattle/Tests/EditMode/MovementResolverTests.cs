@@ -45,9 +45,11 @@ namespace DeckBattle.Tests
 
             int moved = MovementResolver.ResolveMovement(simulation);
 
-            Assert.AreEqual(1, moved);
+            Assert.AreEqual(2, moved);
             Assert.IsTrue(simulation.Units[0].IsMoving);
             Assert.AreEqual(new HexCoord(1, 0), simulation.Units[0].MovementDestination);
+            Assert.IsTrue(simulation.Units[1].IsMoving);
+            Assert.AreEqual(new HexCoord(2, 0), simulation.Units[1].MovementDestination);
         }
 
         [Test]

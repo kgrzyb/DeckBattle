@@ -58,6 +58,17 @@ namespace DeckBattle
             return AttackResetResult.Applied;
         }
 
+        public static bool CancelWindup(UnitRuntimeState unit, BattleEventQueue eventQueue = null)
+        {
+            if (unit == null || unit.AttackPhase != UnitAttackPhase.Windup)
+            {
+                return false;
+            }
+
+            CancelWindupInternal(unit, eventQueue);
+            return true;
+        }
+
         private static void CollectCompletedWindups(
             BattleSimulation simulation,
             BattleEventQueue eventQueue,
@@ -75,7 +86,7 @@ namespace DeckBattle
                     || unit.IsMoving
                     || !TryGetLockedLiveTarget(simulation, unit, out UnitRuntimeState lockedTarget))
                 {
-                    CancelWindup(unit, eventQueue);
+                    CancelWindupInternal(unit, eventQueue);
                     workspace.Cancelled[i] = true;
                     continue;
                 }
@@ -118,9 +129,10 @@ namespace DeckBattle
 
                 int attackBonus = attacker.AttackBonusNextCombat;
                 int damage = DamageCalculator.CalculateDamage(
-                    attacker.Definition,
-                    target.Definition,
+                    attacker,
+                    target,
                     attackBonus,
+                    simulation.Tuning,
                     simulation.Random,
                     out bool isCritical);
                 attacker.AttackBonusNextCombat = 0;
@@ -196,7 +208,7 @@ namespace DeckBattle
             {
                 UnitRuntimeState unit = simulation.Units[i];
                 if (unit == null
-                    || !unit.IsAlive
+                    || !UnitActionRules.CanStartAttackWindup(unit)
                     || workspace.Cancelled[i]
                     || unit.AttackPhase != UnitAttackPhase.AcquireReload
                     || unit.IsMoving
@@ -238,7 +250,7 @@ namespace DeckBattle
             eventQueue?.Enqueue(BattleEvent.AttackWinddownEnded(unit.UnitId, unit.AttackSequenceId));
         }
 
-        private static void CancelWindup(UnitRuntimeState unit, BattleEventQueue eventQueue)
+        private static void CancelWindupInternal(UnitRuntimeState unit, BattleEventQueue eventQueue)
         {
             eventQueue?.Enqueue(BattleEvent.AttackWindupCancelled(
                 unit.UnitId,

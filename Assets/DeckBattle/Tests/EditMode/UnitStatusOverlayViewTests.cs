@@ -44,6 +44,39 @@ namespace DeckBattle.Tests
             }
         }
 
+        [Test]
+        public void SetStatuses_CreatesAtMostFourPooledIconSlots()
+        {
+            GameObject root = new GameObject("Overlay", typeof(RectTransform), typeof(UnitStatusOverlayView));
+            var statuses = new UnitStatusCollection(8);
+            statuses.TryAdd(new StatusInstance { Kind = StatusKind.Stun, Stacks = 1 }, out _);
+            statuses.TryAdd(new StatusInstance { Kind = StatusKind.Shield, Stacks = 1, RemainingShield = 3 }, out _);
+            statuses.TryAdd(new StatusInstance { Kind = StatusKind.Burn, Stacks = 2 }, out _);
+            statuses.TryAdd(new StatusInstance { Kind = StatusKind.Mark, Stacks = 1 }, out _);
+            statuses.TryAdd(new StatusInstance { Kind = StatusKind.Empower, Stacks = 1 }, out _);
+
+            try
+            {
+                UnitStatusOverlayView view = root.GetComponent<UnitStatusOverlayView>();
+                view.SetStatuses(statuses, 3);
+                view.SetStatuses(statuses, 3);
+
+                Assert.AreEqual(5, root.GetComponentsInChildren<Image>(true).Length);
+                RectTransform shieldBar = root.transform.Find("ShieldBar") as RectTransform;
+                Assert.IsNotNull(shieldBar);
+                Assert.AreEqual(new Vector2(0.25f, 1f), shieldBar.anchorMin);
+                Assert.AreEqual(new Vector2(0.75f, 1f), shieldBar.anchorMax);
+                Assert.IsTrue(shieldBar.gameObject.activeSelf);
+
+                view.SetStatuses(statuses, 0);
+                Assert.IsFalse(shieldBar.gameObject.activeSelf);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
         private static void SetPrivateField(object target, string fieldName, Object value)
         {
             FieldInfo field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);

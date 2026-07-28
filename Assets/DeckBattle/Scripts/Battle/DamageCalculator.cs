@@ -4,6 +4,21 @@ namespace DeckBattle
 {
     public static class DamageCalculator
     {
+        public static int CalculateDamage(UnitRuntimeState attacker, UnitRuntimeState target, int attackBonus, BattleRuntimeTuning tuning, DeterministicRandom rng, out bool isCritical)
+        {
+            if (attacker == null) throw new ArgumentNullException(nameof(attacker));
+            if (target == null) throw new ArgumentNullException(nameof(target));
+
+            isCritical = RollCritical(attacker.Definition, rng);
+            float armorPenetration = ClampPercentage(attacker.Definition.ArmorPenetration);
+            float effectiveArmor = ClampPercentage(target.Definition.Armor) * (1f - armorPenetration / 100f);
+            float damage = Math.Max(0, attacker.Definition.Attack + Math.Max(0, attackBonus));
+            damage *= EffectiveStatsResolver.GetOutgoingDamageMultiplier(attacker, tuning);
+            damage *= 1f - effectiveArmor / 100f;
+            if (isCritical) damage *= EffectiveStatsResolver.GetCriticalMultiplier(attacker);
+            return Math.Max(0, (int)Math.Round(damage, MidpointRounding.AwayFromZero));
+        }
+
         public static int CalculateDamage(
             UnitDefinition attacker,
             UnitDefinition target,
