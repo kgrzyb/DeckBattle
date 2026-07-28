@@ -46,13 +46,16 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void AttackSpeed_ShortensWindupAndWholeCycleFromWindupStart()
+        public void Haste_ShortensWindupAndWholeCycleFromWindupStart()
         {
             BattleSimulation normal = CreateSimulation(4f);
             BattleSimulation accelerated = CreateSimulation(4f);
             normal.Units[0].NextAttackTime = 0d;
             accelerated.Units[0].NextAttackTime = 0d;
-            accelerated.Units[0].SpecialAttackCooldownMultiplier = 0.5f;
+            StatusResolver.TryApply(
+                accelerated,
+                accelerated.Units[0],
+                new StatusApplicationRequest(CreateHasteStatus(0.5f), accelerated.Units[0].UnitId));
             var normalLoop = new BattleTickLoop(normal, TickDuration);
             var acceleratedLoop = new BattleTickLoop(accelerated, TickDuration);
 
@@ -70,7 +73,10 @@ namespace DeckBattle.Tests
         {
             BattleSimulation simulation = CreateSimulation(0.5f);
             simulation.Units[0].NextAttackTime = 0d;
-            simulation.Units[0].SpecialAttackCooldownMultiplier = 0.1f;
+            StatusResolver.TryApply(
+                simulation,
+                simulation.Units[0],
+                new StatusApplicationRequest(CreateHasteStatus(0.9f), simulation.Units[0].UnitId));
             var loop = new BattleTickLoop(simulation, TickDuration);
 
             loop.Tick(simulation, new BattleEventQueue());
@@ -249,6 +255,16 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
                     new UnitSpawnData(2, target, BattleSide.Enemy, new HexCoord(2, 1))
                 });
+        }
+
+        private static StatusDefinition CreateHasteStatus(float magnitude)
+        {
+            StatusDefinition status = TestDefinitions.Track(UnityEngine.ScriptableObject.CreateInstance<StatusDefinition>());
+            status.Kind = StatusKind.Haste;
+            status.Category = StatusCategory.Beneficial;
+            status.DefaultDuration = 10f;
+            status.DefaultMagnitude = magnitude;
+            return status;
         }
 
         private static BattleEvent FindEvent(BattleEventQueue events, BattleEventType type)

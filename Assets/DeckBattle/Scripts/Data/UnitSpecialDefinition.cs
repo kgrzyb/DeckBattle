@@ -7,13 +7,6 @@ namespace DeckBattle
     {
         public string SpecialId;
         public UnitSpecialKind Kind;
-        public float Duration;
-        public float AttackCooldownMultiplier = 1f;
-
-        private void OnValidate()
-        {
-            Duration = Mathf.Max(0f, Duration);
-            AttackCooldownMultiplier = Mathf.Max(0.01f, AttackCooldownMultiplier);
-        }
+        public StatusDefinition AppliedStatus;
     }
 }

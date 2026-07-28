@@ -33,9 +33,6 @@ namespace DeckBattle
         public bool IsMoving;
         public HexCoord MovementDestination;
         public float MovementTimeRemaining;
-        public UnitSpecialDefinition ActiveSpecial;
-        public double SpecialEndTime;
-        public float SpecialAttackCooldownMultiplier;
         public int AttackBonusNextCombat;
         public bool IsDefeated;
         public readonly UnitStatusCollection Statuses;
@@ -68,9 +65,6 @@ namespace DeckBattle
             IsMoving = false;
             MovementDestination = startHex;
             MovementTimeRemaining = 0f;
-            ActiveSpecial = null;
-            SpecialEndTime = double.PositiveInfinity;
-            SpecialAttackCooldownMultiplier = 1f;
             AttackBonusNextCombat = Math.Max(0, attackBonusNextCombat);
             IsDefeated = false;
             Statuses = new UnitStatusCollection(maxStatusesPerUnit);
@@ -147,9 +141,6 @@ namespace DeckBattle
             IsMoving = false;
             MovementDestination = startHex;
             MovementTimeRemaining = 0f;
-            ActiveSpecial = null;
-            SpecialEndTime = double.PositiveInfinity;
-            SpecialAttackCooldownMultiplier = 1f;
             AttackBonusNextCombat = 0;
             IsDefeated = false;
             Statuses.Clear();

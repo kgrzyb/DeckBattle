@@ -72,14 +72,13 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_AttackSpeedActivatedAtFireAffectsFollowingCycle()
+        public void Tick_HasteBurstActivatedAtFireAppliesHasteForFollowingCycle()
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
             attacker.ManaThreshold = 10;
             attacker.Special = TestDefinitions.Track(UnityEngine.ScriptableObject.CreateInstance<UnitSpecialDefinition>());
-            attacker.Special.Kind = UnitSpecialKind.AttackSpeed;
-            attacker.Special.Duration = 5f;
-            attacker.Special.AttackCooldownMultiplier = 0.5f;
+            attacker.Special.Kind = UnitSpecialKind.HasteBurst;
+            attacker.Special.AppliedStatus = CreateHasteStatus(5f, 0.5f);
             BattleSimulation simulation = BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),
                 new[]
@@ -93,51 +92,50 @@ namespace DeckBattle.Tests
 
             TestDefinitions.ResolveNextAttack(simulation, events);
 
-            Assert.AreSame(attacker.Special, simulation.Units[0].ActiveSpecial);
-            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(5.5d).Within(0.000001d));
-            Assert.AreEqual(0.5f, simulation.Units[0].SpecialAttackCooldownMultiplier);
+            Assert.IsTrue(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, simulation.Units[0].UnitId, out int hasteIndex));
+            Assert.That(simulation.Units[0].Statuses[hasteIndex].EndTime, Is.EqualTo(5.5d).Within(0.000001d));
+            Assert.AreEqual(0.5f, simulation.Units[0].StatusSnapshot.Haste);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
-            AssertSpecialActivation(events, UnitSpecialKind.AttackSpeed);
+            AssertSpecialActivation(events, UnitSpecialKind.HasteBurst);
         }
 
         [Test]
-        public void Tick_ExpiresAttackSpeedSpecialAtItsAbsoluteEndTimeWithoutReschedulingAttack()
+        public void Tick_ExpiresHasteAppliedBySpecialWithoutReschedulingAttack()
         {
             UnitDefinition attacker = CreateUnit("attacker", 100, 1, 1, 1f);
-            attacker.Special = CreateAttackSpeedSpecial();
+            attacker.Special = CreateHasteBurstSpecial();
             BattleSimulation simulation = CreateSimulation(attacker, CreateUnit("target", 100, 1, 1, 1f));
             simulation.Units[0].SetTarget(simulation.Units[1]);
-            simulation.Units[0].ActiveSpecial = attacker.Special;
-            simulation.Units[0].SpecialEndTime = 5d;
-            simulation.Units[0].SpecialAttackCooldownMultiplier = 0.5f;
+            StatusResolver.TryApply(
+                simulation,
+                simulation.Units[0],
+                new StatusApplicationRequest(attacker.Special.AppliedStatus, simulation.Units[0].UnitId));
             simulation.Units[0].NextAttackTime = 10d;
             var loop = new BattleTickLoop(simulation, 5f);
 
             loop.Tick(simulation, new BattleEventQueue());
 
-            Assert.IsNull(simulation.Units[0].ActiveSpecial);
-            Assert.IsTrue(double.IsPositiveInfinity(simulation.Units[0].SpecialEndTime));
-            Assert.AreEqual(1f, simulation.Units[0].SpecialAttackCooldownMultiplier);
+            Assert.IsFalse(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, 0, out _));
+            Assert.AreEqual(0f, simulation.Units[0].StatusSnapshot.Haste);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(10d).Within(0.000001d));
         }
 
         [Test]
-        public void Tick_ReactivatingAttackSpeedSpecialRefreshesItsAbsoluteEndTime()
+        public void Tick_ReactivatingHasteBurstRefreshesHasteDuration()
         {
             UnitDefinition attacker = CreateUnit("attacker", 100, 1, 1, 1f);
             attacker.ManaThreshold = 10;
-            attacker.Special = CreateAttackSpeedSpecial();
+            attacker.Special = CreateHasteBurstSpecial();
             BattleSimulation simulation = CreateSimulation(attacker, CreateUnit("target", 100, 1, 1, 1f));
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[0].NextAttackTime = 0d;
 
             TestDefinitions.ResolveNextAttack(simulation);
-            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(5.5d).Within(0.000001d));
+            AssertHasteEndTime(simulation.Units[0], 5.5d);
 
             TestDefinitions.ResolveNextAttack(simulation);
 
-            Assert.That(simulation.Units[0].SpecialEndTime, Is.EqualTo(6.25d).Within(0.000001d));
-            Assert.AreSame(attacker.Special, simulation.Units[0].ActiveSpecial);
+            AssertHasteEndTime(simulation.Units[0], 6.25d);
         }
 
         [Test]
@@ -152,8 +150,7 @@ namespace DeckBattle.Tests
 
             TestDefinitions.ResolveNextAttack(simulation, events);
 
-            Assert.IsNull(simulation.Units[0].ActiveSpecial);
-            Assert.AreEqual(1f, simulation.Units[0].SpecialAttackCooldownMultiplier);
+            Assert.IsFalse(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, simulation.Units[0].UnitId, out _));
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
             AssertNoSpecialActivation(events);
         }
@@ -197,13 +194,28 @@ namespace DeckBattle.Tests
                 });
         }
 
-        private static UnitSpecialDefinition CreateAttackSpeedSpecial()
+        private static UnitSpecialDefinition CreateHasteBurstSpecial()
         {
             UnitSpecialDefinition special = TestDefinitions.Track(UnityEngine.ScriptableObject.CreateInstance<UnitSpecialDefinition>());
-            special.Kind = UnitSpecialKind.AttackSpeed;
-            special.Duration = 5f;
-            special.AttackCooldownMultiplier = 0.5f;
+            special.Kind = UnitSpecialKind.HasteBurst;
+            special.AppliedStatus = CreateHasteStatus(5f, 0.5f);
             return special;
+        }
+
+        private static StatusDefinition CreateHasteStatus(float duration, float magnitude)
+        {
+            StatusDefinition status = TestDefinitions.Track(UnityEngine.ScriptableObject.CreateInstance<StatusDefinition>());
+            status.Kind = StatusKind.Haste;
+            status.Category = StatusCategory.Beneficial;
+            status.DefaultDuration = duration;
+            status.DefaultMagnitude = magnitude;
+            return status;
+        }
+
+        private static void AssertHasteEndTime(UnitRuntimeState unit, double expectedEndTime)
+        {
+            Assert.IsTrue(unit.Statuses.TryFind(StatusKind.Haste, unit.UnitId, out int hasteIndex));
+            Assert.That(unit.Statuses[hasteIndex].EndTime, Is.EqualTo(expectedEndTime).Within(0.000001d));
         }
 
         private static UnitDefinition CreateUnit(string unitId, int hp, int attack, int range, float cooldown)

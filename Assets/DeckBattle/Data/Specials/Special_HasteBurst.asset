@@ -10,9 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4c9d2e7a1b5f43d8a6e0c2f7b9d4a381, type: 3}
-  m_Name: Special_AtackSpeed
+  m_Name: Special_HasteBurst
   m_EditorClassIdentifier: 
-  SpecialId: special_attackspeed
+  SpecialId: special_hasteburst
   Kind: 1
-  Duration: 5
-  AttackCooldownMultiplier: 0.5
+  AppliedStatus: {fileID: 11400000, guid: 4e0d00312a7651d48aaa399cf14ff515, type: 2}

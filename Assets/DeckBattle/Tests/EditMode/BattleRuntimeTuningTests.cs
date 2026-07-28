@@ -61,7 +61,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void RuntimeAttackCooldownMultiplier_AdjustsCycleScheduledAtWindupStart()
+        public void Haste_AdjustsCycleScheduledAtWindupStart()
         {
             UnitDefinition player = CreateUnit("player", 10, 1, 3, 1f);
             UnitDefinition enemy = CreateUnit("enemy", 5, 1, 1, 1f);
@@ -73,7 +73,10 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 0))
                 });
             simulation.Units[0].SetTarget(simulation.Units[1]);
-            simulation.Units[0].SpecialAttackCooldownMultiplier = 0.5f;
+            StatusResolver.TryApply(
+                simulation,
+                simulation.Units[0],
+                new StatusApplicationRequest(CreateHasteStatus(0.5f), simulation.Units[0].UnitId));
             simulation.Units[0].NextAttackTime = 0d;
             var loop = new BattleTickLoop(simulation, 0.25f);
 
@@ -91,6 +94,16 @@ namespace DeckBattle.Tests
             definition.AttackRange = attackRange;
             definition.AttackCooldown = attackCooldown;
             return definition;
+        }
+
+        private static StatusDefinition CreateHasteStatus(float magnitude)
+        {
+            StatusDefinition status = TestDefinitions.Track(UnityEngine.ScriptableObject.CreateInstance<StatusDefinition>());
+            status.Kind = StatusKind.Haste;
+            status.Category = StatusCategory.Beneficial;
+            status.DefaultDuration = 10f;
+            status.DefaultMagnitude = magnitude;
+            return status;
         }
     }
 }

@@ -47,21 +47,30 @@ namespace DeckBattle
 
             UnitSpecialDefinition special = unit.Definition.Special;
             if (special == null
-                || special.Kind != UnitSpecialKind.AttackSpeed
-                || special.Duration <= 0f)
+                || special.Kind != UnitSpecialKind.HasteBurst
+                || special.AppliedStatus == null
+                || special.AppliedStatus.Kind != StatusKind.Haste)
+            {
+                return false;
+            }
+
+            StatusApplicationResult applicationResult = StatusResolver.TryApply(
+                simulation,
+                unit,
+                new StatusApplicationRequest(special.AppliedStatus, unit.UnitId),
+                eventQueue);
+            if (applicationResult != StatusApplicationResult.Applied
+                && applicationResult != StatusApplicationResult.Refreshed)
             {
                 return false;
             }
 
             unit.CurrentMana = 0;
             eventQueue?.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
-            unit.ActiveSpecial = special;
-            unit.SpecialEndTime = simulation.ElapsedTime + special.Duration;
-            unit.SpecialAttackCooldownMultiplier = Math.Max(0.01f, special.AttackCooldownMultiplier);
             eventQueue?.Enqueue(BattleEvent.UnitSpecialActivated(
                 unit.UnitId,
                 special.Kind,
-                special.Duration));
+                special.AppliedStatus.DefaultDuration));
             return true;
         }
     }

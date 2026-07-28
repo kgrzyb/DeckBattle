@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Kind: 17
   Category: 0
-  StackingRule: 1
-  DefaultDuration: 3
+  StackingRule: 2
+  DefaultDuration: 5
   DefaultInterval: 0
   DefaultMagnitude: 0.2
-  MaxStacks: 1
+  MaxStacks: 5
   DisplayName: Haste
-  Description: Runtime status definition. Not assigned to production content.
+  Description: Reduces attack cooldown while active.
   Icon: {fileID: 0}
-  DisplayColor: {r: 0.3, g: 0.75, b: 0.45, a: 1}
+  DisplayColor: {r: 0.5395603, g: 0.87112725, b: 0.9150943, a: 1}
