@@ -37,5 +37,33 @@ namespace DeckBattle.Tests
                 Object.DestroyImmediate(root);
             }
         }
+
+        [Test]
+        public void ShowUnitDefinition_ShowsUnitStatFieldsAndHidesSpellFields()
+        {
+            GameObject root = new GameObject("CardDetailsPopup", typeof(RectTransform), typeof(CardDetailsPopupView));
+
+            try
+            {
+                CardDetailsPopupView view = root.GetComponent<CardDetailsPopupView>();
+                typeof(CardDetailsPopupView)
+                    .GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(view, null);
+
+                UnitDefinition unit = TestDefinitions.CreateUnit("swordsman", 2);
+
+                view.Show(unit);
+
+                Assert.IsFalse(view.IsShowingCardDetails);
+                Assert.IsTrue(root.transform.Find("UnitDetails/Hp").gameObject.activeSelf);
+                Assert.IsTrue(root.transform.Find("UnitDetails/Attack").gameObject.activeSelf);
+                Assert.IsFalse(root.transform.Find("SpellDetails/SpellTarget").gameObject.activeSelf);
+                Assert.IsFalse(root.transform.Find("SpellDetails/SpellEffect").gameObject.activeSelf);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
     }
 }

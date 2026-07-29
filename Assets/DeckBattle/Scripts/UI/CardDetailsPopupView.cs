@@ -31,6 +31,7 @@ namespace DeckBattle
         [SerializeField] private TextMeshProUGUI spellDescriptionText;
 
         private CardRuntimeState shownCard;
+        private UnitDefinition shownUnitDefinition;
         private RectTransform rectTransform;
 
         private void Awake()
@@ -57,9 +58,27 @@ namespace DeckBattle
             SetVisible(true);
         }
 
+        public void Show(UnitDefinition unitDefinition)
+        {
+            if (unitDefinition == null)
+            {
+                Hide();
+                return;
+            }
+
+            if (shownUnitDefinition != unitDefinition || shownCard != null)
+            {
+                Apply(unitDefinition);
+            }
+
+            ApplySafeArea();
+            SetVisible(true);
+        }
+
         public void Hide()
         {
             shownCard = null;
+            shownUnitDefinition = null;
             SetVisible(false);
         }
 
@@ -68,9 +87,15 @@ namespace DeckBattle
             return gameObject.activeSelf && shownCard == card;
         }
 
+        public bool IsShowingCardDetails
+        {
+            get { return gameObject.activeSelf && shownCard != null; }
+        }
+
         private void Apply(CardRuntimeState card)
         {
             shownCard = card;
+            shownUnitDefinition = null;
             CardDefinition definition = card.Definition;
             UnitDefinition unitDefinition = card.UnitDefinition;
             SpellDefinition spellDefinition = card.SpellDefinition;
@@ -87,6 +112,24 @@ namespace DeckBattle
             {
                 ApplySpellDetails(spellDefinition);
             }
+
+            if (cardArtImage != null)
+            {
+                cardArtImage.sprite = definition.CardArt;
+                cardArtImage.enabled = definition.CardArt != null;
+            }
+        }
+
+        private void Apply(UnitDefinition definition)
+        {
+            shownCard = null;
+            shownUnitDefinition = definition;
+
+            SetText(nameText, definition.DisplayName);
+            SetText(apCostText, "AP " + definition.ApCost);
+            SetText(typeText, definition.CardKind.ToString());
+            SetText(rarityText, definition.Rarity.ToString());
+            ApplyUnitDetails(definition);
 
             if (cardArtImage != null)
             {

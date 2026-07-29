@@ -170,6 +170,14 @@ namespace DeckBattle
             }
         }
 
+        public void ShowUnitDetails(UnitDefinition unitDefinition)
+        {
+            if (cardDetailsPopup != null)
+            {
+                cardDetailsPopup.Show(unitDefinition);
+            }
+        }
+
         public void HideCardDetails()
         {
             if (cardDetailsPopup != null)
@@ -319,7 +327,7 @@ namespace DeckBattle
 
         private void HideCardDetailsIfMissingFromHand(List<CardRuntimeState> hand)
         {
-            if (cardDetailsPopup == null)
+            if (cardDetailsPopup == null || !cardDetailsPopup.IsShowingCardDetails)
             {
                 return;
             }

@@ -262,6 +262,12 @@ namespace DeckBattle
                     return;
                 }
 
+                if (TryShowUnitDetails(selectedUnitView))
+                {
+                    ClearSelection(false);
+                    return;
+                }
+
                 HexCoord targetCoord;
                 HexTileView targetTile;
                 if (TryGetFormationTarget(screenPosition, out targetCoord, out targetTile) && battleController != null)
@@ -277,6 +283,11 @@ namespace DeckBattle
             if (unitView != null && unitView.Unit != null && unitView.Unit.Side == BattleSide.Player)
             {
                 BeginUnitPress(unitView, screenPosition, pointerId);
+                return;
+            }
+
+            if (TryShowUnitDetails(unitView))
+            {
                 return;
             }
 
@@ -333,8 +344,9 @@ namespace DeckBattle
                 if (IsUnitTap(screenPosition))
                 {
                     RuntimeUnit unit = pressedUnit;
-                    ClearSelection();
+                    ClearSelection(false);
                     SelectUnit(unit);
+                    ShowUnitDetails(unit != null ? unit.Definition : null);
                 }
                 else
                 {
@@ -793,6 +805,38 @@ namespace DeckBattle
             if (uiController != null)
             {
                 uiController.HideCardDetails();
+            }
+        }
+
+        private bool TryShowUnitDetails(UnitView unitView)
+        {
+            if (unitView == null)
+            {
+                return false;
+            }
+
+            RuntimeUnit preparationUnit = unitView.Unit;
+            if (preparationUnit != null && preparationUnit.IsAlive)
+            {
+                ShowUnitDetails(preparationUnit.Definition);
+                return true;
+            }
+
+            UnitRuntimeState realtimeUnit = unitView.RealtimeUnit;
+            if (realtimeUnit != null && realtimeUnit.IsAlive)
+            {
+                ShowUnitDetails(realtimeUnit.Definition);
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ShowUnitDetails(UnitDefinition unitDefinition)
+        {
+            if (uiController != null && unitDefinition != null)
+            {
+                uiController.ShowUnitDetails(unitDefinition);
             }
         }
 

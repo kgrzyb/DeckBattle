@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Kind: 8
   Category: 2
-  StackingRule: 2
+  StackingRule: 5
+  IndependentPerSourceCombination: 0
   DefaultDuration: 3
   DefaultInterval: 1
   DefaultMagnitude: 1
