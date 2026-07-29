@@ -47,6 +47,7 @@ namespace DeckBattle
         public readonly int SequenceId;
         public readonly StatusKind StatusKind;
         public readonly int StatusStackCount;
+        public readonly int StatusStackDelta;
 
         private BattleEvent(
             BattleEventType type,
@@ -64,7 +65,8 @@ namespace DeckBattle
             bool hasWinner,
             int sequenceId = 0,
             StatusKind statusKind = StatusKind.None,
-            int statusStackCount = 0)
+            int statusStackCount = 0,
+            int statusStackDelta = 0)
         {
             Type = type;
             UnitId = unitId;
@@ -82,6 +84,7 @@ namespace DeckBattle
             SequenceId = sequenceId;
             StatusKind = statusKind;
             StatusStackCount = statusStackCount;
+            StatusStackDelta = statusStackDelta;
         }
 
         public static BattleEvent UnitMoved(int unitId, HexCoord from, HexCoord to)
@@ -167,17 +170,17 @@ namespace DeckBattle
 
         public static BattleEvent StatusApplied(int targetId, int sourceId, StatusKind kind, int stacks, float duration)
         {
-            return new BattleEvent(BattleEventType.StatusApplied, targetId, sourceId, default, default, 0, 0, 0, 0, duration, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks);
+            return new BattleEvent(BattleEventType.StatusApplied, targetId, sourceId, default, default, 0, 0, 0, 0, duration, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks, stacks);
         }
 
-        public static BattleEvent StatusRefreshed(int targetId, int sourceId, StatusKind kind, int stacks, float duration)
+        public static BattleEvent StatusRefreshed(int targetId, int sourceId, StatusKind kind, int stacks, float duration, int stackDelta = 0)
         {
-            return new BattleEvent(BattleEventType.StatusRefreshed, targetId, sourceId, default, default, 0, 0, 0, 0, duration, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks);
+            return new BattleEvent(BattleEventType.StatusRefreshed, targetId, sourceId, default, default, 0, 0, 0, 0, duration, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks, stackDelta);
         }
 
         public static BattleEvent StatusRemoved(int targetId, int sourceId, StatusKind kind, int stacks)
         {
-            return new BattleEvent(BattleEventType.StatusRemoved, targetId, sourceId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks);
+            return new BattleEvent(BattleEventType.StatusRemoved, targetId, sourceId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, 0, kind, stacks, -stacks);
         }
 
         public static BattleEvent StatusRejected(int targetId, int sourceId, StatusKind kind, StatusApplicationResult reason)

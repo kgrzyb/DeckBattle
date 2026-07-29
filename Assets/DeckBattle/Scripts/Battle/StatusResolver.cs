@@ -59,21 +59,27 @@ namespace DeckBattle
             int stacks = Math.Max(1, request.Stacks);
             double endTime = simulation.ElapsedTime + duration;
 
-            if (definition.StackingRule != StatusStackingRule.IndependentShield
-                && target.Statuses.TryFind(definition.Kind, request.SourceUnitId, out int existingIndex))
+            int existingIndex = -1;
+            bool hasExisting = definition.StackingRule == StatusStackingRule.AggregateStacksAcrossSources
+                ? target.Statuses.TryFind(definition.Kind, out existingIndex)
+                : definition.StackingRule != StatusStackingRule.IndependentShield
+                    && target.Statuses.TryFind(definition.Kind, request.SourceUnitId, out existingIndex);
+            if (hasExisting)
             {
                 StatusInstance existing = target.Statuses[existingIndex];
+                int previousStacks = existing.Stacks;
                 existing.EndTime = Math.Max(existing.EndTime, endTime);
                 existing.Magnitude = Math.Max(existing.Magnitude, magnitude);
                 existing.NextTickTime = interval > 0f ? simulation.ElapsedTime + interval : double.PositiveInfinity;
                 existing.TickInterval = interval;
-                if (definition.StackingRule == StatusStackingRule.AggregateStacks)
+                if (definition.StackingRule == StatusStackingRule.AggregateStacks
+                    || definition.StackingRule == StatusStackingRule.AggregateStacksAcrossSources)
                 {
                     existing.Stacks = Math.Min(definition.MaxStacks, existing.Stacks + stacks);
                 }
                 target.Statuses.Set(existingIndex, existing);
                 RebuildSnapshot(target);
-                eventQueue?.Enqueue(BattleEvent.StatusRefreshed(target.UnitId, request.SourceUnitId, definition.Kind, existing.Stacks, (float)(existing.EndTime - simulation.ElapsedTime)));
+                eventQueue?.Enqueue(BattleEvent.StatusRefreshed(target.UnitId, request.SourceUnitId, definition.Kind, existing.Stacks, (float)(existing.EndTime - simulation.ElapsedTime), existing.Stacks - previousStacks));
                 return StatusApplicationResult.Refreshed;
             }
 
@@ -82,6 +88,7 @@ namespace DeckBattle
                 Kind = definition.Kind,
                 Category = definition.Category,
                 StackingRule = definition.StackingRule,
+                IndependentPerSourceCombination = definition.IndependentPerSourceCombination,
                 SourceUnitId = request.SourceUnitId,
                 LinkedUnitId = request.LinkedUnitId,
                 Magnitude = magnitude,
@@ -156,15 +163,15 @@ namespace DeckBattle
                         snapshot.BlocksTargeting = true; snapshot.BlocksMovement = true; snapshot.BlocksAttack = true; snapshot.BlocksSpecial = true; break;
                     case StatusKind.Root: snapshot.BlocksMovement = true; break;
                     case StatusKind.Silence: snapshot.BlocksSpecial = true; break;
-                    case StatusKind.Slow: snapshot.Slow += totalMagnitude; break;
-                    case StatusKind.Haste: snapshot.Haste += totalMagnitude; break;
-                    case StatusKind.Weaken: snapshot.Weaken += totalMagnitude; break;
-                    case StatusKind.Empower: snapshot.Empower += totalMagnitude; break;
-                    case StatusKind.Exposed: snapshot.Exposed += totalMagnitude; break;
-                    case StatusKind.Shred: snapshot.Shred += totalMagnitude; break;
-                    case StatusKind.Criticality: snapshot.Criticality += totalMagnitude; break;
-                    case StatusKind.Lifesteal: snapshot.Lifesteal += totalMagnitude; break;
-                    case StatusKind.Poison: snapshot.HealingReduction += totalMagnitude; break;
+                    case StatusKind.Slow: snapshot.Slow = CombineMagnitude(snapshot.Slow, totalMagnitude, instance); break;
+                    case StatusKind.Haste: snapshot.Haste = CombineMagnitude(snapshot.Haste, totalMagnitude, instance); break;
+                    case StatusKind.Weaken: snapshot.Weaken = CombineMagnitude(snapshot.Weaken, totalMagnitude, instance); break;
+                    case StatusKind.Empower: snapshot.Empower = CombineMagnitude(snapshot.Empower, totalMagnitude, instance); break;
+                    case StatusKind.Exposed: snapshot.Exposed = CombineMagnitude(snapshot.Exposed, totalMagnitude, instance); break;
+                    case StatusKind.Shred: snapshot.Shred = CombineMagnitude(snapshot.Shred, totalMagnitude, instance); break;
+                    case StatusKind.Criticality: snapshot.Criticality = CombineMagnitude(snapshot.Criticality, totalMagnitude, instance); break;
+                    case StatusKind.Lifesteal: snapshot.Lifesteal = CombineMagnitude(snapshot.Lifesteal, totalMagnitude, instance); break;
+                    case StatusKind.Poison: snapshot.HealingReduction = CombineMagnitude(snapshot.HealingReduction, totalMagnitude, instance); break;
                     case StatusKind.Shield: snapshot.TotalShield += Math.Max(0, instance.RemainingShield); break;
                     case StatusKind.Invulnerability: snapshot.Invulnerable = true; break;
                     case StatusKind.Fearless: snapshot.Fearless = true; break;
@@ -173,6 +180,17 @@ namespace DeckBattle
             }
             unit.StatusSnapshot = snapshot;
             unit.StatusVersion++;
+        }
+
+        private static float CombineMagnitude(float accumulated, float value, StatusInstance instance)
+        {
+            if (instance.StackingRule != StatusStackingRule.IndependentPerSource
+                || instance.IndependentPerSourceCombination != StatusValueCombinationRule.Multiplicative)
+            {
+                return accumulated + value;
+            }
+
+            return (1f + accumulated) * (1f + value) - 1f;
         }
 
         private static StatusApplicationResult Reject(UnitRuntimeState target, StatusApplicationRequest request, StatusApplicationResult reason, BattleEventQueue eventQueue)

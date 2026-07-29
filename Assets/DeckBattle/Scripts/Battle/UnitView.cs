@@ -23,6 +23,7 @@ namespace DeckBattle
         public int RuntimeId { get; private set; }
         public RuntimeUnit Unit { get; private set; }
         public UnitRuntimeState RealtimeUnit { get; private set; }
+        public Transform StatusVfxPivot { get { return transform; } }
 
         private MaterialPropertyBlock propertyBlock;
         private Vector3 baseModelScale;

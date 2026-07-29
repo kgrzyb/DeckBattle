@@ -169,8 +169,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
@@ -256,6 +256,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 16250556}
   m_CullTransparentMesh: 1
+--- !u!1 &35274781
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 35274782}
+  m_Layer: 0
+  m_Name: StatusVfxPool
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &35274782
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 35274781}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 225271483}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &43039735
 GameObject:
   m_ObjectHideFlags: 0
@@ -746,6 +777,7 @@ GameObject:
   - component: {fileID: 225271484}
   - component: {fileID: 225271485}
   - component: {fileID: 225271486}
+  - component: {fileID: 225271487}
   m_Layer: 0
   m_Name: BattleController
   m_TagString: Untagged
@@ -805,7 +837,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 35274782}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &225271484
@@ -852,6 +885,9 @@ MonoBehaviour:
   boardPresenter: {fileID: 1201968723}
   unitRoot: {fileID: 763315698}
   statusOverlayController: {fileID: 641749120}
+  statusPresentationCatalog: {fileID: 11400000, guid: 12381e2df6b472d44a5f35e37d417a6b,
+    type: 2}
+  statusVfxController: {fileID: 225271487}
   attackEffectPrefab: {fileID: 0}
   damageEffectPrefab: {fileID: 0}
   effectRoot: {fileID: 763315698}
@@ -887,6 +923,21 @@ MonoBehaviour:
   reservedColor: {r: 0.55, g: 0.2, b: 1, a: 0.9}
   attackPositionColor: {r: 1, g: 1, b: 1, a: 0.95}
   unitHexLabelColor: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &225271487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 225271481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b0a6c9fe6f996745a67d2fb1ab5830c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  presentationCatalog: {fileID: 11400000, guid: 12381e2df6b472d44a5f35e37d417a6b,
+    type: 2}
+  poolRoot: {fileID: 35274782}
 --- !u!1 &408650581
 GameObject:
   m_ObjectHideFlags: 0
@@ -1430,6 +1481,8 @@ MonoBehaviour:
   overlayRoot: {fileID: 641749121}
   worldCamera: {fileID: 1149497570}
   worldOffset: {x: 0, y: 2.5, z: 0}
+  presentationCatalog: {fileID: 11400000, guid: 12381e2df6b472d44a5f35e37d417a6b,
+    type: 2}
 --- !u!224 &641749121
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3010,9 +3063,9 @@ RectTransform:
   - {fileID: 1229694191}
   m_Father: {fileID: 1358124553}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 100, y: -82.5}
   m_SizeDelta: {x: 200, y: 55}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1566802631
@@ -3675,7 +3728,11 @@ MonoBehaviour:
   handRoot: {fileID: 2110472614}
   cardViewPrefab: {fileID: 9136431263256065374, guid: 374c874e811c1fb458007df21a73b306,
     type: 3}
+  handSidePadding: 18
+  preferredHandSpacing: 14
+  selectedCardLift: 22
   cardDetailsPopup: {fileID: 1666162181}
+  dragHexOffsetUi: 72
 --- !u!114 &2012690323
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3798,9 +3855,9 @@ RectTransform:
   - {fileID: 1977282090}
   m_Father: {fileID: 1358124553}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 100, y: -27.5}
   m_SizeDelta: {x: 200, y: 55}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2025697492

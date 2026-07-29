@@ -31,6 +31,20 @@ namespace DeckBattle
             return false;
         }
 
+        public bool TryFind(StatusKind kind, out int index)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (instances[i].Kind == kind)
+                {
+                    index = i;
+                    return true;
+                }
+            }
+            index = -1;
+            return false;
+        }
+
         public bool TryAdd(StatusInstance instance, out int index)
         {
             if (count == instances.Length)

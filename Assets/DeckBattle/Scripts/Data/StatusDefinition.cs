@@ -8,6 +8,8 @@ namespace DeckBattle
         public StatusKind Kind;
         public StatusCategory Category;
         public StatusStackingRule StackingRule = StatusStackingRule.RefreshPerSource;
+        [Tooltip("Used only when Stacking Rule is Independent Per Source.")]
+        public StatusValueCombinationRule IndependentPerSourceCombination = StatusValueCombinationRule.Additive;
         [Min(0.01f)] public float DefaultDuration = 1f;
         [Min(0f)] public float DefaultInterval;
         [Min(0f)] public float DefaultMagnitude;

@@ -5,6 +5,7 @@ namespace DeckBattle
         public StatusKind Kind;
         public StatusCategory Category;
         public StatusStackingRule StackingRule;
+        public StatusValueCombinationRule IndependentPerSourceCombination;
         public int SourceUnitId;
         public int LinkedUnitId;
         public int ApplicationSequenceId;

@@ -9,6 +9,7 @@ namespace DeckBattle
         [SerializeField] private RectTransform overlayRoot;
         [SerializeField] private Camera worldCamera;
         [SerializeField] private Vector3 worldOffset = new Vector3(0f, 1.55f, 0f);
+        [SerializeField] private StatusPresentationCatalog presentationCatalog;
 
         private readonly Dictionary<int, TrackedOverlay> activeOverlays = new Dictionary<int, TrackedOverlay>(16);
         private readonly Stack<UnitStatusOverlayView> pooledOverlays = new Stack<UnitStatusOverlayView>(16);
@@ -26,6 +27,11 @@ namespace DeckBattle
         {
             ResolveRoot();
             ResolveCamera();
+        }
+
+        public void SetPresentationCatalog(StatusPresentationCatalog catalog)
+        {
+            presentationCatalog = catalog;
         }
 
         private void LateUpdate()
@@ -108,7 +114,7 @@ namespace DeckBattle
                 return;
             }
 
-            tracked.View.SetStatuses(unit.Statuses, unit.StatusSnapshot.TotalShield);
+            tracked.View.SetStatuses(unit.Statuses, unit.StatusSnapshot.TotalShield, presentationCatalog);
         }
 
         public void Release(int unitId)

@@ -19,6 +19,8 @@ namespace DeckBattle
         [SerializeField, Range(1, 4)] private int maxVisibleStatusIcons = 4;
 
         private readonly StatusIconSlot[] statusIconSlots = new StatusIconSlot[4];
+        private readonly StatusKind[] selectedStatusKinds = new StatusKind[16];
+        private readonly StatusPresentationEntry[] selectedStatusEntries = new StatusPresentationEntry[16];
         private int unitId;
         private int shownHp = -1;
         private int shownMaxHp = -1;
@@ -70,6 +72,18 @@ namespace DeckBattle
 
         public void SetStatuses(UnitStatusCollection statuses, int totalShield)
         {
+            SetStatuses(statuses, totalShield, null);
+        }
+
+        public void SetStatuses(UnitStatusCollection statuses, int totalShield, StatusPresentationCatalog presentationCatalog)
+        {
+            if (presentationCatalog != null)
+            {
+                SetCatalogStatuses(statuses, presentationCatalog);
+                SetShield(totalShield);
+                return;
+            }
+
             EnsureStatusIconSlots();
             int visibleCount = 0;
             int hiddenCount = 0;
@@ -113,6 +127,70 @@ namespace DeckBattle
 
             shownStatusVersion = statusCount;
             SetShield(totalShield);
+        }
+
+        private void SetCatalogStatuses(UnitStatusCollection statuses, StatusPresentationCatalog presentationCatalog)
+        {
+            EnsureStatusIconSlots();
+            int selectedCount = 0;
+            int statusCount = statuses != null ? statuses.Count : 0;
+            for (int i = 0; i < statusCount; i++)
+            {
+                StatusKind kind = statuses[i].Kind;
+                if (!presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) || entry.Mode != StatusPresentationMode.Icon)
+                {
+                    continue;
+                }
+
+                bool alreadySelected = false;
+                for (int selectedIndex = 0; selectedIndex < selectedCount; selectedIndex++)
+                {
+                    if (selectedStatusKinds[selectedIndex] == kind)
+                    {
+                        alreadySelected = true;
+                        break;
+                    }
+                }
+
+                if (alreadySelected || selectedCount >= selectedStatusKinds.Length)
+                {
+                    continue;
+                }
+
+                int insertIndex = selectedCount;
+                while (insertIndex > 0 && ComparePresentation(entry, kind, selectedStatusEntries[insertIndex - 1], selectedStatusKinds[insertIndex - 1]) < 0)
+                {
+                    selectedStatusKinds[insertIndex] = selectedStatusKinds[insertIndex - 1];
+                    selectedStatusEntries[insertIndex] = selectedStatusEntries[insertIndex - 1];
+                    insertIndex--;
+                }
+
+                selectedStatusKinds[insertIndex] = kind;
+                selectedStatusEntries[insertIndex] = entry;
+                selectedCount++;
+            }
+
+            int visibleCount = Mathf.Min(selectedCount, maxVisibleStatusIcons);
+            for (int i = 0; i < visibleCount; i++)
+            {
+                statusIconSlots[i].SetIcon(selectedStatusEntries[i].Icon);
+            }
+
+            for (int i = visibleCount; i < statusIconSlots.Length; i++)
+            {
+                statusIconSlots[i].SetVisible(false);
+            }
+
+            if (selectedCount > maxVisibleStatusIcons && visibleCount > 0)
+            {
+                statusIconSlots[visibleCount - 1].SetOverflow(selectedCount - maxVisibleStatusIcons + 1);
+            }
+        }
+
+        private static int ComparePresentation(StatusPresentationEntry left, StatusKind leftKind, StatusPresentationEntry right, StatusKind rightKind)
+        {
+            int priority = left.Priority.CompareTo(right.Priority);
+            return priority != 0 ? priority : leftKind.CompareTo(rightKind);
         }
 
         public void SetShield(int totalShield)
@@ -291,6 +369,14 @@ namespace DeckBattle
                 {
                     label.SetText(GetAbbreviation(kind));
                 }
+                SetVisible(true);
+            }
+
+            public void SetIcon(Sprite sprite)
+            {
+                image.sprite = sprite;
+                image.color = Color.white;
+                label.SetText(string.Empty);
                 SetVisible(true);
             }
 

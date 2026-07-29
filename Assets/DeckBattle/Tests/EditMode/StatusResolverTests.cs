@@ -67,6 +67,46 @@ namespace DeckBattle.Tests
             Assert.That(target.StatusSnapshot.Slow, Is.EqualTo(0.4f).Within(0.0001f));
         }
 
+        [TestCase(StatusValueCombinationRule.Additive, 0.5f)]
+        [TestCase(StatusValueCombinationRule.Multiplicative, 0.56f)]
+        public void IndependentPerSource_CombinesMagnitudesUsingDefinitionRule(StatusValueCombinationRule combinationRule, float expectedSlow)
+        {
+            BattleSimulation simulation = CreateSimulation();
+            UnitRuntimeState target = simulation.Units[0];
+            StatusDefinition slow = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
+            slow.Kind = StatusKind.Slow;
+            slow.Category = StatusCategory.HarmfulCrowdControl;
+            slow.StackingRule = StatusStackingRule.IndependentPerSource;
+            slow.IndependentPerSourceCombination = combinationRule;
+            slow.DefaultDuration = 5f;
+
+            Assert.AreEqual(StatusApplicationResult.Applied, StatusResolver.TryApply(simulation, target, new StatusApplicationRequest(slow, 2, magnitude: 0.2f)));
+            Assert.AreEqual(StatusApplicationResult.Applied, StatusResolver.TryApply(simulation, target, new StatusApplicationRequest(slow, 3, magnitude: 0.3f)));
+
+            Assert.AreEqual(2, target.Statuses.Count);
+            Assert.That(target.StatusSnapshot.Slow, Is.EqualTo(expectedSlow).Within(0.0001f));
+        }
+
+        [Test]
+        public void AggregateStacksAcrossSources_UsesOneSharedStatusInstance()
+        {
+            BattleSimulation simulation = CreateSimulation();
+            UnitRuntimeState target = simulation.Units[0];
+            StatusDefinition bleed = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
+            bleed.Kind = StatusKind.Bleed;
+            bleed.Category = StatusCategory.HarmfulDamageOverTime;
+            bleed.StackingRule = StatusStackingRule.AggregateStacksAcrossSources;
+            bleed.MaxStacks = 5;
+            bleed.DefaultDuration = 5f;
+
+            Assert.AreEqual(StatusApplicationResult.Applied, StatusResolver.TryApply(simulation, target, new StatusApplicationRequest(bleed, 2, stacks: 1)));
+            Assert.AreEqual(StatusApplicationResult.Refreshed, StatusResolver.TryApply(simulation, target, new StatusApplicationRequest(bleed, 3, stacks: 2)));
+
+            Assert.AreEqual(1, target.Statuses.Count);
+            Assert.AreEqual(3, target.Statuses[0].Stacks);
+            Assert.AreEqual(2, target.Statuses[0].SourceUnitId);
+        }
+
         private static BattleSimulation CreateSimulation()
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);

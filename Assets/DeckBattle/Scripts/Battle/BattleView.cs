@@ -24,9 +24,10 @@ namespace DeckBattle
         [SerializeField] private BoardPresenter boardPresenter;
         [SerializeField] private Transform unitRoot;
         [SerializeField] private UnitStatusOverlayController statusOverlayController;
+        [SerializeField] private StatusPresentationCatalog statusPresentationCatalog;
+        [SerializeField] private UnitStatusVfxController statusVfxController;
         [SerializeField] private PooledBattleEffect attackEffectPrefab;
         [SerializeField] private PooledBattleEffect damageEffectPrefab;
-        [SerializeField] private PooledBattleEffect statusEffectPrefab;
         [SerializeField] private Transform effectRoot;
 
 #if DEVELOPMENT_BUILD && !UNITY_EDITOR
@@ -40,10 +41,8 @@ namespace DeckBattle
         private readonly BattleEventQueue eventQueue = new BattleEventQueue(32);
         private readonly List<PooledBattleEffect> activeAttackEffects = new List<PooledBattleEffect>(8);
         private readonly List<PooledBattleEffect> activeDamageEffects = new List<PooledBattleEffect>(8);
-        private readonly List<PooledBattleEffect> activeStatusEffects = new List<PooledBattleEffect>(4);
         private readonly Stack<PooledBattleEffect> pooledAttackEffects = new Stack<PooledBattleEffect>(8);
         private readonly Stack<PooledBattleEffect> pooledDamageEffects = new Stack<PooledBattleEffect>(8);
-        private readonly Stack<PooledBattleEffect> pooledStatusEffects = new Stack<PooledBattleEffect>(4);
         private readonly List<ProjectileView> activeProjectileViews = new List<ProjectileView>(8);
         private readonly Dictionary<int, ProjectileView> projectileViewById = new Dictionary<int, ProjectileView>(8);
         private readonly Dictionary<ProjectileView, Stack<ProjectileView>> pooledProjectileViews = new Dictionary<ProjectileView, Stack<ProjectileView>>(4);
@@ -97,6 +96,16 @@ namespace DeckBattle
 
         private void Awake()
         {
+            if (statusOverlayController != null)
+            {
+                statusOverlayController.SetPresentationCatalog(statusPresentationCatalog);
+            }
+
+            if (statusVfxController != null)
+            {
+                statusVfxController.Initialize(statusPresentationCatalog);
+            }
+
             if (startOnAwake)
             {
                 StartConfiguredBattle();
@@ -108,7 +117,6 @@ namespace DeckBattle
             UpdateSimulation(Time.deltaTime);
             ReleaseCompletedEffects(activeAttackEffects, pooledAttackEffects);
             ReleaseCompletedEffects(activeDamageEffects, pooledDamageEffects);
-            ReleaseCompletedEffects(activeStatusEffects, pooledStatusEffects);
             ReleaseCompletedProjectiles();
         }
 
@@ -198,6 +206,11 @@ namespace DeckBattle
                 statusOverlayController.ReleaseAll();
             }
 
+            if (statusVfxController != null)
+            {
+                statusVfxController.ReleaseAll();
+            }
+
             ReleaseAllUnitViews(reusableUnitViews);
             CaptureDebugSnapshot(simulation, null);
             for (int i = 0; i < simulation.Units.Count; i++)
@@ -239,6 +252,11 @@ namespace DeckBattle
             lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
             eventQueue.Clear();
             CaptureDebugSnapshot(null, null);
+            if (statusVfxController != null)
+            {
+                statusVfxController.ReleaseAll();
+            }
+
             if (releaseUnitViews)
             {
                 if (statusOverlayController != null)
@@ -256,7 +274,6 @@ namespace DeckBattle
 
             ReleaseAllEffects(activeAttackEffects, pooledAttackEffects);
             ReleaseAllEffects(activeDamageEffects, pooledDamageEffects);
-            ReleaseAllEffects(activeStatusEffects, pooledStatusEffects);
             ReleaseAllProjectiles();
         }
 
@@ -346,16 +363,25 @@ namespace DeckBattle
                     case BattleEventType.UnitDied:
                         HandleUnitDied(battleEvent);
                         break;
+                    case BattleEventType.BattleEnded:
+                        HandleBattleEnded();
+                        break;
                     case BattleEventType.UnitManaChanged:
                         HandleUnitManaChanged(battleEvent);
                         break;
                     case BattleEventType.StatusApplied:
-                        HandleStatusApplied(battleEvent);
+                        HandleStatusPresentationEvent(battleEvent);
                         HandleStatusChanged(battleEvent);
                         break;
                     case BattleEventType.StatusRefreshed:
                     case BattleEventType.StatusStackChanged:
+                        HandleStatusPresentationEvent(battleEvent);
+                        HandleStatusChanged(battleEvent);
+                        break;
                     case BattleEventType.StatusRemoved:
+                        HandleStatusPresentationEvent(battleEvent);
+                        HandleStatusChanged(battleEvent);
+                        break;
                     case BattleEventType.ShieldChanged:
                         HandleStatusChanged(battleEvent);
                         break;
@@ -481,6 +507,11 @@ namespace DeckBattle
             {
                 statusOverlayController.Release(battleEvent.UnitId);
             }
+
+            if (statusVfxController != null)
+            {
+                statusVfxController.Release(battleEvent.UnitId);
+            }
         }
 
         private void HandleUnitManaChanged(BattleEvent battleEvent)
@@ -499,39 +530,41 @@ namespace DeckBattle
             statusOverlayController.SetMana(unit.UnitId, battleEvent.CurrentMana, unit.Definition.ManaThreshold);
         }
 
+        private void HandleBattleEnded()
+        {
+            if (statusVfxController != null)
+            {
+                statusVfxController.ReleaseAll();
+            }
+        }
+
         private void HandleStatusChanged(BattleEvent battleEvent)
         {
-            if (statusOverlayController == null || simulation == null)
+            if (simulation == null)
             {
                 return;
             }
 
             if (simulation.TryGetUnitById(battleEvent.UnitId, out UnitRuntimeState unit) && unit != null && unit.IsAlive)
             {
-                statusOverlayController.SetStatuses(unit);
+                if (statusOverlayController != null)
+                {
+                    statusOverlayController.SetStatuses(unit);
+                }
+
+                if (statusVfxController != null)
+                {
+                    statusVfxController.Sync(unit);
+                }
             }
         }
 
-        private void HandleStatusApplied(BattleEvent battleEvent)
+        private void HandleStatusPresentationEvent(BattleEvent battleEvent)
         {
-            if (!IsKeyStatusVisual(battleEvent.StatusKind)
-                || simulation == null
-                || boardPresenter == null
-                || !simulation.TryGetUnitById(battleEvent.UnitId, out UnitRuntimeState target)
-                || target == null)
+            if (statusVfxController != null)
             {
-                return;
+                statusVfxController.HandleStatusEvent(battleEvent);
             }
-
-            SpawnEffect(statusEffectPrefab, boardPresenter.GetWorldPosition(target.CurrentHex), activeStatusEffects, pooledStatusEffects);
-        }
-
-        private static bool IsKeyStatusVisual(StatusKind kind)
-        {
-            return kind == StatusKind.Stun
-                || kind == StatusKind.Shield
-                || kind == StatusKind.Invulnerability
-                || kind == StatusKind.Mark;
         }
 
         private void HandleProjectileLaunched(BattleEvent battleEvent)
@@ -618,22 +651,33 @@ namespace DeckBattle
 
         private void BindStatusOverlay(UnitRuntimeState unit, UnitView view)
         {
-            if (statusOverlayController == null)
-            {
-                return;
-            }
-
             if (unit == null || !unit.IsAlive)
             {
                 if (unit != null)
                 {
-                    statusOverlayController.Release(unit.UnitId);
+                    if (statusOverlayController != null)
+                    {
+                        statusOverlayController.Release(unit.UnitId);
+                    }
+
+                    if (statusVfxController != null)
+                    {
+                        statusVfxController.Release(unit.UnitId);
+                    }
                 }
 
                 return;
             }
 
-            statusOverlayController.BindRealtimeUnit(unit, view);
+            if (statusOverlayController != null)
+            {
+                statusOverlayController.BindRealtimeUnit(unit, view);
+            }
+
+            if (statusVfxController != null)
+            {
+                statusVfxController.BindOrSync(unit, view);
+            }
         }
 
         private UnitView CreateUnitView(UnitDefinition definition)
