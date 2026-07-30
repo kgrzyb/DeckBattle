@@ -9,6 +9,12 @@ namespace DeckBattle
         Winddown = 2
     }
 
+    public enum UnitSpecialPhase
+    {
+        Idle = 0,
+        Windup = 1
+    }
+
     public sealed class UnitRuntimeState
     {
         public const int NoTargetUnitId = 0;
@@ -29,6 +35,9 @@ namespace DeckBattle
         public int AttackSequenceId;
         public double AttackCycleStartTime;
         public double WindupEndTime;
+        public UnitSpecialPhase SpecialPhase;
+        public int SpecialSequenceId;
+        public double SpecialWindupEndTime;
         public int CurrentMana;
         public bool IsMoving;
         public HexCoord MovementDestination;
@@ -61,6 +70,7 @@ namespace DeckBattle
             ResetPursuit();
             NextAttackTime = double.PositiveInfinity;
             ResetAttackCycle();
+            ResetSpecialCycle();
             CurrentMana = 0;
             IsMoving = false;
             MovementDestination = startHex;
@@ -137,6 +147,7 @@ namespace DeckBattle
             ClearTarget();
             NextAttackTime = double.PositiveInfinity;
             ResetAttackCycle();
+            ResetSpecialCycle();
             CurrentMana = 0;
             IsMoving = false;
             MovementDestination = startHex;
@@ -155,6 +166,13 @@ namespace DeckBattle
             AttackSequenceId = 0;
             AttackCycleStartTime = double.PositiveInfinity;
             WindupEndTime = double.PositiveInfinity;
+        }
+
+        public void ResetSpecialCycle()
+        {
+            SpecialPhase = UnitSpecialPhase.Idle;
+            SpecialSequenceId = 0;
+            SpecialWindupEndTime = double.PositiveInfinity;
         }
     }
 }

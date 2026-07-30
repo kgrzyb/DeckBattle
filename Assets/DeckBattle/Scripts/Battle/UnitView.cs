@@ -1,4 +1,3 @@
-using DG.Tweening;
 using UnityEngine;
 
 namespace DeckBattle
@@ -7,15 +6,27 @@ namespace DeckBattle
     {
         private const int MaxQueuedMoves = 4;
 
+        private enum UnitVisualState
+        {
+            Idle = 0,
+            Run = 1,
+            Attack = 2,
+            Special = 3,
+            Dead = 4
+        }
+
+        private static readonly int IdleTrigger = Animator.StringToHash("idle");
+        private static readonly int RunTrigger = Animator.StringToHash("run");
+        private static readonly int AttackTrigger = Animator.StringToHash("attack");
+        private static readonly int SpecialTrigger = Animator.StringToHash("special");
+        private static readonly int DeadTrigger = Animator.StringToHash("dead");
+
         [SerializeField] private MeshRenderer meshRenderer;
         [SerializeField] private Transform modelRoot;
+        [SerializeField] private Animator animator;
         [SerializeField] private float groundOffset = 0.65f;
-        [SerializeField] private float attackPulseDuration = 0.14f;
-        [SerializeField] private float meleeAttackLeanBackAngle = -7f;
-        [SerializeField] private float meleeAttackStrikeAngle = 14f;
         [SerializeField] private float damageFlashDuration = 0.12f;
         [SerializeField] private float deathDuration = 0.25f;
-        [SerializeField] private float deathSinkDistance = 0.25f;
         [SerializeField] private Color playerColor = new Color(0.18f, 0.62f, 0.95f, 1f);
         [SerializeField] private Color enemyColor = new Color(0.95f, 0.35f, 0.25f, 1f);
         [SerializeField] private Color damageFlashColor = Color.white;
@@ -32,20 +43,18 @@ namespace DeckBattle
         private Vector3 moveTo;
         private readonly Vector3[] queuedMoveTargets = new Vector3[MaxQueuedMoves];
         private readonly float[] queuedMoveDurations = new float[MaxQueuedMoves];
-        private Vector3 deathStartPosition;
         private Color sideColor;
         private float moveElapsed;
         private float moveDuration;
-        private float attackTimer;
         private float damageTimer;
         private float deathTimer;
         private int queuedMoveHead;
         private int queuedMoveCount;
         private bool isMoving;
         private bool isDying;
-        private Sequence attackSequence;
-        private Quaternion attackSequenceStartRotation;
         private int activeAttackSequenceId;
+        private int activeSpecialSequenceId;
+        private UnitVisualState visualState;
 
         private void Awake()
         {
@@ -61,6 +70,11 @@ namespace DeckBattle
                 {
                     meshRenderer = GetComponentInChildren<MeshRenderer>();
                 }
+            }
+
+            if (animator != null)
+            {
+                animator.applyRootMotion = false;
             }
 
             baseModelScale = modelRoot.localScale;
@@ -82,17 +96,7 @@ namespace DeckBattle
 
         private bool HasActiveFrameWork
         {
-            get { return isMoving || attackTimer > 0f || damageTimer > 0f || isDying; }
-        }
-
-        private void OnDisable()
-        {
-            KillAttackSequence();
-        }
-
-        private void OnDestroy()
-        {
-            KillAttackSequence();
+            get { return isMoving || damageTimer > 0f || isDying; }
         }
 
         public void Bind(RuntimeUnit unit, Vector3 worldPosition)
@@ -140,51 +144,40 @@ namespace DeckBattle
             StartMove(target, safeDuration);
         }
 
-        private void PlayAttackSequence(float duration)
-        {
-            if (modelRoot == null)
-            {
-                return;
-            }
-
-            KillAttackSequence();
-
-            attackSequenceStartRotation = modelRoot.localRotation;
-            Quaternion leanBackRotation = attackSequenceStartRotation * Quaternion.Euler(meleeAttackLeanBackAngle, 0f, 0f);
-            Quaternion strikeRotation = attackSequenceStartRotation * Quaternion.Euler(meleeAttackStrikeAngle, 0f, 0f);
-            float safeDuration = Mathf.Max(0.01f, duration);
-
-            attackSequence = DOTween.Sequence()
-                .SetTarget(modelRoot)
-                .Append(modelRoot.DOLocalRotateQuaternion(leanBackRotation, safeDuration * 0.25f).SetEase(Ease.OutQuad))
-                .Append(modelRoot.DOLocalRotateQuaternion(strikeRotation, safeDuration * 0.35f).SetEase(Ease.InQuad))
-                .Append(modelRoot.DOLocalRotateQuaternion(attackSequenceStartRotation, safeDuration * 0.4f).SetEase(Ease.OutQuad))
-                .OnKill(() => attackSequence = null);
-        }
-
         public void BeginAttackWindup(int sequenceId, float duration)
         {
             activeAttackSequenceId = sequenceId;
-            attackTimer = 0f;
-            PlayAttackSequence(duration);
+            TriggerAnimation(UnitVisualState.Attack, true);
         }
 
         public void PlayAttackFire(int sequenceId)
         {
             if (sequenceId != activeAttackSequenceId) return;
-            if (attackSequence != null && attackSequence.IsActive())
-            {
-                attackSequence.Complete();
-            }
-
-            attackTimer = Mathf.Max(attackPulseDuration, 0.01f);
+            visualState = UnitVisualState.Idle;
         }
 
         public void CancelAttackWindup(int sequenceId)
         {
             if (sequenceId != activeAttackSequenceId) return;
-            attackTimer = 0f;
-            KillAttackSequence();
+            TriggerAnimation(UnitVisualState.Idle);
+        }
+
+        public void BeginSpecialWindup(int sequenceId, float duration)
+        {
+            activeSpecialSequenceId = sequenceId;
+            TriggerAnimation(UnitVisualState.Special, true);
+        }
+
+        public void CompleteSpecialWindup(int sequenceId)
+        {
+            if (sequenceId != activeSpecialSequenceId) return;
+            visualState = UnitVisualState.Idle;
+        }
+
+        public void CancelSpecialWindup(int sequenceId)
+        {
+            if (sequenceId != activeSpecialSequenceId) return;
+            TriggerAnimation(UnitVisualState.Idle);
         }
 
         public void FaceWorldPosition(Vector3 worldPosition)
@@ -221,13 +214,12 @@ namespace DeckBattle
                 return;
             }
 
-            KillAttackSequence();
             isDying = true;
             deathTimer = Mathf.Max(deathDuration, 0.01f);
-            deathStartPosition = transform.position;
             isMoving = false;
             queuedMoveHead = 0;
             queuedMoveCount = 0;
+            TriggerAnimation(UnitVisualState.Dead, true);
         }
 
         private void ApplySideColor(BattleSide side)
@@ -252,10 +244,10 @@ namespace DeckBattle
         {
             gameObject.SetActive(true);
             isDying = false;
-            attackTimer = 0f;
             damageTimer = 0f;
             deathTimer = 0f;
-            KillAttackSequence();
+            activeAttackSequenceId = 0;
+            activeSpecialSequenceId = 0;
             if (modelRoot != null)
             {
                 modelRoot.localScale = baseModelScale;
@@ -263,6 +255,7 @@ namespace DeckBattle
             }
 
             SetWorldPosition(worldPosition);
+            ResetAnimator();
         }
 
         private void UpdateMovement(float deltaTime)
@@ -283,6 +276,7 @@ namespace DeckBattle
                 if (!TryStartNextQueuedMove())
                 {
                     isMoving = false;
+                    TriggerAnimation(UnitVisualState.Idle);
                 }
             }
         }
@@ -293,9 +287,9 @@ namespace DeckBattle
             moveTo = target;
             moveElapsed = 0f;
             moveDuration = duration;
-            KillAttackSequence();
             FaceWorldPosition(target);
             isMoving = true;
+            TriggerAnimation(UnitVisualState.Run);
         }
 
         private void EnqueueMove(Vector3 target, float duration)
@@ -331,44 +325,15 @@ namespace DeckBattle
 
         private void UpdateVisualTimers(float deltaTime)
         {
-            if (modelRoot == null)
-            {
-                return;
-            }
-
-            bool updateScale = false;
-            float pulseScale = 1f;
-            if (attackTimer > 0f)
-            {
-                attackTimer = Mathf.Max(0f, attackTimer - deltaTime);
-                float normalized = attackPulseDuration > 0f ? attackTimer / attackPulseDuration : 0f;
-                pulseScale += Mathf.Sin((1f - normalized) * Mathf.PI) * 0.12f;
-                updateScale = true;
-            }
-
             if (isDying)
             {
                 deathTimer = Mathf.Max(0f, deathTimer - deltaTime);
-                float normalized = deathDuration > 0f ? deathTimer / deathDuration : 0f;
-                pulseScale *= Mathf.Clamp01(normalized);
-                transform.position = deathStartPosition + Vector3.down * ((1f - normalized) * deathSinkDistance);
-                updateScale = true;
 
                 if (deathTimer <= 0f)
                 {
-                    KillAttackSequence();
                     gameObject.SetActive(false);
                     return;
                 }
-            }
-
-            if (updateScale)
-            {
-                modelRoot.localScale = baseModelScale * pulseScale;
-            }
-            else if (modelRoot.localScale != baseModelScale)
-            {
-                modelRoot.localScale = baseModelScale;
             }
 
             if (damageTimer > 0f)
@@ -387,19 +352,49 @@ namespace DeckBattle
             return side + "_Unit_" + runtimeId + "_" + displayName;
         }
 
-        private void KillAttackSequence()
+        private void ResetAnimator()
         {
-            if (attackSequence == null)
+            visualState = UnitVisualState.Idle;
+            if (animator == null)
             {
                 return;
             }
 
-            Sequence sequence = attackSequence;
-            attackSequence = null;
-            sequence.Kill();
-            if (modelRoot != null)
+            animator.ResetTrigger(IdleTrigger);
+            animator.ResetTrigger(RunTrigger);
+            animator.ResetTrigger(AttackTrigger);
+            animator.ResetTrigger(SpecialTrigger);
+            animator.ResetTrigger(DeadTrigger);
+            animator.Rebind();
+            animator.Update(0f);
+            animator.SetTrigger(IdleTrigger);
+        }
+
+        private void TriggerAnimation(UnitVisualState nextState, bool force = false)
+        {
+            if (isDying && nextState != UnitVisualState.Dead)
             {
-                modelRoot.localRotation = attackSequenceStartRotation;
+                return;
+            }
+
+            if (!force && visualState == nextState)
+            {
+                return;
+            }
+
+            visualState = nextState;
+            if (animator == null)
+            {
+                return;
+            }
+
+            switch (nextState)
+            {
+                case UnitVisualState.Idle: animator.SetTrigger(IdleTrigger); break;
+                case UnitVisualState.Run: animator.SetTrigger(RunTrigger); break;
+                case UnitVisualState.Attack: animator.SetTrigger(AttackTrigger); break;
+                case UnitVisualState.Special: animator.SetTrigger(SpecialTrigger); break;
+                case UnitVisualState.Dead: animator.SetTrigger(DeadTrigger); break;
             }
         }
     }

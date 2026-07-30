@@ -72,7 +72,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_HasteBurstActivatedAtFireAppliesHasteForFollowingCycle()
+        public void Tick_HasteBurstActivatesAfterSpecialWindupAndAppliesHasteForFollowingCycle()
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
             attacker.ManaThreshold = 10;
@@ -92,8 +92,12 @@ namespace DeckBattle.Tests
 
             TestDefinitions.ResolveNextAttack(simulation, events);
 
+            Assert.IsFalse(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, simulation.Units[0].UnitId, out _));
+            Assert.AreEqual(10, simulation.Units[0].CurrentMana);
+            ResolveReadySpecial(simulation, events);
+
             Assert.IsTrue(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, simulation.Units[0].UnitId, out int hasteIndex));
-            Assert.That(simulation.Units[0].Statuses[hasteIndex].EndTime, Is.EqualTo(5.5d).Within(0.000001d));
+            Assert.That(simulation.Units[0].Statuses[hasteIndex].EndTime, Is.EqualTo(6.5d).Within(0.000001d));
             Assert.AreEqual(0.5f, simulation.Units[0].StatusSnapshot.Haste);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
             AssertSpecialActivation(events, UnitSpecialKind.HasteBurst);
@@ -131,11 +135,13 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
 
             TestDefinitions.ResolveNextAttack(simulation);
-            AssertHasteEndTime(simulation.Units[0], 5.5d);
+            ResolveReadySpecial(simulation, new BattleEventQueue());
+            AssertHasteEndTime(simulation.Units[0], 6.5d);
 
             TestDefinitions.ResolveNextAttack(simulation);
+            ResolveReadySpecial(simulation, new BattleEventQueue());
 
-            AssertHasteEndTime(simulation.Units[0], 6.25d);
+            AssertHasteEndTime(simulation.Units[0], 7.5d);
         }
 
         [Test]
@@ -216,6 +222,24 @@ namespace DeckBattle.Tests
         {
             Assert.IsTrue(unit.Statuses.TryFind(StatusKind.Haste, unit.UnitId, out int hasteIndex));
             Assert.That(unit.Statuses[hasteIndex].EndTime, Is.EqualTo(expectedEndTime).Within(0.000001d));
+        }
+
+        private static void ResolveReadySpecial(BattleSimulation simulation, BattleEventQueue events)
+        {
+            var loop = new BattleTickLoop(simulation, 0.25f);
+            for (int i = 0; i < 64; i++)
+            {
+                loop.Tick(simulation, events);
+                for (int eventIndex = 0; eventIndex < events.Count; eventIndex++)
+                {
+                    if (events[eventIndex].Type == BattleEventType.UnitSpecialActivated)
+                    {
+                        return;
+                    }
+                }
+            }
+
+            Assert.Fail("Special did not activate within the test tick budget.");
         }
 
         private static UnitDefinition CreateUnit(string unitId, int hp, int attack, int range, float cooldown)

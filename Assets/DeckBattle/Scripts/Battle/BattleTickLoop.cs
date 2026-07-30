@@ -9,6 +9,7 @@ namespace DeckBattle
         private readonly MovementResolver.Workspace movementWorkspace;
         private readonly TargetSelector.Workspace targetWorkspace;
         private readonly AttackCycleResolver.Workspace attackCycleWorkspace;
+        private readonly SpecialCycleResolver.Workspace specialCycleWorkspace;
         private readonly TargetSelector.TargetSelection[] targetSelections;
         private readonly bool[] targetSelectionValid;
 
@@ -29,6 +30,7 @@ namespace DeckBattle
             movementWorkspace = new MovementResolver.Workspace(boardCellCapacity, simulation.Units.Count);
             targetWorkspace = new TargetSelector.Workspace(boardCellCapacity);
             attackCycleWorkspace = new AttackCycleResolver.Workspace(simulation.Units.Count);
+            specialCycleWorkspace = new SpecialCycleResolver.Workspace(simulation.Units.Count);
             targetSelections = new TargetSelector.TargetSelection[simulation.Units.Count];
             targetSelectionValid = new bool[simulation.Units.Count];
         }
@@ -59,7 +61,6 @@ namespace DeckBattle
             simulation.AdvanceTime(TickDuration);
             PeriodicStatusResolver.Resolve(simulation, eventQueue);
             StatusResolver.ExpireStatuses(simulation, eventQueue);
-            ActivateReadySpecials(simulation, eventQueue);
             MovementResolver.AdvanceActiveMovements(simulation, TickDuration);
 
             ProjectileResolver.ResolveProjectiles(simulation, eventQueue);
@@ -77,6 +78,7 @@ namespace DeckBattle
                 eventQueue,
                 targetSelections,
                 targetSelectionValid);
+            SpecialCycleResolver.Resolve(simulation, eventQueue, specialCycleWorkspace, TickDuration);
 
             BattleSide winner;
             bool hasWinner;
@@ -128,14 +130,6 @@ namespace DeckBattle
                 targetSelections[i] = selection;
                 targetSelectionValid[i] = true;
                 unit.SetTarget(selection.Target);
-            }
-        }
-
-        private static void ActivateReadySpecials(BattleSimulation simulation, BattleEventQueue eventQueue)
-        {
-            for (int i = 0; i < simulation.Units.Count; i++)
-            {
-                CombatResolver.TryActivateReadySpecial(simulation, simulation.Units[i], eventQueue);
             }
         }
 

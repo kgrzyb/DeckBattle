@@ -26,7 +26,9 @@ namespace DeckBattle
         ShieldChanged = 21,
         UnitHealed = 22,
         ManaDrained = 23,
-        DamageRedirected = 24
+        DamageRedirected = 24,
+        SpecialWindupStarted = 25,
+        SpecialWindupCancelled = 26
     }
 
     public readonly struct BattleEvent
@@ -137,9 +139,19 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.UnitManaChanged, unitId, 0, default, default, 0, 0, currentMana, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
-        public static BattleEvent UnitSpecialActivated(int unitId, UnitSpecialKind specialKind, float duration)
+        public static BattleEvent UnitSpecialActivated(int unitId, UnitSpecialKind specialKind, float duration, int sequenceId = 0)
         {
-            return new BattleEvent(BattleEventType.UnitSpecialActivated, unitId, 0, default, default, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitSpecialActivated, unitId, 0, default, default, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false, sequenceId);
+        }
+
+        public static BattleEvent SpecialWindupStarted(int unitId, UnitSpecialKind specialKind, int sequenceId, float duration)
+        {
+            return new BattleEvent(BattleEventType.SpecialWindupStarted, unitId, 0, default, default, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false, sequenceId);
+        }
+
+        public static BattleEvent SpecialWindupCancelled(int unitId, UnitSpecialKind specialKind, int sequenceId)
+        {
+            return new BattleEvent(BattleEventType.SpecialWindupCancelled, unitId, 0, default, default, 0, 0, 0, 0, 0f, specialKind, BattleSide.Player, false, sequenceId);
         }
 
         public static BattleEvent UnitCrit(int attackerId, int targetId)

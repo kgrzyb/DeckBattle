@@ -357,6 +357,15 @@ namespace DeckBattle
                     case BattleEventType.AttackFired:
                         HandleAttackFired(battleEvent);
                         break;
+                    case BattleEventType.SpecialWindupStarted:
+                        HandleSpecialWindupStarted(battleEvent);
+                        break;
+                    case BattleEventType.SpecialWindupCancelled:
+                        HandleSpecialWindupCancelled(battleEvent);
+                        break;
+                    case BattleEventType.UnitSpecialActivated:
+                        HandleUnitSpecialActivated(battleEvent);
+                        break;
                     case BattleEventType.UnitDamaged:
                         HandleUnitDamaged(battleEvent);
                         break;
@@ -830,6 +839,24 @@ namespace DeckBattle
                 SpawnEffect(attackEffectPrefab, boardPresenter.GetWorldPosition(attacker.CurrentHex), activeAttackEffects, pooledAttackEffects);
             }
             view.PlayAttackFire(battleEvent.SequenceId);
+        }
+
+        private void HandleSpecialWindupStarted(BattleEvent battleEvent)
+        {
+            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) && view != null)
+                view.BeginSpecialWindup(battleEvent.SequenceId, battleEvent.Duration);
+        }
+
+        private void HandleSpecialWindupCancelled(BattleEvent battleEvent)
+        {
+            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) && view != null)
+                view.CancelSpecialWindup(battleEvent.SequenceId);
+        }
+
+        private void HandleUnitSpecialActivated(BattleEvent battleEvent)
+        {
+            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) && view != null)
+                view.CompleteSpecialWindup(battleEvent.SequenceId);
         }
 
         private float ResolveStandaloneTickDuration()

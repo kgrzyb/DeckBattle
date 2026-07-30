@@ -109,6 +109,13 @@ namespace DeckBattle
                 AttackCycleResolver.CancelWindup(target, eventQueue);
             }
 
+            if (definition.Kind == StatusKind.Stun
+                || definition.Kind == StatusKind.Sleep
+                || definition.Kind == StatusKind.Silence)
+            {
+                SpecialCycleResolver.CancelWindup(target, eventQueue);
+            }
+
             if (definition.Kind == StatusKind.Invulnerability)
             {
                 RemoveHarmfulStatuses(target, eventQueue);
