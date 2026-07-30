@@ -43,6 +43,7 @@ namespace DeckBattle
         public readonly int CurrentMana;
         public readonly int ProjectileId;
         public readonly float Duration;
+        public readonly float TimeScale;
         public readonly UnitSpecialKind SpecialKind;
         public readonly BattleSide Winner;
         public readonly bool HasWinner;
@@ -68,7 +69,8 @@ namespace DeckBattle
             int sequenceId = 0,
             StatusKind statusKind = StatusKind.None,
             int statusStackCount = 0,
-            int statusStackDelta = 0)
+            int statusStackDelta = 0,
+            float timeScale = 1f)
         {
             Type = type;
             UnitId = unitId;
@@ -80,6 +82,7 @@ namespace DeckBattle
             CurrentMana = currentMana;
             ProjectileId = projectileId;
             Duration = duration;
+            TimeScale = IsValidTimeScale(timeScale) ? timeScale : 1f;
             SpecialKind = specialKind;
             Winner = winner;
             HasWinner = hasWinner;
@@ -99,9 +102,29 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.UnitAttackStarted, attackerId, targetId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
-        public static BattleEvent AttackWindupStarted(int attackerId, int targetId, int sequenceId, float duration)
+        public static BattleEvent AttackWindupStarted(
+            int attackerId,
+            int targetId,
+            int sequenceId,
+            float duration,
+            float timeScale)
         {
-            return new BattleEvent(BattleEventType.AttackWindupStarted, attackerId, targetId, default, default, 0, 0, 0, 0, duration, UnitSpecialKind.None, BattleSide.Player, false, sequenceId);
+            return new BattleEvent(
+                BattleEventType.AttackWindupStarted,
+                attackerId,
+                targetId,
+                default,
+                default,
+                0,
+                0,
+                0,
+                0,
+                duration,
+                UnitSpecialKind.None,
+                BattleSide.Player,
+                false,
+                sequenceId,
+                timeScale: timeScale);
         }
 
         public static BattleEvent AttackWindupCancelled(int attackerId, int targetId, int sequenceId)
@@ -223,6 +246,11 @@ namespace DeckBattle
         public static BattleEvent DamageRedirected(int protectedUnitId, int guardUnitId, int amount)
         {
             return new BattleEvent(BattleEventType.DamageRedirected, protectedUnitId, guardUnitId, default, default, amount, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+        }
+
+        private static bool IsValidTimeScale(float value)
+        {
+            return value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
         }
     }
 }

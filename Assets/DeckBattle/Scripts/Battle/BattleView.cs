@@ -822,7 +822,7 @@ namespace DeckBattle
             if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) || view == null) return;
             if (simulation.TryGetUnitById(battleEvent.TargetUnitId, out UnitRuntimeState target) && target != null)
                 view.FaceWorldPosition(boardPresenter.GetWorldPosition(target.CurrentHex));
-            view.BeginAttackWindup(battleEvent.SequenceId, battleEvent.Duration);
+            view.BeginAttackWindup(battleEvent.SequenceId, battleEvent.Duration, battleEvent.TimeScale);
         }
 
         private void HandleAttackWindupCancelled(BattleEvent battleEvent)

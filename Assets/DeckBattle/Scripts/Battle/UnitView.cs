@@ -18,6 +18,7 @@ namespace DeckBattle
         private static readonly int IdleTrigger = Animator.StringToHash("idle");
         private static readonly int RunTrigger = Animator.StringToHash("run");
         private static readonly int AttackTrigger = Animator.StringToHash("attack");
+        private static readonly int AttackSpeedParameter = Animator.StringToHash("attackSpeed");
         private static readonly int SpecialTrigger = Animator.StringToHash("special");
         private static readonly int DeadTrigger = Animator.StringToHash("dead");
 
@@ -144,9 +145,14 @@ namespace DeckBattle
             StartMove(target, safeDuration);
         }
 
-        public void BeginAttackWindup(int sequenceId, float duration)
+        public void BeginAttackWindup(int sequenceId, float duration, float timeScale)
         {
             activeAttackSequenceId = sequenceId;
+            if (animator != null)
+            {
+                animator.SetFloat(AttackSpeedParameter, SanitizeAttackTimeScale(timeScale));
+            }
+
             TriggerAnimation(UnitVisualState.Attack, true);
         }
 
@@ -367,7 +373,15 @@ namespace DeckBattle
             animator.ResetTrigger(DeadTrigger);
             animator.Rebind();
             animator.Update(0f);
+            animator.SetFloat(AttackSpeedParameter, 1f);
             animator.SetTrigger(IdleTrigger);
+        }
+
+        private static float SanitizeAttackTimeScale(float timeScale)
+        {
+            return timeScale > 0f && !float.IsNaN(timeScale) && !float.IsInfinity(timeScale)
+                ? timeScale
+                : 1f;
         }
 
         private void TriggerAnimation(UnitVisualState nextState, bool force = false)

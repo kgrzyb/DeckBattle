@@ -224,9 +224,11 @@ namespace DeckBattle
                     continue;
                 }
 
-                float attackCycleDuration = simulation.Tuning.GetAttackCooldown(unit.Definition, unit);
                 float windupPercent = Math.Max(0f, Math.Min(1f, unit.Definition.AttackWindupPercent));
-                float windupDuration = Math.Max(tickDuration, attackCycleDuration * windupPercent);
+                float attackCycleDuration = simulation.Tuning.GetAttackCooldown(unit.Definition, unit);
+                float windupDuration = GetWindupDuration(attackCycleDuration, windupPercent, tickDuration);
+                float baseWindupDuration = GetWindupDuration(unit.Definition.AttackCooldown, windupPercent, tickDuration);
+                float windupTimeScale = GetWindupTimeScale(baseWindupDuration, windupDuration);
                 attackCycleDuration = Math.Max(attackCycleDuration, windupDuration);
 
                 unit.AttackPhase = UnitAttackPhase.Windup;
@@ -239,8 +241,22 @@ namespace DeckBattle
                     unit.UnitId,
                     target.UnitId,
                     unit.AttackSequenceId,
-                    windupDuration));
+                    windupDuration,
+                    windupTimeScale));
             }
+        }
+
+        private static float GetWindupDuration(float attackCycleDuration, float windupPercent, float tickDuration)
+        {
+            return Math.Max(tickDuration, attackCycleDuration * windupPercent);
+        }
+
+        private static float GetWindupTimeScale(float baseWindupDuration, float effectiveWindupDuration)
+        {
+            float timeScale = baseWindupDuration / effectiveWindupDuration;
+            return timeScale > 0f && !float.IsNaN(timeScale) && !float.IsInfinity(timeScale)
+                ? timeScale
+                : 1f;
         }
 
         private static void CompleteWinddown(UnitRuntimeState unit, BattleEventQueue eventQueue)

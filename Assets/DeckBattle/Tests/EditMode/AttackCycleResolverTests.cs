@@ -59,13 +59,17 @@ namespace DeckBattle.Tests
             var normalLoop = new BattleTickLoop(normal, TickDuration);
             var acceleratedLoop = new BattleTickLoop(accelerated, TickDuration);
 
-            normalLoop.Tick(normal, new BattleEventQueue());
-            acceleratedLoop.Tick(accelerated, new BattleEventQueue());
+            var normalEvents = new BattleEventQueue();
+            var acceleratedEvents = new BattleEventQueue();
+            normalLoop.Tick(normal, normalEvents);
+            acceleratedLoop.Tick(accelerated, acceleratedEvents);
 
             Assert.That(normal.Units[0].WindupEndTime - normal.Units[0].AttackCycleStartTime, Is.EqualTo(1d).Within(0.000001d));
             Assert.That(normal.Units[0].NextAttackTime - normal.Units[0].AttackCycleStartTime, Is.EqualTo(4d).Within(0.000001d));
             Assert.That(accelerated.Units[0].WindupEndTime - accelerated.Units[0].AttackCycleStartTime, Is.EqualTo(0.5d).Within(0.000001d));
             Assert.That(accelerated.Units[0].NextAttackTime - accelerated.Units[0].AttackCycleStartTime, Is.EqualTo(2d).Within(0.000001d));
+            Assert.That(FindEvent(normalEvents, BattleEventType.AttackWindupStarted).TimeScale, Is.EqualTo(1f).Within(0.000001f));
+            Assert.That(FindEvent(acceleratedEvents, BattleEventType.AttackWindupStarted).TimeScale, Is.EqualTo(2f).Within(0.000001f));
         }
 
         [Test]
@@ -79,11 +83,13 @@ namespace DeckBattle.Tests
                 new StatusApplicationRequest(CreateHasteStatus(0.9f), simulation.Units[0].UnitId));
             var loop = new BattleTickLoop(simulation, TickDuration);
 
-            loop.Tick(simulation, new BattleEventQueue());
+            var events = new BattleEventQueue();
+            loop.Tick(simulation, events);
 
             UnitRuntimeState attacker = simulation.Units[0];
             Assert.That(attacker.WindupEndTime - attacker.AttackCycleStartTime, Is.EqualTo(TickDuration).Within(0.000001d));
             Assert.That(attacker.NextAttackTime, Is.EqualTo(attacker.WindupEndTime).Within(0.000001d));
+            Assert.That(FindEvent(events, BattleEventType.AttackWindupStarted).TimeScale, Is.EqualTo(1f).Within(0.000001f));
         }
 
         [Test]
