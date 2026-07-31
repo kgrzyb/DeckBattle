@@ -48,9 +48,84 @@ namespace DeckBattle.Tests
             loop.Tick(events);
             loop.Tick(events);
 
-            Assert.AreEqual(UnitSpecialPhase.Idle, unit.SpecialPhase);
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, unit.SpecialPhase);
             Assert.AreEqual(0, unit.CurrentMana);
             AssertEvent(events, BattleEventType.UnitSpecialActivated);
+        }
+
+        [Test]
+        public void Tick_SpecialCastSpendsManaAtCastStartAndLocksManaUntilRecoveryEnds()
+        {
+            BattleSimulation simulation = CreateSimulation(0.25f, 0.5f);
+            UnitRuntimeState unit = simulation.Units[0];
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.Casting, unit.SpecialPhase);
+            Assert.AreEqual(0, unit.CurrentMana);
+            CombatResolver.AddMana(simulation, unit, 10, events);
+            Assert.AreEqual(0, unit.CurrentMana);
+
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, unit.SpecialPhase);
+            Assert.That(unit.NextAttackTime, Is.EqualTo(6d).Within(0.000001d));
+            CombatResolver.AddMana(simulation, unit, 10, events);
+            Assert.AreEqual(0, unit.CurrentMana);
+
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.Idle, unit.SpecialPhase);
+            CombatResolver.AddMana(simulation, unit, 10, events);
+            Assert.AreEqual(10, unit.CurrentMana);
+        }
+
+        [Test]
+        public void StatusStun_CancelsCastAfterManaWasSpent()
+        {
+            BattleSimulation simulation = CreateSimulation(0.25f, 1f);
+            UnitRuntimeState unit = simulation.Units[0];
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            loop.Tick(new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
+            var events = new BattleEventQueue();
+
+            StatusResolver.TryApply(
+                simulation,
+                unit,
+                new StatusApplicationRequest(CreateStunStatus(), 0),
+                events);
+
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, unit.SpecialPhase);
+            Assert.AreEqual(0, unit.CurrentMana);
+            Assert.IsFalse(unit.Statuses.TryFind(StatusKind.Haste, unit.UnitId, out _));
+            AssertEvent(events, BattleEventType.SpecialWindupCancelled);
+        }
+
+        [Test]
+        public void Tick_StartedAttackFiresBeforeItsReadySpecialBegins()
+        {
+            BattleSimulation simulation = CreateSimulation(0.25f);
+            UnitRuntimeState attacker = simulation.Units[0];
+            attacker.NextAttackTime = 0d;
+            attacker.SetTarget(simulation.Units[1]);
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            loop.Tick(events);
+
+            AssertEvent(events, BattleEventType.AttackFired);
+            Assert.AreEqual(attacker.CombatSpec.ManaThreshold, attacker.CurrentMana);
+            Assert.AreEqual(UnitSpecialPhase.Windup, attacker.SpecialPhase);
+            AssertEvent(events, BattleEventType.SpecialWindupStarted);
         }
 
         [Test]
@@ -112,12 +187,12 @@ namespace DeckBattle.Tests
             Assert.AreEqual(UnitSpecialPhase.Windup, unit.SpecialPhase);
         }
 
-        private static BattleSimulation CreateSimulation(float windupDuration)
+        private static BattleSimulation CreateSimulation(float windupDuration, float castDuration = 0f)
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
             attacker.AttackCooldown = 10f;
             attacker.ManaThreshold = 10;
-            attacker.Special = CreateHasteBurstSpecial(windupDuration);
+            attacker.Special = CreateHasteBurstSpecial(windupDuration, castDuration);
             UnitDefinition target = TestDefinitions.CreateUnit("target", 1);
             target.AttackCooldown = 999f;
             return BattleSimulation.Create(
@@ -129,11 +204,12 @@ namespace DeckBattle.Tests
                 });
         }
 
-        private static UnitSpecialDefinition CreateHasteBurstSpecial(float windupDuration)
+        private static UnitSpecialDefinition CreateHasteBurstSpecial(float windupDuration, float castDuration = 0f)
         {
             UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
             special.Kind = UnitSpecialKind.HasteBurst;
             special.WindupDuration = windupDuration;
+            special.CastDuration = castDuration;
             special.AppliedStatus = CreateHasteStatus(5f, 0.5f);
             return special;
         }

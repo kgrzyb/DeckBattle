@@ -12,7 +12,9 @@ namespace DeckBattle
     public enum UnitSpecialPhase
     {
         Idle = 0,
-        Windup = 1
+        Windup = 1,
+        Casting = 2,
+        RecoveryLock = 3
     }
 
     public sealed class UnitRuntimeState
@@ -39,6 +41,8 @@ namespace DeckBattle
         public UnitSpecialPhase SpecialPhase;
         public int SpecialSequenceId;
         public double SpecialWindupEndTime;
+        public double SpecialCastEndTime;
+        public double ManaLockEndTime;
         public int CurrentMana;
         public bool IsMoving;
         public HexCoord MovementDestination;
@@ -186,6 +190,8 @@ namespace DeckBattle
             SpecialPhase = UnitSpecialPhase.Idle;
             SpecialSequenceId = 0;
             SpecialWindupEndTime = double.PositiveInfinity;
+            SpecialCastEndTime = double.PositiveInfinity;
+            ManaLockEndTime = double.PositiveInfinity;
         }
     }
 }

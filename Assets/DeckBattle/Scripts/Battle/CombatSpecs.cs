@@ -96,6 +96,7 @@ namespace DeckBattle
     {
         public readonly UnitSpecialKind Kind;
         public readonly float WindupDuration;
+        public readonly float CastDuration;
         public readonly StatusCombatSpec AppliedStatus;
 
         public bool IsValid
@@ -103,10 +104,11 @@ namespace DeckBattle
             get { return Kind != UnitSpecialKind.None && AppliedStatus.Kind != StatusKind.None; }
         }
 
-        public UnitSpecialCombatSpec(UnitSpecialKind kind, float windupDuration, StatusCombatSpec appliedStatus)
+        public UnitSpecialCombatSpec(UnitSpecialKind kind, float windupDuration, float castDuration, StatusCombatSpec appliedStatus)
         {
             Kind = kind;
             WindupDuration = Math.Max(0f, windupDuration);
+            CastDuration = Math.Max(0f, castDuration);
             AppliedStatus = appliedStatus;
         }
 
@@ -117,6 +119,7 @@ namespace DeckBattle
                 : new UnitSpecialCombatSpec(
                     definition.Kind,
                     definition.WindupDuration,
+                    definition.CastDuration,
                     StatusCombatSpec.FromDefinition(definition.AppliedStatus));
         }
     }

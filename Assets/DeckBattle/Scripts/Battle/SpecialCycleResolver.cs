@@ -4,6 +4,8 @@ namespace DeckBattle
 {
     public static class SpecialCycleResolver
     {
+        private const float RecoveryLockDuration = 0.5f;
+
         public static void Resolve(
             BattleSimulation simulation,
             BattleEventQueue eventQueue,
@@ -15,14 +17,15 @@ namespace DeckBattle
             if (tickDuration <= 0f) throw new ArgumentOutOfRangeException(nameof(tickDuration));
 
             workspace.Clear();
-            CollectCompletedWindups(simulation, eventQueue, workspace);
-            ResolveCompletedWindups(simulation, eventQueue, workspace);
+            AdvanceActiveCycles(simulation, eventQueue, tickDuration);
             StartReadyWindups(simulation, eventQueue, workspace, tickDuration);
         }
 
-        public static bool CancelWindup(UnitRuntimeState unit, BattleEventQueue eventQueue = null)
+        public static bool CancelWindup(UnitRuntimeState unit, BattleEventQueue eventQueue = null, BattleSimulation simulation = null)
         {
-            if (unit == null || unit.SpecialPhase != UnitSpecialPhase.Windup)
+            if (unit == null
+                || (unit.SpecialPhase != UnitSpecialPhase.Windup
+                    && unit.SpecialPhase != UnitSpecialPhase.Casting))
             {
                 return false;
             }
@@ -32,65 +35,126 @@ namespace DeckBattle
                 unit.UnitId,
                 special.Kind,
                 unit.SpecialSequenceId));
-            unit.SpecialPhase = UnitSpecialPhase.Idle;
-            unit.SpecialWindupEndTime = double.PositiveInfinity;
+            if (unit.SpecialPhase == UnitSpecialPhase.Windup)
+            {
+                ResetToIdle(unit);
+            }
+            else
+            {
+                // Mana is committed when casting begins. A fizzle keeps the
+                // recovery lock and starts the ordinary attack cooldown here.
+                EnterRecoveryLock(unit, simulation != null ? simulation.ElapsedTime : 0d);
+                if (simulation != null)
+                {
+                    AttackCycleResolver.RestartCooldownAfterSpecial(simulation, unit, eventQueue);
+                }
+            }
+
             return true;
         }
 
-        private static void CollectCompletedWindups(
+        public static void AdvanceActiveCycles(
             BattleSimulation simulation,
             BattleEventQueue eventQueue,
-            Workspace workspace)
+            float tickDuration)
         {
             for (int i = 0; i < simulation.Units.Count; i++)
             {
                 UnitRuntimeState unit = simulation.Units[i];
-                if (unit == null || unit.SpecialPhase != UnitSpecialPhase.Windup)
+                if (unit == null || unit.SpecialPhase == UnitSpecialPhase.Idle)
                 {
                     continue;
                 }
 
-                if (!unit.IsAlive || !UnitActionRules.CanActivateSpecial(unit))
+                if ((unit.SpecialPhase == UnitSpecialPhase.Windup || unit.SpecialPhase == UnitSpecialPhase.Casting)
+                    && (!unit.IsAlive || !UnitActionRules.CanActivateSpecial(unit)))
                 {
-                    CancelWindup(unit, eventQueue);
-                    workspace.Cancelled[i] = true;
+                    CancelWindup(unit, eventQueue, simulation);
                     continue;
                 }
 
-                if (simulation.ElapsedTime >= unit.SpecialWindupEndTime)
+                switch (unit.SpecialPhase)
                 {
-                    workspace.AddCompleted(unit, i);
+                    case UnitSpecialPhase.Windup:
+                        if (simulation.ElapsedTime >= unit.SpecialWindupEndTime)
+                        {
+                            BeginCast(simulation, unit, eventQueue, tickDuration);
+                        }
+                        break;
+                    case UnitSpecialPhase.Casting:
+                        if (simulation.ElapsedTime >= unit.SpecialCastEndTime)
+                        {
+                            CompleteCast(simulation, unit, eventQueue);
+                        }
+                        break;
+                    case UnitSpecialPhase.RecoveryLock:
+                        if (simulation.ElapsedTime >= unit.ManaLockEndTime)
+                        {
+                            ResetToIdle(unit);
+                        }
+                        break;
                 }
             }
         }
 
-        private static void ResolveCompletedWindups(
+        private static void BeginCast(
             BattleSimulation simulation,
+            UnitRuntimeState unit,
             BattleEventQueue eventQueue,
-            Workspace workspace)
+            float tickDuration)
         {
-            for (int i = 0; i < workspace.CompletedCount; i++)
+            UnitSpecialCombatSpec special = unit.CombatSpec.Special;
+            unit.SpecialPhase = UnitSpecialPhase.Casting;
+            unit.SpecialWindupEndTime = double.PositiveInfinity;
+            unit.CurrentMana = 0;
+            eventQueue?.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
+
+            if (special.CastDuration <= 0f)
             {
-                UnitRuntimeState unit = workspace.CompletedUnits[i];
-                UnitSpecialCombatSpec special = unit.CombatSpec.Special;
-                int sequenceId = unit.SpecialSequenceId;
-                unit.SpecialPhase = UnitSpecialPhase.Idle;
-                unit.SpecialWindupEndTime = double.PositiveInfinity;
-                workspace.Resolved[workspace.CompletedIndices[i]] = true;
+                CompleteCast(simulation, unit, eventQueue);
+                return;
+            }
 
-                if (!TryApplySpecial(simulation, unit, special, eventQueue))
-                {
-                    continue;
-                }
+            unit.SpecialCastEndTime = simulation.ElapsedTime + Math.Max(tickDuration, special.CastDuration);
+        }
 
-                unit.CurrentMana = 0;
-                eventQueue?.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
+        private static void CompleteCast(
+            BattleSimulation simulation,
+            UnitRuntimeState unit,
+            BattleEventQueue eventQueue)
+        {
+            UnitSpecialCombatSpec special = unit.CombatSpec.Special;
+            int sequenceId = unit.SpecialSequenceId;
+            EnterRecoveryLock(unit, simulation.ElapsedTime);
+
+            if (TryApplySpecial(simulation, unit, special, eventQueue))
+            {
                 eventQueue?.Enqueue(BattleEvent.UnitSpecialActivated(
                     unit.UnitId,
                     special.Kind,
                     special.AppliedStatus.DefaultDuration,
                     sequenceId));
             }
+
+            // The special's own status (for example haste) affects the next
+            // attack cycle because that cycle begins only after the cast ends.
+            AttackCycleResolver.RestartCooldownAfterSpecial(simulation, unit, eventQueue);
+        }
+
+        private static void EnterRecoveryLock(UnitRuntimeState unit, double startTime)
+        {
+            unit.SpecialPhase = UnitSpecialPhase.RecoveryLock;
+            unit.SpecialWindupEndTime = double.PositiveInfinity;
+            unit.SpecialCastEndTime = double.PositiveInfinity;
+            unit.ManaLockEndTime = startTime + RecoveryLockDuration;
+        }
+
+        private static void ResetToIdle(UnitRuntimeState unit)
+        {
+            unit.SpecialPhase = UnitSpecialPhase.Idle;
+            unit.SpecialWindupEndTime = double.PositiveInfinity;
+            unit.SpecialCastEndTime = double.PositiveInfinity;
+            unit.ManaLockEndTime = double.PositiveInfinity;
         }
 
         private static void StartReadyWindups(
@@ -101,11 +165,6 @@ namespace DeckBattle
         {
             for (int i = 0; i < simulation.Units.Count; i++)
             {
-                if (workspace.Cancelled[i] || workspace.Resolved[i])
-                {
-                    continue;
-                }
-
                 UnitRuntimeState unit = simulation.Units[i];
                 if (!UnitActionRules.CanStartSpecialWindup(unit))
                 {
@@ -117,6 +176,8 @@ namespace DeckBattle
                 unit.SpecialPhase = UnitSpecialPhase.Windup;
                 unit.SpecialSequenceId++;
                 unit.SpecialWindupEndTime = simulation.ElapsedTime + duration;
+                unit.SpecialCastEndTime = double.PositiveInfinity;
+                unit.ManaLockEndTime = double.PositiveInfinity;
                 eventQueue?.Enqueue(BattleEvent.SpecialWindupStarted(
                     unit.UnitId,
                     special.Kind,
@@ -149,33 +210,12 @@ namespace DeckBattle
 
         public sealed class Workspace
         {
-            internal UnitRuntimeState[] CompletedUnits;
-            internal int[] CompletedIndices;
-            internal bool[] Cancelled;
-            internal bool[] Resolved;
-            internal int CompletedCount;
-
             public Workspace(int unitCapacity)
             {
-                int capacity = Math.Max(1, unitCapacity);
-                CompletedUnits = new UnitRuntimeState[capacity];
-                CompletedIndices = new int[capacity];
-                Cancelled = new bool[capacity];
-                Resolved = new bool[capacity];
-            }
-
-            internal void AddCompleted(UnitRuntimeState unit, int unitIndex)
-            {
-                CompletedUnits[CompletedCount] = unit;
-                CompletedIndices[CompletedCount] = unitIndex;
-                CompletedCount++;
             }
 
             internal void Clear()
             {
-                CompletedCount = 0;
-                Array.Clear(Cancelled, 0, Cancelled.Length);
-                Array.Clear(Resolved, 0, Resolved.Length);
             }
         }
     }

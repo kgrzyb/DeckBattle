@@ -69,6 +69,24 @@ namespace DeckBattle
             return true;
         }
 
+        public static void RestartCooldownAfterSpecial(
+            BattleSimulation simulation,
+            UnitRuntimeState unit,
+            BattleEventQueue eventQueue = null)
+        {
+            if (simulation == null) throw new ArgumentNullException(nameof(simulation));
+            if (unit == null) throw new ArgumentNullException(nameof(unit));
+
+            if (unit.AttackPhase == UnitAttackPhase.Winddown)
+            {
+                CompleteWinddown(unit, eventQueue);
+            }
+
+            unit.NextAttackTime = simulation.ElapsedTime + simulation.Tuning.GetAttackCooldown(unit.CombatSpec, unit);
+            unit.AttackCycleStartTime = double.PositiveInfinity;
+            unit.WindupEndTime = double.PositiveInfinity;
+        }
+
         private static void CollectCompletedWindups(
             BattleSimulation simulation,
             BattleEventQueue eventQueue,

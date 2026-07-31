@@ -10,7 +10,10 @@ namespace DeckBattle
             int amount,
             BattleEventQueue eventQueue)
         {
-            if (unit == null || amount <= 0 || unit.IsDefeated)
+            if (unit == null
+                || amount <= 0
+                || unit.IsDefeated
+                || unit.SpecialPhase != UnitSpecialPhase.Idle)
             {
                 return;
             }

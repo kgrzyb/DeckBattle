@@ -63,6 +63,7 @@ namespace DeckBattle
             ProjectileResolver.ResolveProjectiles(simulation, eventQueue);
 
             RefreshTargets(simulation, eventQueue);
+            SpecialCycleResolver.AdvanceActiveCycles(simulation, eventQueue, TickDuration);
             CombatResolutionResult combat = AttackCycleResolver.Resolve(simulation, eventQueue, attackCycleWorkspace, TickDuration);
 
             // Melee deaths and projectile/attack side effects can invalidate targets
@@ -76,7 +77,6 @@ namespace DeckBattle
                 targetSelections,
                 targetSelectionValid);
             SpecialCycleResolver.Resolve(simulation, eventQueue, specialCycleWorkspace, TickDuration);
-
             BattleSide winner;
             bool hasWinner;
             bool ended = TryEndBattle(simulation, out winner, out hasWinner);

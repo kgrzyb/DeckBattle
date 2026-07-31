@@ -52,7 +52,7 @@ namespace DeckBattle
             if (died)
             {
                 simulation.DefeatUnit(target);
-                SpecialCycleResolver.CancelWindup(target, eventQueue);
+                SpecialCycleResolver.CancelWindup(target, eventQueue, simulation);
                 eventQueue?.Enqueue(BattleEvent.UnitDied(target.UnitId));
             }
             if (request.CanApplyLifesteal && request.Kind == DamageKind.Direct) ApplyLifesteal(request.Source, remaining, eventQueue);
