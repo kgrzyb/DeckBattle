@@ -94,7 +94,7 @@ namespace DeckBattle
             }
 
             HexBoard board = simulation.Board;
-            int attackRange = simulation.Tuning.GetAttackRange(attacker.Definition);
+            int attackRange = simulation.Tuning.GetAttackRange(attacker.CombatSpec);
             HexCoord targetPlanningHex = GetTargetPlanningHex(target);
             if (board.Distance(attacker.CurrentHex, targetPlanningHex) <= attackRange)
             {

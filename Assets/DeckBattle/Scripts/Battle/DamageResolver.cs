@@ -41,8 +41,12 @@ namespace DeckBattle
             }
 
             target.CurrentHp -= remaining;
-            eventQueue?.Enqueue(BattleEvent.UnitDamaged(target.UnitId, remaining, Math.Max(0, target.CurrentHp)));
-            CombatResolver.AddMana(simulation, target, target.Definition.ManaPerDamageTaken, eventQueue);
+            eventQueue?.Enqueue(BattleEvent.UnitDamaged(
+                target.UnitId,
+                remaining,
+                Math.Max(0, target.CurrentHp),
+                target.CurrentHex));
+            CombatResolver.AddMana(simulation, target, target.CombatSpec.ManaPerDamageTaken, eventQueue);
             WakeSleep(target, eventQueue);
             bool died = target.CurrentHp <= 0;
             if (died)

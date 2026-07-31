@@ -20,13 +20,14 @@ namespace DeckBattle
         public const int NoTargetUnitId = 0;
 
         public readonly int UnitId;
-        public readonly UnitDefinition Definition;
+        public readonly UnitCombatSpec CombatSpec;
         public readonly BattleSide Side;
 
         public int CurrentHp;
         public HexCoord CurrentHex;
         public HexCoord PreviousHex;
         public int TargetUnitId;
+        public HexCoord LastKnownTargetHex;
         public int EngagedTargetUnitId;
         public int PursuitStepsUsed;
         public double NextAttackTime;
@@ -49,11 +50,16 @@ namespace DeckBattle
         public int StatusVersion;
 
         public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex)
-            : this(unitId, definition, side, startHex, 0)
+            : this(unitId, UnitCombatSpec.FromDefinition(definition), side, startHex, 0)
         {
         }
 
         public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex, int attackBonusNextCombat, int maxStatusesPerUnit = 8)
+            : this(unitId, UnitCombatSpec.FromDefinition(definition), side, startHex, attackBonusNextCombat, maxStatusesPerUnit)
+        {
+        }
+
+        public UnitRuntimeState(int unitId, UnitCombatSpec combatSpec, BattleSide side, HexCoord startHex, int attackBonusNextCombat = 0, int maxStatusesPerUnit = 8)
         {
             if (unitId <= 0)
             {
@@ -61,12 +67,13 @@ namespace DeckBattle
             }
 
             UnitId = unitId;
-            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+            CombatSpec = combatSpec;
             Side = side;
             CurrentHex = startHex;
             PreviousHex = startHex;
-            CurrentHp = definition.MaxHp;
+            CurrentHp = combatSpec.MaxHp;
             TargetUnitId = NoTargetUnitId;
+            LastKnownTargetHex = default;
             ResetPursuit();
             NextAttackTime = double.PositiveInfinity;
             ResetAttackCycle();
@@ -95,11 +102,17 @@ namespace DeckBattle
                 TargetUnitId = targetUnitId;
                 ResetPursuit();
             }
+
+            if (target != null)
+            {
+                LastKnownTargetHex = target.CurrentHex;
+            }
         }
 
         public void ClearTarget()
         {
             TargetUnitId = NoTargetUnitId;
+            LastKnownTargetHex = default;
             ResetPursuit();
         }
 
@@ -143,7 +156,7 @@ namespace DeckBattle
         {
             CurrentHex = startHex;
             PreviousHex = startHex;
-            CurrentHp = Definition.MaxHp;
+            CurrentHp = CombatSpec.MaxHp;
             ClearTarget();
             NextAttackTime = double.PositiveInfinity;
             ResetAttackCycle();

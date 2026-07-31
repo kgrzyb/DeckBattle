@@ -822,13 +822,6 @@ namespace DeckBattle
                 return true;
             }
 
-            UnitRuntimeState realtimeUnit = unitView.RealtimeUnit;
-            if (realtimeUnit != null && realtimeUnit.IsAlive)
-            {
-                ShowUnitDetails(realtimeUnit.Definition);
-                return true;
-            }
-
             return false;
         }
 

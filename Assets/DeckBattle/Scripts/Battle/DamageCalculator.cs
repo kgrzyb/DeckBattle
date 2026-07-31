@@ -9,10 +9,10 @@ namespace DeckBattle
             if (attacker == null) throw new ArgumentNullException(nameof(attacker));
             if (target == null) throw new ArgumentNullException(nameof(target));
 
-            isCritical = RollCritical(attacker.Definition, rng);
-            float armorPenetration = ClampPercentage(attacker.Definition.ArmorPenetration);
-            float effectiveArmor = ClampPercentage(target.Definition.Armor) * (1f - armorPenetration / 100f);
-            float damage = Math.Max(0, attacker.Definition.Attack + Math.Max(0, attackBonus));
+            isCritical = RollCritical(attacker.CombatSpec, rng);
+            float armorPenetration = ClampPercentage(attacker.CombatSpec.ArmorPenetration);
+            float effectiveArmor = ClampPercentage(target.CombatSpec.Armor) * (1f - armorPenetration / 100f);
+            float damage = Math.Max(0, attacker.CombatSpec.Attack + Math.Max(0, attackBonus));
             damage *= EffectiveStatsResolver.GetOutgoingDamageMultiplier(attacker, tuning);
             damage *= 1f - effectiveArmor / 100f;
             if (isCritical) damage *= EffectiveStatsResolver.GetCriticalMultiplier(attacker);
@@ -45,7 +45,7 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(target));
             }
 
-            isCritical = RollCritical(attacker, rng);
+            isCritical = RollCritical(UnitCombatSpec.FromDefinition(attacker), rng);
             float armorPenetration = ClampPercentage(attacker.ArmorPenetration);
             float effectiveArmor = ClampPercentage(target.Armor) * (1f - armorPenetration / 100f);
             float damageAfterArmor = Math.Max(0, attacker.Attack + Math.Max(0, attackBonus)) * (1f - effectiveArmor / 100f);
@@ -57,7 +57,7 @@ namespace DeckBattle
             return Math.Max(0, (int)Math.Round(damageAfterArmor, MidpointRounding.AwayFromZero));
         }
 
-        private static bool RollCritical(UnitDefinition attacker, DeterministicRandom rng)
+        private static bool RollCritical(UnitCombatSpec attacker, DeterministicRandom rng)
         {
             float critChance = ClampPercentage(attacker.CritChance);
             if (critChance <= 0f)

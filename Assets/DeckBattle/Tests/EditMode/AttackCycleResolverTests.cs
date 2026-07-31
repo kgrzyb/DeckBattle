@@ -19,14 +19,14 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, TickDuration);
             var events = new BattleEventQueue();
 
-            loop.Tick(simulation, events);
-            loop.Tick(simulation, events);
-            loop.Tick(simulation, events);
+            loop.Tick(events);
+            loop.Tick(events);
+            loop.Tick(events);
 
             Assert.AreEqual(UnitAttackPhase.AcquireReload, simulation.Units[0].AttackPhase);
             Assert.AreEqual(5, simulation.Units[1].CurrentHp);
 
-            BattleTickResult windupTick = loop.Tick(simulation, events);
+            BattleTickResult windupTick = loop.Tick(events);
 
             Assert.AreEqual(0, windupTick.Attacks);
             Assert.AreEqual(UnitAttackPhase.Windup, simulation.Units[0].AttackPhase);
@@ -35,7 +35,7 @@ namespace DeckBattle.Tests
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(2d).Within(0.000001d));
             AssertEvent(events, BattleEventType.AttackWindupStarted);
 
-            BattleTickResult fireTick = loop.Tick(simulation, events);
+            BattleTickResult fireTick = loop.Tick(events);
 
             Assert.AreEqual(1, fireTick.Attacks);
             Assert.AreEqual(UnitAttackPhase.Winddown, simulation.Units[0].AttackPhase);
@@ -61,15 +61,15 @@ namespace DeckBattle.Tests
 
             var normalEvents = new BattleEventQueue();
             var acceleratedEvents = new BattleEventQueue();
-            normalLoop.Tick(normal, normalEvents);
-            acceleratedLoop.Tick(accelerated, acceleratedEvents);
+            normalLoop.Tick(normalEvents);
+            acceleratedLoop.Tick(acceleratedEvents);
 
             Assert.That(normal.Units[0].WindupEndTime - normal.Units[0].AttackCycleStartTime, Is.EqualTo(1d).Within(0.000001d));
             Assert.That(normal.Units[0].NextAttackTime - normal.Units[0].AttackCycleStartTime, Is.EqualTo(4d).Within(0.000001d));
             Assert.That(accelerated.Units[0].WindupEndTime - accelerated.Units[0].AttackCycleStartTime, Is.EqualTo(0.5d).Within(0.000001d));
             Assert.That(accelerated.Units[0].NextAttackTime - accelerated.Units[0].AttackCycleStartTime, Is.EqualTo(2d).Within(0.000001d));
-            Assert.That(FindEvent(normalEvents, BattleEventType.AttackWindupStarted).TimeScale, Is.EqualTo(1f).Within(0.000001f));
-            Assert.That(FindEvent(acceleratedEvents, BattleEventType.AttackWindupStarted).TimeScale, Is.EqualTo(2f).Within(0.000001f));
+            Assert.That(FindEvent(normalEvents, BattleEventType.AttackWindupStarted).Duration, Is.EqualTo(1f).Within(0.000001f));
+            Assert.That(FindEvent(acceleratedEvents, BattleEventType.AttackWindupStarted).Duration, Is.EqualTo(0.5f).Within(0.000001f));
         }
 
         [Test]
@@ -84,12 +84,12 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, TickDuration);
 
             var events = new BattleEventQueue();
-            loop.Tick(simulation, events);
+            loop.Tick(events);
 
             UnitRuntimeState attacker = simulation.Units[0];
             Assert.That(attacker.WindupEndTime - attacker.AttackCycleStartTime, Is.EqualTo(TickDuration).Within(0.000001d));
             Assert.That(attacker.NextAttackTime, Is.EqualTo(attacker.WindupEndTime).Within(0.000001d));
-            Assert.That(FindEvent(events, BattleEventType.AttackWindupStarted).TimeScale, Is.EqualTo(1f).Within(0.000001f));
+            Assert.That(FindEvent(events, BattleEventType.AttackWindupStarted).Duration, Is.EqualTo(TickDuration).Within(0.000001f));
         }
 
         [Test]
@@ -118,7 +118,7 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, 0.35f);
             var events = new BattleEventQueue();
 
-            loop.Tick(simulation, events);
+            loop.Tick(events);
 
             Assert.AreEqual(new HexCoord(0, 0), attacker.CurrentHex);
             Assert.AreEqual(new HexCoord(1, 0), attacker.MovementDestination);
@@ -126,13 +126,13 @@ namespace DeckBattle.Tests
             Assert.AreEqual(UnitAttackPhase.AcquireReload, attacker.AttackPhase);
             AssertNoEvent(events, BattleEventType.AttackWindupStarted);
 
-            loop.Tick(simulation, events);
+            loop.Tick(events);
 
             Assert.IsTrue(attacker.IsMoving);
             Assert.AreEqual(UnitAttackPhase.AcquireReload, attacker.AttackPhase);
             AssertNoEvent(events, BattleEventType.AttackWindupStarted);
 
-            loop.Tick(simulation, events);
+            loop.Tick(events);
 
             Assert.IsFalse(attacker.IsMoving);
             Assert.AreEqual(UnitAttackPhase.Windup, attacker.AttackPhase);
@@ -147,14 +147,14 @@ namespace DeckBattle.Tests
             attacker.NextAttackTime = 0d;
             var loop = new BattleTickLoop(simulation, TickDuration);
             var events = new BattleEventQueue();
-            loop.Tick(simulation, events);
+            loop.Tick(events);
             Assert.AreEqual(UnitAttackPhase.Windup, attacker.AttackPhase);
 
             attacker.IsMoving = true;
             attacker.MovementDestination = attacker.CurrentHex;
             attacker.MovementTimeRemaining = 1f;
 
-            BattleTickResult result = loop.Tick(simulation, events);
+            BattleTickResult result = loop.Tick(events);
 
             Assert.AreEqual(0, result.Attacks);
             Assert.AreEqual(UnitAttackPhase.AcquireReload, attacker.AttackPhase);
@@ -170,7 +170,7 @@ namespace DeckBattle.Tests
             UnitRuntimeState attacker = simulation.Units[0];
             attacker.NextAttackTime = 0d;
             var loop = new BattleTickLoop(simulation, TickDuration);
-            loop.Tick(simulation, new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
 
             Assert.AreEqual(UnitAttackPhase.Windup, attacker.AttackPhase);
             Assert.Throws<System.InvalidOperationException>(
@@ -186,8 +186,8 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, TickDuration);
             var events = new BattleEventQueue();
 
-            loop.Tick(simulation, events);
-            loop.Tick(simulation, events);
+            loop.Tick(events);
+            loop.Tick(events);
             UnitRuntimeState attacker = simulation.Units[0];
             Assert.AreEqual(UnitAttackPhase.Winddown, attacker.AttackPhase);
 
@@ -198,7 +198,7 @@ namespace DeckBattle.Tests
             Assert.That(attacker.NextAttackTime, Is.EqualTo(simulation.ElapsedTime).Within(0.000001d));
             AssertEvent(events, BattleEventType.AttackWinddownEnded);
 
-            BattleTickResult nextTick = loop.Tick(simulation, events);
+            BattleTickResult nextTick = loop.Tick(events);
             Assert.AreEqual(0, nextTick.Attacks);
             Assert.AreEqual(UnitAttackPhase.Windup, attacker.AttackPhase);
         }
@@ -209,7 +209,7 @@ namespace DeckBattle.Tests
             BattleSimulation simulation = CreateSimulation(1f);
             simulation.Units[0].NextAttackTime = 0d;
             var loop = new BattleTickLoop(simulation, TickDuration);
-            loop.Tick(simulation, new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
             UnitRuntimeState attacker = simulation.Units[0];
             double windupEndTime = attacker.WindupEndTime;
             double nextAttackTime = attacker.NextAttackTime;
@@ -231,10 +231,10 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
             var loop = new BattleTickLoop(simulation, TickDuration);
             var events = new BattleEventQueue();
-            loop.Tick(simulation, events);
+            loop.Tick(events);
 
             simulation.DefeatUnit(simulation.Units[1]);
-            BattleTickResult result = loop.Tick(simulation, events);
+            BattleTickResult result = loop.Tick(events);
 
             Assert.AreEqual(0, result.Attacks);
             Assert.AreEqual(UnitAttackPhase.AcquireReload, simulation.Units[0].AttackPhase);

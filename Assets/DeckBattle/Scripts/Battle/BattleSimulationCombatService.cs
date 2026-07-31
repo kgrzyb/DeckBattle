@@ -56,7 +56,7 @@ namespace DeckBattle
             int ticks = 0;
             while (state.Phase == BattlePhase.Combat && ticks < maxTicks)
             {
-                BattleTickResult tickResult = tickLoop.Tick(simulation, eventQueue);
+                BattleTickResult tickResult = tickLoop.Tick(eventQueue);
                 ticks++;
                 if (tickResult.BattleEnded)
                 {

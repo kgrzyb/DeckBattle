@@ -71,12 +71,32 @@ namespace DeckBattle
                 return;
             }
 
-            UnitDefinition definition = unit.Definition;
-            int maxHp = definition != null ? definition.MaxHp : 1;
-            int maxMana = definition != null ? definition.ManaThreshold : 0;
-            string displayName = definition != null ? definition.DisplayName : null;
-            Bind(unit.UnitId, view.transform, displayName, unit.CurrentHp, maxHp, unit.CurrentMana, maxMana);
+            Bind(
+                unit.UnitId,
+                view.transform,
+                null,
+                unit.CurrentHp,
+                unit.CombatSpec.MaxHp,
+                unit.CurrentMana,
+                unit.CombatSpec.ManaThreshold);
             SetStatuses(unit);
+        }
+
+        public void BindPresentationUnit(UnitPresentationState state, UnitView view)
+        {
+            if (view == null)
+            {
+                return;
+            }
+
+            Bind(
+                state.UnitId,
+                view.transform,
+                null,
+                state.CurrentHp,
+                state.MaxHp,
+                state.CurrentMana,
+                state.MaxMana);
         }
 
         public void SetHealth(int unitId, int currentHp, int maxHp)
@@ -115,6 +135,17 @@ namespace DeckBattle
             }
 
             tracked.View.SetStatuses(unit.Statuses, unit.StatusSnapshot.TotalShield, presentationCatalog);
+        }
+
+        public void SetPresentationStatuses(int unitId, IReadOnlyList<StatusPresentationState> statuses, int totalShield)
+        {
+            TrackedOverlay tracked;
+            if (!activeOverlays.TryGetValue(unitId, out tracked) || tracked.View == null)
+            {
+                return;
+            }
+
+            tracked.View.SetPresentationStatuses(statuses, totalShield, presentationCatalog);
         }
 
         public void Release(int unitId)

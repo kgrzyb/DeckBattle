@@ -28,8 +28,8 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
-            BattleTickResult windup = loop.Tick(simulation, events);
-            BattleTickResult result = loop.Tick(simulation, events);
+            BattleTickResult windup = loop.Tick(events);
+            BattleTickResult result = loop.Tick(events);
 
             Assert.AreEqual(0, windup.Attacks);
             Assert.AreEqual(2, result.Attacks);
@@ -54,7 +54,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
             var loop = new BattleTickLoop(simulation, 0.25f);
 
-            loop.Tick(simulation, new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
 
             Assert.AreEqual(UnitAttackPhase.Windup, simulation.Units[0].AttackPhase);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(2.25d).Within(0.000001d));
@@ -80,7 +80,7 @@ namespace DeckBattle.Tests
             simulation.Units[0].NextAttackTime = 0d;
             var loop = new BattleTickLoop(simulation, 0.25f);
 
-            loop.Tick(simulation, new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
 
             Assert.AreEqual(UnitAttackPhase.Windup, simulation.Units[0].AttackPhase);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(0.75d).Within(0.000001d));

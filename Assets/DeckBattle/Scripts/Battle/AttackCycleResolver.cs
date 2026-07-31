@@ -123,7 +123,13 @@ namespace DeckBattle
                 attacker.MarkTargetEngaged(target.UnitId);
 
                 float remainingWinddown = (float)Math.Max(0d, attacker.NextAttackTime - simulation.ElapsedTime);
-                eventQueue?.Enqueue(BattleEvent.AttackFired(attacker.UnitId, target.UnitId, sequenceId, remainingWinddown));
+                eventQueue?.Enqueue(BattleEvent.AttackFired(
+                    attacker.UnitId,
+                    target.UnitId,
+                    sequenceId,
+                    remainingWinddown,
+                    attacker.CurrentHex,
+                    target.CurrentHex));
                 // Retained for consumers built before the phase-specific events.
                 eventQueue?.Enqueue(BattleEvent.UnitAttackStarted(attacker.UnitId, target.UnitId));
 
@@ -137,16 +143,16 @@ namespace DeckBattle
                     out bool isCritical);
                 attacker.AttackBonusNextCombat = 0;
 
-                CombatResolver.AddMana(simulation, attacker, attacker.Definition.ManaPerAttack, eventQueue);
+                CombatResolver.AddMana(simulation, attacker, attacker.CombatSpec.ManaPerAttack, eventQueue);
 
-                ProjectileDefinition projectileDefinition = attacker.Definition.Projectile;
-                bool useProjectile = attacker.Definition.UnitType == UnitType.Range && projectileDefinition != null;
+                ProjectileCombatSpec projectileSpec = attacker.CombatSpec.Projectile;
+                bool useProjectile = attacker.CombatSpec.UnitType == UnitType.Range && projectileSpec.IsValid;
                 if (useProjectile)
                 {
                     ProjectileRuntimeState projectile = simulation.SpawnProjectile(
                         attacker,
                         target,
-                        projectileDefinition,
+                        projectileSpec,
                         damage,
                         isCritical);
                     eventQueue?.Enqueue(BattleEvent.ProjectileLaunched(
@@ -155,7 +161,8 @@ namespace DeckBattle
                         target.UnitId,
                         projectile.FromHex,
                         projectile.LastKnownTargetHex,
-                        projectile.TravelDuration));
+                        projectile.TravelDuration,
+                        projectileSpec.PresentationId));
                 }
                 else
                 {
@@ -219,16 +226,14 @@ namespace DeckBattle
 
                 if (!TryGetUnitById(simulation, unit.TargetUnitId, out UnitRuntimeState target)
                     || !target.IsAlive
-                    || simulation.Board.Distance(unit.CurrentHex, target.CurrentHex) > simulation.Tuning.GetAttackRange(unit.Definition))
+                    || simulation.Board.Distance(unit.CurrentHex, target.CurrentHex) > simulation.Tuning.GetAttackRange(unit.CombatSpec))
                 {
                     continue;
                 }
 
-                float windupPercent = Math.Max(0f, Math.Min(1f, unit.Definition.AttackWindupPercent));
-                float attackCycleDuration = simulation.Tuning.GetAttackCooldown(unit.Definition, unit);
+                float windupPercent = unit.CombatSpec.AttackWindupPercent;
+                float attackCycleDuration = simulation.Tuning.GetAttackCooldown(unit.CombatSpec, unit);
                 float windupDuration = GetWindupDuration(attackCycleDuration, windupPercent, tickDuration);
-                float baseWindupDuration = GetWindupDuration(unit.Definition.AttackCooldown, windupPercent, tickDuration);
-                float windupTimeScale = GetWindupTimeScale(baseWindupDuration, windupDuration);
                 attackCycleDuration = Math.Max(attackCycleDuration, windupDuration);
 
                 unit.AttackPhase = UnitAttackPhase.Windup;
@@ -242,21 +247,13 @@ namespace DeckBattle
                     target.UnitId,
                     unit.AttackSequenceId,
                     windupDuration,
-                    windupTimeScale));
+                    target.CurrentHex));
             }
         }
 
         private static float GetWindupDuration(float attackCycleDuration, float windupPercent, float tickDuration)
         {
             return Math.Max(tickDuration, attackCycleDuration * windupPercent);
-        }
-
-        private static float GetWindupTimeScale(float baseWindupDuration, float effectiveWindupDuration)
-        {
-            float timeScale = baseWindupDuration / effectiveWindupDuration;
-            return timeScale > 0f && !float.IsNaN(timeScale) && !float.IsInfinity(timeScale)
-                ? timeScale
-                : 1f;
         }
 
         private static void CompleteWinddown(UnitRuntimeState unit, BattleEventQueue eventQueue)

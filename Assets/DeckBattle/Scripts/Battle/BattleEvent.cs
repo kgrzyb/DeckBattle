@@ -28,7 +28,8 @@ namespace DeckBattle
         ManaDrained = 23,
         DamageRedirected = 24,
         SpecialWindupStarted = 25,
-        SpecialWindupCancelled = 26
+        SpecialWindupCancelled = 26,
+        UnitTargetChanged = 27
     }
 
     public readonly struct BattleEvent
@@ -43,7 +44,6 @@ namespace DeckBattle
         public readonly int CurrentMana;
         public readonly int ProjectileId;
         public readonly float Duration;
-        public readonly float TimeScale;
         public readonly UnitSpecialKind SpecialKind;
         public readonly BattleSide Winner;
         public readonly bool HasWinner;
@@ -51,6 +51,7 @@ namespace DeckBattle
         public readonly StatusKind StatusKind;
         public readonly int StatusStackCount;
         public readonly int StatusStackDelta;
+        public readonly int PresentationId;
 
         private BattleEvent(
             BattleEventType type,
@@ -70,7 +71,7 @@ namespace DeckBattle
             StatusKind statusKind = StatusKind.None,
             int statusStackCount = 0,
             int statusStackDelta = 0,
-            float timeScale = 1f)
+            int presentationId = 0)
         {
             Type = type;
             UnitId = unitId;
@@ -82,7 +83,6 @@ namespace DeckBattle
             CurrentMana = currentMana;
             ProjectileId = projectileId;
             Duration = duration;
-            TimeScale = IsValidTimeScale(timeScale) ? timeScale : 1f;
             SpecialKind = specialKind;
             Winner = winner;
             HasWinner = hasWinner;
@@ -90,11 +90,12 @@ namespace DeckBattle
             StatusKind = statusKind;
             StatusStackCount = statusStackCount;
             StatusStackDelta = statusStackDelta;
+            PresentationId = presentationId;
         }
 
-        public static BattleEvent UnitMoved(int unitId, HexCoord from, HexCoord to)
+        public static BattleEvent UnitMoved(int unitId, HexCoord from, HexCoord to, float duration = 0f)
         {
-            return new BattleEvent(BattleEventType.UnitMoved, unitId, 0, from, to, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitMoved, unitId, 0, from, to, 0, 0, 0, 0, duration, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
         public static BattleEvent UnitAttackStarted(int attackerId, int targetId)
@@ -107,14 +108,14 @@ namespace DeckBattle
             int targetId,
             int sequenceId,
             float duration,
-            float timeScale)
+            HexCoord targetHex)
         {
             return new BattleEvent(
                 BattleEventType.AttackWindupStarted,
                 attackerId,
                 targetId,
                 default,
-                default,
+                targetHex,
                 0,
                 0,
                 0,
@@ -123,8 +124,7 @@ namespace DeckBattle
                 UnitSpecialKind.None,
                 BattleSide.Player,
                 false,
-                sequenceId,
-                timeScale: timeScale);
+                sequenceId);
         }
 
         public static BattleEvent AttackWindupCancelled(int attackerId, int targetId, int sequenceId)
@@ -132,9 +132,9 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.AttackWindupCancelled, attackerId, targetId, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, sequenceId);
         }
 
-        public static BattleEvent AttackFired(int attackerId, int targetId, int sequenceId, float winddownDuration)
+        public static BattleEvent AttackFired(int attackerId, int targetId, int sequenceId, float winddownDuration, HexCoord from, HexCoord targetHex)
         {
-            return new BattleEvent(BattleEventType.AttackFired, attackerId, targetId, default, default, 0, 0, 0, 0, winddownDuration, UnitSpecialKind.None, BattleSide.Player, false, sequenceId);
+            return new BattleEvent(BattleEventType.AttackFired, attackerId, targetId, from, targetHex, 0, 0, 0, 0, winddownDuration, UnitSpecialKind.None, BattleSide.Player, false, sequenceId);
         }
 
         public static BattleEvent AttackWinddownEnded(int attackerId, int sequenceId)
@@ -142,9 +142,14 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.AttackWinddownEnded, attackerId, 0, default, default, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false, sequenceId);
         }
 
-        public static BattleEvent UnitDamaged(int targetId, int amount, int remainingHp)
+        public static BattleEvent UnitTargetChanged(int unitId, int targetUnitId, HexCoord targetHex)
         {
-            return new BattleEvent(BattleEventType.UnitDamaged, targetId, 0, default, default, amount, remainingHp, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+            return new BattleEvent(BattleEventType.UnitTargetChanged, unitId, targetUnitId, default, targetHex, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+        }
+
+        public static BattleEvent UnitDamaged(int targetId, int amount, int remainingHp, HexCoord targetHex)
+        {
+            return new BattleEvent(BattleEventType.UnitDamaged, targetId, 0, default, targetHex, amount, remainingHp, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
         public static BattleEvent UnitDied(int unitId)
@@ -188,9 +193,24 @@ namespace DeckBattle
             int targetId,
             HexCoord from,
             HexCoord targetHex,
-            float duration)
+            float duration,
+            int presentationId)
         {
-            return new BattleEvent(BattleEventType.ProjectileLaunched, attackerId, targetId, from, targetHex, 0, 0, 0, projectileId, duration, UnitSpecialKind.None, BattleSide.Player, false);
+            return new BattleEvent(
+                BattleEventType.ProjectileLaunched,
+                attackerId,
+                targetId,
+                from,
+                targetHex,
+                0,
+                0,
+                0,
+                projectileId,
+                duration,
+                UnitSpecialKind.None,
+                BattleSide.Player,
+                false,
+                presentationId: presentationId);
         }
 
         public static BattleEvent ProjectileHit(int projectileId, int attackerId, int targetId, HexCoord targetHex)
@@ -248,9 +268,5 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.DamageRedirected, protectedUnitId, guardUnitId, default, default, amount, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
-        private static bool IsValidTimeScale(float value)
-        {
-            return value > 0f && !float.IsNaN(value) && !float.IsInfinity(value);
-        }
     }
 }

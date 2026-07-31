@@ -51,6 +51,14 @@ namespace DeckBattle
             Sync(unit.UnitId, unit.Statuses);
         }
 
+        public void BindPresentationUnit(int unitId, UnitView view)
+        {
+            if (view != null)
+            {
+                pivotsByUnitId[unitId] = view.StatusVfxPivot;
+            }
+        }
+
         public void HandleStatusEvent(BattleEvent battleEvent)
         {
             if (presentationCatalog == null || !presentationCatalog.TryGet(battleEvent.StatusKind, out StatusPresentationEntry entry) || entry.Mode != StatusPresentationMode.Vfx)
@@ -89,6 +97,7 @@ namespace DeckBattle
             }
 
             SetShadowStacks(battleEvent.UnitId, battleEvent.StatusKind, battleEvent.TargetUnitId, nextStacks);
+            ReconcileShadowStatusVfx(battleEvent.UnitId, battleEvent.StatusKind, entry);
         }
 
         public void Sync(UnitRuntimeState unit)
@@ -287,6 +296,26 @@ namespace DeckBattle
                 }
             }
             if (stacks > 0) shadowStatuses.Add(new ShadowStatus(unitId, kind, sourceUnitId, stacks));
+        }
+
+        private void ReconcileShadowStatusVfx(int unitId, StatusKind kind, StatusPresentationEntry entry)
+        {
+            if (!pivotsByUnitId.TryGetValue(unitId, out Transform pivot) || pivot == null)
+            {
+                return;
+            }
+
+            int totalStacks = 0;
+            for (int i = 0; i < shadowStatuses.Count; i++)
+            {
+                ShadowStatus status = shadowStatuses[i];
+                if (status.UnitId == unitId && status.Kind == kind)
+                {
+                    totalStacks += status.Stacks;
+                }
+            }
+
+            Reconcile(unitId, kind, totalStacks, pivot, entry);
         }
 
         private void Prewarm()

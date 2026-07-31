@@ -27,10 +27,10 @@ namespace DeckBattle
                 return false;
             }
 
-            UnitSpecialDefinition special = unit.Definition != null ? unit.Definition.Special : null;
+            UnitSpecialCombatSpec special = unit.CombatSpec.Special;
             eventQueue?.Enqueue(BattleEvent.SpecialWindupCancelled(
                 unit.UnitId,
-                special != null ? special.Kind : UnitSpecialKind.None,
+                special.Kind,
                 unit.SpecialSequenceId));
             unit.SpecialPhase = UnitSpecialPhase.Idle;
             unit.SpecialWindupEndTime = double.PositiveInfinity;
@@ -72,7 +72,7 @@ namespace DeckBattle
             for (int i = 0; i < workspace.CompletedCount; i++)
             {
                 UnitRuntimeState unit = workspace.CompletedUnits[i];
-                UnitSpecialDefinition special = unit.Definition.Special;
+                UnitSpecialCombatSpec special = unit.CombatSpec.Special;
                 int sequenceId = unit.SpecialSequenceId;
                 unit.SpecialPhase = UnitSpecialPhase.Idle;
                 unit.SpecialWindupEndTime = double.PositiveInfinity;
@@ -112,7 +112,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                UnitSpecialDefinition special = unit.Definition.Special;
+                UnitSpecialCombatSpec special = unit.CombatSpec.Special;
                 float duration = Math.Max(tickDuration, Math.Max(0f, special.WindupDuration));
                 unit.SpecialPhase = UnitSpecialPhase.Windup;
                 unit.SpecialSequenceId++;
@@ -128,12 +128,11 @@ namespace DeckBattle
         private static bool TryApplySpecial(
             BattleSimulation simulation,
             UnitRuntimeState unit,
-            UnitSpecialDefinition special,
+            UnitSpecialCombatSpec special,
             BattleEventQueue eventQueue)
         {
-            if (special == null
+            if (!special.IsValid
                 || special.Kind != UnitSpecialKind.HasteBurst
-                || special.AppliedStatus == null
                 || special.AppliedStatus.Kind != StatusKind.Haste)
             {
                 return false;

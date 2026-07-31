@@ -10,6 +10,7 @@ namespace DeckBattle
     public sealed class BattleDebugOverlay : MonoBehaviour
     {
         [Header("References")]
+        [SerializeField] private BattleCombatRunner combatRunner;
         [SerializeField] private BattleView battleView;
         [SerializeField] private BoardPresenter boardPresenter;
 
@@ -57,7 +58,8 @@ namespace DeckBattle
                 return;
             }
 
-            BattleSimulation simulation = ResolveSimulation();
+            BattleCombatRunner runner = ResolveCombatRunner();
+            BattleSimulation simulation = runner != null ? runner.Simulation : null;
             if (simulation == null)
             {
                 return;
@@ -73,12 +75,12 @@ namespace DeckBattle
 
             if (showOccupiedHexes)
             {
-                DrawHexDictionary(simulation, presenter, battleView.DebugSnapshot.OccupiedHexes, occupiedColor, "O");
+                DrawHexDictionary(simulation, presenter, runner.DebugSnapshot.OccupiedHexes, occupiedColor, "O");
             }
 
             if (showReservedHexes)
             {
-                DrawHexDictionary(simulation, presenter, battleView.DebugSnapshot.ReservedHexes, reservedColor, "R");
+                DrawHexDictionary(simulation, presenter, runner.DebugSnapshot.ReservedHexes, reservedColor, "R");
             }
 
             if (showPaths)
@@ -143,14 +145,14 @@ namespace DeckBattle
             DrawLabel(position, label, unitHexLabelColor);
         }
 
-        private BattleSimulation ResolveSimulation()
+        private BattleCombatRunner ResolveCombatRunner()
         {
-            if (battleView == null)
+            if (combatRunner == null)
             {
-                battleView = GetComponent<BattleView>();
+                combatRunner = GetComponent<BattleCombatRunner>();
             }
 
-            return battleView != null ? battleView.Simulation : null;
+            return combatRunner;
         }
 
         private BoardPresenter ResolveBoardPresenter()
@@ -194,7 +196,7 @@ namespace DeckBattle
         private void DrawAttackRange(BattleSimulation simulation, BoardPresenter presenter, UnitRuntimeState unit)
         {
             rangeHexes.Clear();
-            simulation.Board.FillHexesInRange(unit.CurrentHex, simulation.Tuning.GetAttackRange(unit.Definition), rangeHexes);
+            simulation.Board.FillHexesInRange(unit.CurrentHex, simulation.Tuning.GetAttackRange(unit.CombatSpec), rangeHexes);
             Gizmos.color = rangeColor;
             for (int i = 0; i < rangeHexes.Count; i++)
             {

@@ -23,6 +23,11 @@ PrefabInstance:
       propertyPath: groundOffset
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3695311291659987714, guid: c61b7deca06656f42a5fed87dc6f8d34,
+        type: 3}
+      propertyPath: attackWindupAnimationDuration
+      value: 0.5
+      objectReference: {fileID: 0}
     - target: {fileID: 4332660001639080517, guid: c61b7deca06656f42a5fed87dc6f8d34,
         type: 3}
       propertyPath: m_Materials.Array.size

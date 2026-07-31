@@ -18,7 +18,7 @@ namespace DeckBattle.Tests
             HitResolutionResult result = DamageResolver.Resolve(simulation, target, new DamageRequest(simulation.Units[0], 3), null);
 
             Assert.AreEqual(0, result.Damage);
-            Assert.AreEqual(target.Definition.MaxHp, target.CurrentHp);
+            Assert.AreEqual(target.CombatSpec.MaxHp, target.CurrentHp);
             Assert.AreEqual(1, target.Statuses.Count);
             Assert.AreEqual(StatusKind.Sleep, target.Statuses[0].Kind);
         }

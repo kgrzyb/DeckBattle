@@ -19,7 +19,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(StatusApplicationResult.Applied, StatusResolver.TryApply(simulation, unit, new StatusApplicationRequest(haste, 1)));
             Assert.AreEqual(StatusApplicationResult.Applied, StatusResolver.TryApply(simulation, unit, new StatusApplicationRequest(slow, 2)));
 
-            Assert.That(simulation.Tuning.GetAttackCooldown(unit.Definition, unit), Is.EqualTo(1.25f).Within(0.0001f));
+            Assert.That(simulation.Tuning.GetAttackCooldown(unit.CombatSpec, unit), Is.EqualTo(1.25f).Within(0.0001f));
         }
 
         [Test]

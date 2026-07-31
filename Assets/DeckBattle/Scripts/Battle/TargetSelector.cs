@@ -289,7 +289,7 @@ namespace DeckBattle
             targetHp = int.MaxValue;
             int selectedUnitId = int.MaxValue;
             IReadOnlyList<UnitRuntimeState> units = simulation.Units;
-            int attackRange = simulation.Tuning.GetAttackRange(attacker.Definition);
+            int attackRange = simulation.Tuning.GetAttackRange(attacker.CombatSpec);
             for (int i = 0; i < units.Count; i++)
             {
                 UnitRuntimeState candidate = units[i];

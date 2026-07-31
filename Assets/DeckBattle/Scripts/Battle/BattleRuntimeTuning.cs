@@ -41,30 +41,20 @@ namespace DeckBattle
             MaxMovementSlowMultiplier = Math.Max(1f, maxMovementSlowMultiplier);
         }
 
-        public int GetAttackRange(UnitDefinition definition)
+        public int GetAttackRange(UnitCombatSpec combatSpec)
         {
-            if (definition == null)
-            {
-                return 1;
-            }
-
-            return Math.Max(1, definition.AttackRange + AttackRangeBonus);
+            return Math.Max(1, combatSpec.AttackRange + AttackRangeBonus);
         }
 
-        public float GetAttackCooldown(UnitDefinition definition)
+        public float GetAttackCooldown(UnitCombatSpec combatSpec)
         {
-            return GetAttackCooldown(definition, null);
+            return GetAttackCooldown(combatSpec, null);
         }
 
-        public float GetAttackCooldown(UnitDefinition definition, UnitRuntimeState runtimeState)
+        public float GetAttackCooldown(UnitCombatSpec combatSpec, UnitRuntimeState runtimeState)
         {
-            if (definition == null)
-            {
-                return 0.01f;
-            }
-
             float statusMultiplier = EffectiveStatsResolver.GetAttackCooldownMultiplier(runtimeState, this);
-            return Math.Max(0.01f, definition.AttackCooldown * AttackCooldownMultiplier * statusMultiplier);
+            return Math.Max(0.01f, combatSpec.AttackCooldown * AttackCooldownMultiplier * statusMultiplier);
         }
     }
 }

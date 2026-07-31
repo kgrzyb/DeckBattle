@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -8,22 +7,32 @@ namespace DeckBattle.Tests
     public sealed class BattleViewFacingTests
     {
         [Test]
-        public void FaceIdleUnitsTowardTargets_RotatesIdleUnitTowardTarget()
+        public void ProcessCombatTick_AttackWindupFacesUnitTowardEventTarget()
         {
             TestContext context = CreateContext();
             try
             {
-                context.Player.SetTarget(context.Enemy);
-
-                InvokePrivateMethod(context.BattleView, "FaceIdleUnitsTowardTargets");
+                context.BattleView.ProcessCombatTick(
+                    default,
+                    new[]
+                    {
+                        BattleEvent.AttackWindupStarted(
+                            context.Player.UnitId,
+                            context.Enemy.UnitId,
+                            1,
+                            0.25f,
+                            context.Enemy.CurrentHex)
+                    });
 
                 Vector3 targetDirection = context.BoardPresenter.GetWorldPosition(context.Enemy.CurrentHex)
                     - context.PlayerView.transform.position;
                 targetDirection.y = 0f;
+                InvokePrivateMethod(context.PlayerView, "UpdateFacing", 1f);
 
                 Assert.That(
                     Vector3.Dot(context.PlayerModel.transform.forward, targetDirection.normalized),
                     Is.GreaterThan(0.999f));
+                Assert.AreEqual("Attack", GetPrivateField(context.PlayerView, "visualState").ToString());
             }
             finally
             {
@@ -32,18 +41,115 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void FaceIdleUnitsTowardTargets_DoesNotRotateMovingUnit()
+        public void ProcessCombatTick_MovementUsesEventDestination()
         {
             TestContext context = CreateContext();
             try
             {
-                context.Player.SetTarget(context.Enemy);
-                context.Player.IsMoving = true;
-                context.PlayerModel.transform.rotation = Quaternion.identity;
+                context.BattleView.ProcessCombatTick(
+                    default,
+                    new[]
+                    {
+                        BattleEvent.UnitMoved(
+                            context.Player.UnitId,
+                            context.Player.CurrentHex,
+                            new HexCoord(1, 1),
+                            0.25f)
+                    });
 
-                InvokePrivateMethod(context.BattleView, "FaceIdleUnitsTowardTargets");
+                Vector3 targetDirection = context.BoardPresenter.GetWorldPosition(new HexCoord(1, 1))
+                    - context.PlayerView.transform.position;
+                targetDirection.y = 0f;
+                InvokePrivateMethod(context.PlayerView, "UpdateFacing", 1f);
+                Assert.That(Vector3.Dot(context.PlayerModel.transform.forward, targetDirection.normalized), Is.GreaterThan(0.999f));
+            }
+            finally
+            {
+                context.Destroy();
+            }
+        }
 
-                Assert.That(Quaternion.Angle(Quaternion.identity, context.PlayerModel.transform.rotation), Is.LessThan(0.01f));
+        [Test]
+        public void ProcessCombatTick_TargetChangedFacesUnitTowardEventTarget()
+        {
+            TestContext context = CreateContext();
+            try
+            {
+                context.BattleView.ProcessCombatTick(
+                    default,
+                    new[]
+                    {
+                        BattleEvent.UnitTargetChanged(
+                            context.Player.UnitId,
+                            context.Enemy.UnitId,
+                            context.Enemy.CurrentHex)
+                    });
+
+                Vector3 targetDirection = context.BoardPresenter.GetWorldPosition(context.Enemy.CurrentHex)
+                    - context.PlayerView.transform.position;
+                targetDirection.y = 0f;
+                InvokePrivateMethod(context.PlayerView, "UpdateFacing", 1f);
+                Assert.That(Vector3.Dot(context.PlayerModel.transform.forward, targetDirection.normalized), Is.GreaterThan(0.999f));
+            }
+            finally
+            {
+                context.Destroy();
+            }
+        }
+
+        [Test]
+        public void ProcessCombatTick_SpecialWindupStartsSpecialAnimation()
+        {
+            TestContext context = CreateContext();
+            try
+            {
+                context.BattleView.ProcessCombatTick(
+                    default,
+                    new[]
+                    {
+                        BattleEvent.SpecialWindupStarted(
+                            context.Player.UnitId,
+                            UnitSpecialKind.HasteBurst,
+                            1,
+                            0.5f)
+                    });
+
+                Assert.AreEqual("Special", GetPrivateField(context.PlayerView, "visualState").ToString());
+            }
+            finally
+            {
+                context.Destroy();
+            }
+        }
+
+        [Test]
+        public void ProcessCombatTick_MovementCompletionFacesTheLastKnownTarget()
+        {
+            TestContext context = CreateContext();
+            try
+            {
+                context.BattleView.ProcessCombatTick(
+                    default,
+                    new[]
+                    {
+                        BattleEvent.UnitTargetChanged(
+                            context.Player.UnitId,
+                            context.Enemy.UnitId,
+                            context.Enemy.CurrentHex),
+                        BattleEvent.UnitMoved(
+                            context.Player.UnitId,
+                            context.Player.CurrentHex,
+                            new HexCoord(1, 1),
+                            0.25f)
+                    });
+
+                InvokePrivateMethod(context.PlayerView, "UpdateMovement", 0.25f);
+                InvokePrivateMethod(context.PlayerView, "UpdateFacing", 1f);
+
+                Vector3 targetDirection = context.BoardPresenter.GetWorldPosition(context.Enemy.CurrentHex)
+                    - context.PlayerView.transform.position;
+                targetDirection.y = 0f;
+                Assert.That(Vector3.Dot(context.PlayerModel.transform.forward, targetDirection.normalized), Is.GreaterThan(0.999f));
             }
             finally
             {
@@ -70,7 +176,6 @@ namespace DeckBattle.Tests
 
             GameObject battleViewObject = new GameObject("BattleView", typeof(BattleView));
             BattleView battleView = battleViewObject.GetComponent<BattleView>();
-            SetPrivateField(battleView, "simulation", simulation);
             SetPrivateField(battleView, "boardPresenter", boardPresenter);
 
             GameObject playerObject = new GameObject("PlayerView", typeof(UnitView));
@@ -80,8 +185,7 @@ namespace DeckBattle.Tests
             InvokePrivateMethod(playerView, "Awake");
             playerView.Bind(simulation.Units[0], boardPresenter.GetWorldPosition(simulation.Units[0].CurrentHex));
 
-            Dictionary<int, UnitView> views = GetPrivateField<Dictionary<int, UnitView>>(battleView, "unitViewByUnitId");
-            views.Add(simulation.Units[0].UnitId, playerView);
+            battleView.UnitViews.RegisterExisting(simulation.Units[0].UnitId, playerView);
 
             return new TestContext(
                 playerDefinition,
@@ -104,18 +208,18 @@ namespace DeckBattle.Tests
                 .SetValue(target, value);
         }
 
-        private static T GetPrivateField<T>(object target, string fieldName)
+        private static object GetPrivateField(object target, string fieldName)
         {
-            return (T)target.GetType()
+            return target.GetType()
                 .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
                 .GetValue(target);
         }
 
-        private static void InvokePrivateMethod(object target, string methodName)
+        private static void InvokePrivateMethod(object target, string methodName, params object[] arguments)
         {
             target.GetType()
                 .GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic)
-                .Invoke(target, null);
+                .Invoke(target, arguments);
         }
 
         private sealed class TestContext

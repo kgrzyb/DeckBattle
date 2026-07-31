@@ -7,8 +7,7 @@ namespace DeckBattle
         public readonly int ProjectileId;
         public readonly int AttackerUnitId;
         public readonly int TargetUnitId;
-        public readonly UnitDefinition AttackerDefinition;
-        public readonly ProjectileDefinition ProjectileDefinition;
+        public readonly ProjectileCombatSpec CombatSpec;
         public readonly HexCoord FromHex;
         public HexCoord LastKnownTargetHex;
         public readonly double ImpactTime;
@@ -20,8 +19,7 @@ namespace DeckBattle
             int projectileId,
             int attackerUnitId,
             int targetUnitId,
-            UnitDefinition attackerDefinition,
-            ProjectileDefinition projectileDefinition,
+            ProjectileCombatSpec combatSpec,
             HexCoord fromHex,
             HexCoord lastKnownTargetHex,
             float travelDuration,
@@ -37,8 +35,12 @@ namespace DeckBattle
             ProjectileId = projectileId;
             AttackerUnitId = attackerUnitId;
             TargetUnitId = targetUnitId;
-            AttackerDefinition = attackerDefinition ?? throw new ArgumentNullException(nameof(attackerDefinition));
-            ProjectileDefinition = projectileDefinition ?? throw new ArgumentNullException(nameof(projectileDefinition));
+            if (!combatSpec.IsValid)
+            {
+                throw new ArgumentException("Projectile combat spec is invalid.", nameof(combatSpec));
+            }
+
+            CombatSpec = combatSpec;
             FromHex = fromHex;
             LastKnownTargetHex = lastKnownTargetHex;
             TravelDuration = Math.Max(0f, travelDuration);

@@ -6,6 +6,7 @@ namespace DeckBattle
     public sealed class BattleTickLoop
     {
         private static readonly ProfilerMarker TickMarker = new ProfilerMarker("DeckBattle.BattleTickLoop.Tick");
+        private readonly BattleSimulation simulation;
         private readonly MovementResolver.Workspace movementWorkspace;
         private readonly TargetSelector.Workspace targetWorkspace;
         private readonly AttackCycleResolver.Workspace attackCycleWorkspace;
@@ -25,6 +26,7 @@ namespace DeckBattle
                 throw new ArgumentOutOfRangeException(nameof(tickDuration));
             }
 
+            this.simulation = simulation;
             TickDuration = tickDuration;
             int boardCellCapacity = simulation.Board.Width * simulation.Board.Height;
             movementWorkspace = new MovementResolver.Workspace(boardCellCapacity, simulation.Units.Count);
@@ -37,15 +39,10 @@ namespace DeckBattle
 
         public float TickDuration { get; private set; }
 
-        public BattleTickResult Tick(BattleSimulation simulation, BattleEventQueue eventQueue)
+        public BattleTickResult Tick(BattleEventQueue eventQueue)
         {
             using (TickMarker.Auto())
             {
-            if (simulation == null)
-            {
-                throw new ArgumentNullException(nameof(simulation));
-            }
-
             if (eventQueue == null)
             {
                 throw new ArgumentNullException(nameof(eventQueue));
@@ -65,12 +62,12 @@ namespace DeckBattle
 
             ProjectileResolver.ResolveProjectiles(simulation, eventQueue);
 
-            RefreshTargets(simulation);
+            RefreshTargets(simulation, eventQueue);
             CombatResolutionResult combat = AttackCycleResolver.Resolve(simulation, eventQueue, attackCycleWorkspace, TickDuration);
 
             // Melee deaths and projectile/attack side effects can invalidate targets
             // and occupied attack positions before the next movement plan.
-            RefreshTargets(simulation);
+            RefreshTargets(simulation, eventQueue);
             int moved = MovementResolver.ResolveMovement(
                 simulation,
                 0f,
@@ -93,7 +90,7 @@ namespace DeckBattle
             }
         }
 
-        private void RefreshTargets(BattleSimulation simulation)
+        private void RefreshTargets(BattleSimulation simulation, BattleEventQueue eventQueue)
         {
             for (int i = 0; i < simulation.Units.Count; i++)
             {
@@ -101,7 +98,10 @@ namespace DeckBattle
                 UnitRuntimeState unit = simulation.Units[i];
                 if (!UnitActionRules.CanAcquireTarget(unit))
                 {
-                    if (unit != null) unit.ClearTarget();
+                    if (unit != null)
+                    {
+                        ClearTarget(unit, eventQueue);
+                    }
                     continue;
                 }
 
@@ -123,14 +123,30 @@ namespace DeckBattle
                         unit.TargetUnitId,
                         out TargetSelector.TargetSelection selection))
                 {
-                    unit.ClearTarget();
+                    ClearTarget(unit, eventQueue);
                     continue;
                 }
 
                 targetSelections[i] = selection;
                 targetSelectionValid[i] = true;
+                bool targetChanged = unit.TargetUnitId != selection.Target.UnitId;
+                bool targetPositionChanged = unit.LastKnownTargetHex != selection.Target.CurrentHex;
                 unit.SetTarget(selection.Target);
+                if (targetChanged || targetPositionChanged)
+                {
+                    eventQueue.Enqueue(BattleEvent.UnitTargetChanged(unit.UnitId, selection.Target.UnitId, selection.Target.CurrentHex));
+                }
             }
+        }
+
+        private static void ClearTarget(UnitRuntimeState unit, BattleEventQueue eventQueue)
+        {
+            if (unit.TargetUnitId != UnitRuntimeState.NoTargetUnitId)
+            {
+                eventQueue.Enqueue(BattleEvent.UnitTargetChanged(unit.UnitId, UnitRuntimeState.NoTargetUnitId, default));
+            }
+
+            unit.ClearTarget();
         }
 
         private static bool TryEndBattle(BattleSimulation simulation, out BattleSide winner, out bool hasWinner)

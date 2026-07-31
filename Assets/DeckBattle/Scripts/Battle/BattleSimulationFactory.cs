@@ -7,7 +7,18 @@ namespace DeckBattle
     {
         public static BattleSimulation Create(BattleState state)
         {
-            return Create(state, BattleRuntimeTuning.Default);
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            BattleRuntimeTuningConfig tuningConfig = state.Config != null ? state.Config.RuntimeTuningConfig : null;
+            if (tuningConfig == null)
+            {
+                throw new InvalidOperationException("BattleConfig requires a BattleRuntimeTuningConfig to create a simulation.");
+            }
+
+            return Create(state, tuningConfig.CreateRuntimeTuning());
         }
 
         public static BattleSimulation Create(BattleState state, BattleRuntimeTuning tuning)
@@ -33,7 +44,12 @@ namespace DeckBattle
                     continue;
                 }
 
-                spawnData.Add(new UnitSpawnData(unit.RuntimeId, unit.Definition, unit.Side, unit.BattleCoord, unit.AttackBonusNextCombat));
+                spawnData.Add(new UnitSpawnData(
+                    unit.RuntimeId,
+                    UnitCombatSpec.FromDefinition(unit.Definition),
+                    unit.Side,
+                    unit.BattleCoord,
+                    unit.AttackBonusNextCombat));
             }
         }
     }

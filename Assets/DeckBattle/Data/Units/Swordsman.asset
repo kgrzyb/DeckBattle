@@ -16,7 +16,7 @@ MonoBehaviour:
   DisplayName: Swordsman
   Rarity: 0
   ApCost: 2
-  CardArt: {fileID: 0}
+  CardArt: {fileID: 21300000, guid: 5141242596f87d34082e117b06fac658, type: 3}
   cardKind: 0
   UnitType: 0
   MaxHp: 70

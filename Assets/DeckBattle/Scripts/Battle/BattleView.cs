@@ -1,97 +1,40 @@
 using System;
 using System.Collections.Generic;
-using Conditional = System.Diagnostics.ConditionalAttribute;
 using UnityEngine;
 
 namespace DeckBattle
 {
     public sealed class BattleView : MonoBehaviour
     {
-        public event Action<BattleTickResult, int> TickProcessed;
-
-        [Header("Simulation")]
-        [SerializeField] private BattleConfig battleConfig;
-        [SerializeField] private BattleTimingConfig battleTimingConfig;
-        [SerializeField, HideInInspector] private float tickDuration = BattleTiming.DefaultCombatTickDuration;
-        [SerializeField, HideInInspector] private int maxTicksPerFrame = BattleTiming.DefaultMaxTicksPerFrame;
-        [SerializeField] private float attackCooldownMultiplier = 1f;
-        [SerializeField] private int attackRangeBonus;
-        [SerializeField] private float movementStepDuration = 0.4f;
-        [SerializeField] private bool startOnAwake;
-        [SerializeField] private List<SpawnEntry> initialUnits = new List<SpawnEntry>(8);
-
         [Header("Presentation")]
         [SerializeField] private BoardPresenter boardPresenter;
         [SerializeField] private Transform unitRoot;
         [SerializeField] private UnitStatusOverlayController statusOverlayController;
         [SerializeField] private StatusPresentationCatalog statusPresentationCatalog;
         [SerializeField] private UnitStatusVfxController statusVfxController;
+        [SerializeField] private BattlePresentationCatalog presentationCatalog;
         [SerializeField] private PooledBattleEffect attackEffectPrefab;
         [SerializeField] private PooledBattleEffect damageEffectPrefab;
         [SerializeField] private Transform effectRoot;
 
-#if DEVELOPMENT_BUILD && !UNITY_EDITOR
-        [SerializeField] private bool captureDebugSnapshots;
-#endif
+        private UnitViewRegistry unitViewRegistry;
+        private BattleUnitPresenter unitPresenter;
+        private BattleProjectilePresenter projectilePresenter;
+        private BattleEffectPresenter effectPresenter;
 
-        private readonly List<UnitSpawnData> spawnBuffer = new List<UnitSpawnData>(16);
-        private readonly List<UnitView> activeUnitViews = new List<UnitView>(16);
-        private readonly List<UnitView> unitViewSearchBuffer = new List<UnitView>(16);
-        private readonly Dictionary<int, UnitView> unitViewByUnitId = new Dictionary<int, UnitView>(16);
-        private readonly BattleEventQueue eventQueue = new BattleEventQueue(32);
-        private readonly List<PooledBattleEffect> activeAttackEffects = new List<PooledBattleEffect>(8);
-        private readonly List<PooledBattleEffect> activeDamageEffects = new List<PooledBattleEffect>(8);
-        private readonly Stack<PooledBattleEffect> pooledAttackEffects = new Stack<PooledBattleEffect>(8);
-        private readonly Stack<PooledBattleEffect> pooledDamageEffects = new Stack<PooledBattleEffect>(8);
-        private readonly List<ProjectileView> activeProjectileViews = new List<ProjectileView>(8);
-        private readonly Dictionary<int, ProjectileView> projectileViewById = new Dictionary<int, ProjectileView>(8);
-        private readonly Dictionary<ProjectileView, Stack<ProjectileView>> pooledProjectileViews = new Dictionary<ProjectileView, Stack<ProjectileView>>(4);
-        private readonly BattleDebugSnapshot debugSnapshot = new BattleDebugSnapshot(16);
-
-        private BattleSimulation simulation;
-        private BattleTickLoop tickLoop;
-        private float tickAccumulator;
-        private int ticksElapsed;
-        private int maxSimulationTicks = int.MaxValue;
-        private bool maxTicksReached;
-        private BattleTickResult lastTickResult;
-
-        public BattleSimulation Simulation
-        {
-            get { return simulation; }
-        }
+        private readonly Dictionary<int, UnitPresentationState> presentationStateByUnitId = new Dictionary<int, UnitPresentationState>(16);
+        private readonly Dictionary<int, List<StatusPresentationState>> statusStatesByUnitId = new Dictionary<int, List<StatusPresentationState>>(16);
+        private readonly Dictionary<int, int> shieldByUnitId = new Dictionary<int, int>(16);
+        private float presentationTickDuration = BattleTiming.DefaultCombatTickDuration;
 
         public BoardPresenter BoardPresenter
         {
             get { return boardPresenter; }
         }
 
-        public BattleDebugSnapshot DebugSnapshot
+        public UnitViewRegistry UnitViews
         {
-            get { return debugSnapshot; }
-        }
-
-        public int TicksElapsed
-        {
-            get { return ticksElapsed; }
-        }
-
-        public bool MaxTicksReached
-        {
-            get { return maxTicksReached; }
-        }
-
-        public BattleTickResult LastTickResult
-        {
-            get { return lastTickResult; }
-        }
-
-        private void OnValidate()
-        {
-            tickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, tickDuration);
-            maxTicksPerFrame = Mathf.Max(1, maxTicksPerFrame);
-            attackCooldownMultiplier = Mathf.Max(0.01f, attackCooldownMultiplier);
-            movementStepDuration = Mathf.Max(0.01f, movementStepDuration);
+            get { return EnsureUnitViewRegistry(); }
         }
 
         private void Awake()
@@ -105,84 +48,20 @@ namespace DeckBattle
             {
                 statusVfxController.Initialize(statusPresentationCatalog);
             }
-
-            if (startOnAwake)
-            {
-                StartConfiguredBattle();
-            }
         }
 
         private void Update()
         {
-            UpdateSimulation(Time.deltaTime);
-            ReleaseCompletedEffects(activeAttackEffects, pooledAttackEffects);
-            ReleaseCompletedEffects(activeDamageEffects, pooledDamageEffects);
-            ReleaseCompletedProjectiles();
+            EnsurePresenters();
+            effectPresenter.Tick();
+            projectilePresenter.Tick();
         }
 
-        public void StartConfiguredBattle()
+        public void BindInitialState(BattlePresentationSnapshot snapshot)
         {
-            if (initialUnits.Count == 0)
+            if (snapshot == null)
             {
-                Debug.LogWarning("BattleView has no configured realtime units to spawn.", this);
-                return;
-            }
-
-            spawnBuffer.Clear();
-            int nextGeneratedUnitId = 1;
-            for (int i = 0; i < initialUnits.Count; i++)
-            {
-                SpawnEntry entry = initialUnits[i];
-                if (entry == null || entry.Definition == null)
-                {
-                    continue;
-                }
-
-                int unitId = entry.UnitId > 0 ? entry.UnitId : nextGeneratedUnitId;
-                spawnBuffer.Add(new UnitSpawnData(unitId, entry.Definition, entry.Side, entry.ToHexCoord()));
-                nextGeneratedUnitId = Mathf.Max(nextGeneratedUnitId, unitId) + 1;
-            }
-
-            StartBattle(spawnBuffer);
-        }
-
-        public void StartBattle(IList<UnitSpawnData> spawnData)
-        {
-            if (battleConfig == null || boardPresenter == null)
-            {
-                Debug.LogError("BattleView is missing required references.", this);
-                return;
-            }
-
-            if (spawnData == null)
-            {
-                throw new ArgumentNullException(nameof(spawnData));
-            }
-
-            HexBoard board = new HexBoard(battleConfig.BoardWidth, battleConfig.BoardHeight, 1f);
-            BattleSimulation nextSimulation = BattleSimulation.Create(board, spawnData, CreateRuntimeTuning());
-            BindSimulation(nextSimulation);
-        }
-
-        public void BindSimulation(BattleSimulation nextSimulation)
-        {
-            BindSimulation(nextSimulation, ResolveStandaloneTickDuration(), ResolveStandaloneMaxCombatTicks());
-        }
-
-        public void BindSimulation(BattleSimulation nextSimulation, float nextTickDuration, int nextMaxTicks)
-        {
-            BindSimulation(nextSimulation, nextTickDuration, nextMaxTicks, null);
-        }
-
-        public void BindSimulation(
-            BattleSimulation nextSimulation,
-            float nextTickDuration,
-            int nextMaxTicks,
-            IReadOnlyDictionary<int, UnitView> reusableUnitViews)
-        {
-            if (nextSimulation == null)
-            {
-                throw new ArgumentNullException(nameof(nextSimulation));
+                throw new ArgumentNullException(nameof(snapshot));
             }
 
             if (boardPresenter == null)
@@ -191,16 +70,6 @@ namespace DeckBattle
                 return;
             }
 
-            simulation = nextSimulation;
-            float resolvedTickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, nextTickDuration);
-            tickLoop = new BattleTickLoop(simulation, resolvedTickDuration);
-            tickAccumulator = 0f;
-            ticksElapsed = 0;
-            maxSimulationTicks = Mathf.Max(1, nextMaxTicks);
-            maxTicksReached = false;
-            lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
-
-            boardPresenter.EnsureBuilt(simulation.Board);
             if (statusOverlayController != null)
             {
                 statusOverlayController.ReleaseAll();
@@ -211,29 +80,16 @@ namespace DeckBattle
                 statusVfxController.ReleaseAll();
             }
 
-            ReleaseAllUnitViews(reusableUnitViews);
-            CaptureDebugSnapshot(simulation, null);
-            for (int i = 0; i < simulation.Units.Count; i++)
+            presentationStateByUnitId.Clear();
+            statusStatesByUnitId.Clear();
+            shieldByUnitId.Clear();
+            EnsurePresenters();
+            for (int i = 0; i < snapshot.Units.Count; i++)
             {
-                UnitRuntimeState unit = simulation.Units[i];
-                if (unit != null && unit.IsAlive)
-                {
-                    CreateOrUpdateUnitView(unit, reusableUnitViews);
-                }
+                UnitPresentationState state = snapshot.Units[i];
+                presentationStateByUnitId[state.UnitId] = state;
+                unitPresenter.BindInitial(state);
             }
-        }
-
-        public UnitView DetachUnitView(int unitId)
-        {
-            UnitView view;
-            if (!unitViewByUnitId.TryGetValue(unitId, out view) || view == null)
-            {
-                return null;
-            }
-
-            unitViewByUnitId.Remove(unitId);
-            activeUnitViews.Remove(view);
-            return view;
         }
 
         public void ClearBattle()
@@ -243,15 +99,9 @@ namespace DeckBattle
 
         public void ClearBattle(bool releaseUnitViews)
         {
-            simulation = null;
-            tickLoop = null;
-            tickAccumulator = 0f;
-            ticksElapsed = 0;
-            maxSimulationTicks = int.MaxValue;
-            maxTicksReached = false;
-            lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
-            eventQueue.Clear();
-            CaptureDebugSnapshot(null, null);
+            presentationStateByUnitId.Clear();
+            statusStatesByUnitId.Clear();
+            shieldByUnitId.Clear();
             if (statusVfxController != null)
             {
                 statusVfxController.ReleaseAll();
@@ -264,107 +114,51 @@ namespace DeckBattle
                     statusOverlayController.ReleaseAll();
                 }
 
-                ReleaseAllUnitViews(null);
-            }
-            else
-            {
-                activeUnitViews.Clear();
-                unitViewByUnitId.Clear();
+                EnsureUnitViewRegistry().ReleaseAll();
             }
 
-            ReleaseAllEffects(activeAttackEffects, pooledAttackEffects);
-            ReleaseAllEffects(activeDamageEffects, pooledDamageEffects);
-            ReleaseAllProjectiles();
+            EnsurePresenters();
+            effectPresenter.Clear();
+            projectilePresenter.Clear();
         }
 
-        private void UpdateSimulation(float deltaTime)
+        public void ProcessCombatTick(BattleTickResult tickResult, IReadOnlyList<BattleEvent> events)
         {
-            if (simulation == null || tickLoop == null || simulation.IsBattleEnded)
+            if (events == null)
             {
                 return;
             }
 
-            tickAccumulator += deltaTime;
-            int ticksThisFrame = 0;
-            int resolvedMaxTicksPerFrame = ResolveMaxTicksPerFrame();
-            while (tickAccumulator >= tickLoop.TickDuration && ticksThisFrame < resolvedMaxTicksPerFrame)
-            {
-                if (ticksElapsed >= maxSimulationTicks)
-                {
-                    StopTickingBecauseMaxTicksReached();
-                    return;
-                }
-
-                BattleTickResult result = tickLoop.Tick(simulation, eventQueue);
-                ticksElapsed++;
-                lastTickResult = result;
-                CaptureDebugSnapshot(simulation, eventQueue.Events);
-                ProcessEvents(eventQueue.Events);
-                FaceIdleUnitsTowardTargets();
-                if (TickProcessed != null)
-                {
-                    TickProcessed.Invoke(result, ticksElapsed);
-                }
-
-                tickAccumulator -= tickLoop.TickDuration;
-                ticksThisFrame++;
-
-                if (result.BattleEnded)
-                {
-                    tickAccumulator = 0f;
-                    return;
-                }
-
-                if (ticksElapsed >= maxSimulationTicks)
-                {
-                    StopTickingBecauseMaxTicksReached();
-                    return;
-                }
-            }
-
-            if (ticksThisFrame >= resolvedMaxTicksPerFrame)
-            {
-                tickAccumulator = 0f;
-            }
-        }
-
-        private void StopTickingBecauseMaxTicksReached()
-        {
-            maxTicksReached = true;
-            tickLoop = null;
-            tickAccumulator = 0f;
-        }
-
-        private void ProcessEvents(IReadOnlyList<BattleEvent> events)
-        {
+            EnsurePresenters();
             for (int i = 0; i < events.Count; i++)
             {
                 BattleEvent battleEvent = events[i];
                 switch (battleEvent.Type)
                 {
                     case BattleEventType.UnitMoved:
-                        HandleUnitMoved(battleEvent);
+                        unitPresenter.HandleMoved(battleEvent);
                         break;
                     case BattleEventType.UnitAttackStarted:
                         // Kept for legacy consumers; phase events drive this view.
                         break;
                     case BattleEventType.AttackWindupStarted:
-                        HandleAttackWindupStarted(battleEvent);
+                        unitPresenter.HandleAttackWindupStarted(battleEvent);
                         break;
                     case BattleEventType.AttackWindupCancelled:
-                        HandleAttackWindupCancelled(battleEvent);
+                        unitPresenter.HandleAttackWindupCancelled(battleEvent);
                         break;
                     case BattleEventType.AttackFired:
-                        HandleAttackFired(battleEvent);
+                        unitPresenter.HandleAttackFired(battleEvent);
+                        effectPresenter.PlayAttack(boardPresenter.GetWorldPosition(battleEvent.From));
                         break;
                     case BattleEventType.SpecialWindupStarted:
-                        HandleSpecialWindupStarted(battleEvent);
+                        unitPresenter.HandleSpecialWindupStarted(battleEvent);
                         break;
                     case BattleEventType.SpecialWindupCancelled:
-                        HandleSpecialWindupCancelled(battleEvent);
+                        unitPresenter.HandleSpecialWindupCancelled(battleEvent);
                         break;
                     case BattleEventType.UnitSpecialActivated:
-                        HandleUnitSpecialActivated(battleEvent);
+                        unitPresenter.HandleSpecialActivated(battleEvent);
                         break;
                     case BattleEventType.UnitDamaged:
                         HandleUnitDamaged(battleEvent);
@@ -377,6 +171,9 @@ namespace DeckBattle
                         break;
                     case BattleEventType.UnitManaChanged:
                         HandleUnitManaChanged(battleEvent);
+                        break;
+                    case BattleEventType.UnitTargetChanged:
+                        unitPresenter.HandleTargetChanged(battleEvent);
                         break;
                     case BattleEventType.StatusApplied:
                         HandleStatusPresentationEvent(battleEvent);
@@ -395,148 +192,42 @@ namespace DeckBattle
                         HandleStatusChanged(battleEvent);
                         break;
                     case BattleEventType.ProjectileLaunched:
-                        HandleProjectileLaunched(battleEvent);
+                        projectilePresenter.HandleLaunched(battleEvent);
                         break;
                     case BattleEventType.ProjectileResolved:
-                        HandleProjectileResolved(battleEvent);
+                        projectilePresenter.HandleResolved(battleEvent);
                         break;
                 }
             }
-        }
 
-        [Conditional("UNITY_EDITOR")]
-        [Conditional("DEVELOPMENT_BUILD")]
-        private void CaptureDebugSnapshot(BattleSimulation sourceSimulation, IReadOnlyList<BattleEvent> events)
-        {
-#if UNITY_EDITOR
-            debugSnapshot.Capture(sourceSimulation, events);
-#elif DEVELOPMENT_BUILD
-            if (captureDebugSnapshots)
-            {
-                debugSnapshot.Capture(sourceSimulation, events);
-            }
-#endif
-        }
-
-        private void FaceIdleUnitsTowardTargets()
-        {
-            if (simulation == null || boardPresenter == null)
-            {
-                return;
-            }
-
-            IReadOnlyList<UnitRuntimeState> units = simulation.Units;
-            for (int i = 0; i < units.Count; i++)
-            {
-                UnitRuntimeState unit = units[i];
-                if (unit == null
-                    || !unit.IsAlive
-                    || unit.IsMoving
-                    || unit.TargetUnitId == UnitRuntimeState.NoTargetUnitId)
-                {
-                    continue;
-                }
-
-                UnitRuntimeState target;
-                if (!simulation.TryGetUnitById(unit.TargetUnitId, out target) || target == null || !target.IsAlive)
-                {
-                    continue;
-                }
-
-                UnitView view;
-                if (!unitViewByUnitId.TryGetValue(unit.UnitId, out view) || view == null)
-                {
-                    continue;
-                }
-
-                view.FaceWorldPosition(boardPresenter.GetWorldPosition(target.CurrentHex));
-            }
-        }
-
-        private void HandleUnitMoved(BattleEvent battleEvent)
-        {
-            UnitView view;
-            if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out view) || view == null)
-            {
-                return;
-            }
-
-            UnitRuntimeState unit;
-            Vector3 targetPosition = boardPresenter.GetWorldPosition(battleEvent.To);
-            float duration = simulation != null
-                && simulation.TryGetUnitById(battleEvent.UnitId, out unit)
-                && unit != null
-                ? ResolvePresentationMovementStepDuration(simulation.Tuning.MovementStepDuration)
-                : tickDuration;
-            view.MoveToWorldPosition(targetPosition, duration);
-        }
-
-        private float ResolvePresentationMovementStepDuration(float stepDuration)
-        {
-            float safeDuration = Mathf.Max(0.01f, stepDuration);
-            if (tickLoop == null || tickLoop.TickDuration <= 0f)
-            {
-                return safeDuration;
-            }
-
-            return Mathf.Ceil(safeDuration / tickLoop.TickDuration) * tickLoop.TickDuration;
         }
 
         private void HandleUnitDamaged(BattleEvent battleEvent)
         {
-            UnitView targetView;
-            if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out targetView) || targetView == null)
+            unitPresenter.HandleDamaged(battleEvent);
+            if (presentationStateByUnitId.TryGetValue(battleEvent.UnitId, out UnitPresentationState state))
             {
-                return;
-            }
-
-            targetView.PlayDamage(battleEvent.RemainingHp);
-            UnitRuntimeState target;
-            if (simulation.TryGetUnitById(battleEvent.UnitId, out target))
-            {
-                if (statusOverlayController != null)
-                {
-                    statusOverlayController.SetHealth(target.UnitId, battleEvent.RemainingHp, target.Definition.MaxHp);
-                }
-
-                SpawnEffect(damageEffectPrefab, boardPresenter.GetWorldPosition(target.CurrentHex), activeDamageEffects, pooledDamageEffects);
+                statusOverlayController?.SetHealth(state.UnitId, battleEvent.RemainingHp, state.MaxHp);
+                effectPresenter.PlayDamage(boardPresenter.GetWorldPosition(battleEvent.To));
             }
         }
 
         private void HandleUnitDied(BattleEvent battleEvent)
         {
-            UnitView view;
-            if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out view) || view == null)
-            {
-                return;
-            }
+            unitPresenter.HandleDied(battleEvent);
 
-            view.PlayDeath();
-            if (statusOverlayController != null)
-            {
-                statusOverlayController.Release(battleEvent.UnitId);
-            }
-
-            if (statusVfxController != null)
-            {
-                statusVfxController.Release(battleEvent.UnitId);
-            }
+            statusStatesByUnitId.Remove(battleEvent.UnitId);
+            shieldByUnitId.Remove(battleEvent.UnitId);
         }
 
         private void HandleUnitManaChanged(BattleEvent battleEvent)
         {
-            if (statusOverlayController == null || simulation == null)
+            if (!presentationStateByUnitId.TryGetValue(battleEvent.UnitId, out UnitPresentationState state))
             {
                 return;
             }
 
-            UnitRuntimeState unit;
-            if (!simulation.TryGetUnitById(battleEvent.UnitId, out unit) || unit == null)
-            {
-                return;
-            }
-
-            statusOverlayController.SetMana(unit.UnitId, battleEvent.CurrentMana, unit.Definition.ManaThreshold);
+            unitPresenter.HandleManaChanged(battleEvent, state);
         }
 
         private void HandleBattleEnded()
@@ -549,22 +240,82 @@ namespace DeckBattle
 
         private void HandleStatusChanged(BattleEvent battleEvent)
         {
-            if (simulation == null)
+            switch (battleEvent.Type)
+            {
+                case BattleEventType.StatusApplied:
+                case BattleEventType.StatusRefreshed:
+                case BattleEventType.StatusStackChanged:
+                    UpdatePresentationStatus(
+                        battleEvent.UnitId,
+                        battleEvent.TargetUnitId,
+                        battleEvent.StatusKind,
+                        battleEvent.StatusStackCount);
+                    break;
+                case BattleEventType.StatusRemoved:
+                    RemovePresentationStatus(battleEvent.UnitId, battleEvent.TargetUnitId, battleEvent.StatusKind);
+                    break;
+                case BattleEventType.ShieldChanged:
+                    shieldByUnitId[battleEvent.UnitId] = Mathf.Max(0, battleEvent.Amount);
+                    break;
+            }
+
+            if (statusOverlayController == null)
             {
                 return;
             }
 
-            if (simulation.TryGetUnitById(battleEvent.UnitId, out UnitRuntimeState unit) && unit != null && unit.IsAlive)
+            statusStatesByUnitId.TryGetValue(battleEvent.UnitId, out List<StatusPresentationState> statuses);
+            shieldByUnitId.TryGetValue(battleEvent.UnitId, out int totalShield);
+            statusOverlayController.SetPresentationStatuses(battleEvent.UnitId, statuses, totalShield);
+        }
+
+        private void UpdatePresentationStatus(int unitId, int sourceUnitId, StatusKind kind, int stacks)
+        {
+            if (kind == StatusKind.None)
             {
-                if (statusOverlayController != null)
+                return;
+            }
+
+            if (!statusStatesByUnitId.TryGetValue(unitId, out List<StatusPresentationState> statuses))
+            {
+                statuses = new List<StatusPresentationState>(4);
+                statusStatesByUnitId.Add(unitId, statuses);
+            }
+
+            for (int i = 0; i < statuses.Count; i++)
+            {
+                StatusPresentationState status = statuses[i];
+                if (status.Kind != kind || status.SourceUnitId != sourceUnitId)
                 {
-                    statusOverlayController.SetStatuses(unit);
+                    continue;
                 }
 
-                if (statusVfxController != null)
+                statuses[i] = new StatusPresentationState(kind, sourceUnitId, stacks);
+                return;
+            }
+
+            statuses.Add(new StatusPresentationState(kind, sourceUnitId, stacks));
+        }
+
+        private void RemovePresentationStatus(int unitId, int sourceUnitId, StatusKind kind)
+        {
+            if (!statusStatesByUnitId.TryGetValue(unitId, out List<StatusPresentationState> statuses))
+            {
+                return;
+            }
+
+            for (int i = statuses.Count - 1; i >= 0; i--)
+            {
+                StatusPresentationState status = statuses[i];
+                if (status.Kind == kind && status.SourceUnitId == sourceUnitId)
                 {
-                    statusVfxController.Sync(unit);
+                    statuses.RemoveAt(i);
                 }
+            }
+
+            if (statuses.Count == 0)
+            {
+                statusStatesByUnitId.Remove(unitId);
             }
         }
 
@@ -576,420 +327,49 @@ namespace DeckBattle
             }
         }
 
-        private void HandleProjectileLaunched(BattleEvent battleEvent)
+        private UnitViewRegistry EnsureUnitViewRegistry()
         {
-            if (simulation == null || boardPresenter == null)
+            if (unitViewRegistry == null)
             {
-                return;
+                unitViewRegistry = new UnitViewRegistry(
+                    presentationCatalog,
+                    unitRoot != null ? unitRoot : transform,
+                    this);
             }
 
-            UnitRuntimeState attacker;
-            if (!simulation.TryGetUnitById(battleEvent.UnitId, out attacker) || attacker == null)
-            {
-                return;
-            }
-
-            ProjectileDefinition projectileDefinition = attacker.Definition.Projectile;
-            if (projectileDefinition == null || projectileDefinition.ProjectilePrefab == null)
-            {
-                return;
-            }
-
-            Vector3 from = boardPresenter.GetWorldPosition(battleEvent.From);
-            from.y += projectileDefinition.SpawnHeight;
-            Vector3 fallbackTarget = boardPresenter.GetWorldPosition(battleEvent.To);
-            fallbackTarget.y += projectileDefinition.HitHeight;
-
-            UnitView targetView;
-            Transform targetTransform = unitViewByUnitId.TryGetValue(battleEvent.TargetUnitId, out targetView) && targetView != null
-                ? targetView.transform
-                : null;
-
-            ProjectileView projectileView = GetProjectileView(projectileDefinition.ProjectilePrefab);
-            projectileView.Play(from, targetTransform, fallbackTarget, battleEvent.Duration);
-            activeProjectileViews.Add(projectileView);
-            projectileViewById[battleEvent.ProjectileId] = projectileView;
+            return unitViewRegistry;
         }
 
-        private void HandleProjectileResolved(BattleEvent battleEvent)
+        private void EnsurePresenters()
         {
-            if (projectileViewById.TryGetValue(battleEvent.ProjectileId, out ProjectileView view) && view != null)
+            UnitViewRegistry unitViews = EnsureUnitViewRegistry();
+            if (unitPresenter == null)
             {
-                view.Resolve();
-                projectileViewById.Remove(battleEvent.ProjectileId);
-            }
-        }
-
-        private void CreateOrUpdateUnitView(UnitRuntimeState unit)
-        {
-            CreateOrUpdateUnitView(unit, null);
-        }
-
-        private void CreateOrUpdateUnitView(UnitRuntimeState unit, IReadOnlyDictionary<int, UnitView> reusableUnitViews)
-        {
-            UnitView view;
-            if (unitViewByUnitId.TryGetValue(unit.UnitId, out view) && view != null)
-            {
-                view.Bind(unit, boardPresenter.GetWorldPosition(unit.CurrentHex));
-                BindStatusOverlay(unit, view);
-                return;
+                unitPresenter = new BattleUnitPresenter(
+                    boardPresenter,
+                    unitViews,
+                    statusOverlayController,
+                    statusVfxController,
+                    presentationTickDuration);
             }
 
-            if (reusableUnitViews != null && reusableUnitViews.TryGetValue(unit.UnitId, out view) && view != null)
+            if (projectilePresenter == null)
             {
-                RemoveDuplicateSceneUnitViews(unit.UnitId, view);
-            }
-            else if (TryFindReusableUnitView(unit.UnitId, out view))
-            {
-                RemoveDuplicateSceneUnitViews(unit.UnitId, view);
-            }
-            else
-            {
-                view = CreateUnitView(unit.Definition);
-                if (view == null)
-                {
-                    return;
-                }
+                projectilePresenter = new BattleProjectilePresenter(
+                    boardPresenter,
+                    presentationCatalog,
+                    unitViews,
+                    effectRoot != null ? effectRoot : transform);
             }
 
-            view.Bind(unit, boardPresenter.GetWorldPosition(unit.CurrentHex));
-            activeUnitViews.Add(view);
-            unitViewByUnitId.Add(unit.UnitId, view);
-            BindStatusOverlay(unit, view);
-        }
-
-        private void BindStatusOverlay(UnitRuntimeState unit, UnitView view)
-        {
-            if (unit == null || !unit.IsAlive)
+            if (effectPresenter == null)
             {
-                if (unit != null)
-                {
-                    if (statusOverlayController != null)
-                    {
-                        statusOverlayController.Release(unit.UnitId);
-                    }
-
-                    if (statusVfxController != null)
-                    {
-                        statusVfxController.Release(unit.UnitId);
-                    }
-                }
-
-                return;
-            }
-
-            if (statusOverlayController != null)
-            {
-                statusOverlayController.BindRealtimeUnit(unit, view);
-            }
-
-            if (statusVfxController != null)
-            {
-                statusVfxController.BindOrSync(unit, view);
+                effectPresenter = new BattleEffectPresenter(
+                    attackEffectPrefab,
+                    damageEffectPrefab,
+                    effectRoot != null ? effectRoot : transform);
             }
         }
 
-        private UnitView CreateUnitView(UnitDefinition definition)
-        {
-            if (definition == null || definition.UnitPrefab == null)
-            {
-                Debug.LogError("Realtime unit definition is missing UnitPrefab.", this);
-                return null;
-            }
-
-            Transform parent = unitRoot != null ? unitRoot : transform;
-            return Instantiate(definition.UnitPrefab, parent);
-        }
-
-        private bool TryFindReusableUnitView(int unitId, out UnitView view)
-        {
-            view = null;
-            Transform searchRoot = unitRoot != null ? unitRoot : transform;
-            searchRoot.GetComponentsInChildren(true, unitViewSearchBuffer);
-            for (int i = 0; i < unitViewSearchBuffer.Count; i++)
-            {
-                UnitView candidate = unitViewSearchBuffer[i];
-                if (candidate == null || candidate.RuntimeId != unitId || activeUnitViews.Contains(candidate))
-                {
-                    continue;
-                }
-
-                if (view == null || (!view.gameObject.activeInHierarchy && candidate.gameObject.activeInHierarchy))
-                {
-                    view = candidate;
-                }
-            }
-
-            unitViewSearchBuffer.Clear();
-            return view != null;
-        }
-
-        private void RemoveDuplicateSceneUnitViews(int unitId, UnitView retainedView)
-        {
-            Transform searchRoot = unitRoot != null ? unitRoot : transform;
-            searchRoot.GetComponentsInChildren(true, unitViewSearchBuffer);
-            for (int i = 0; i < unitViewSearchBuffer.Count; i++)
-            {
-                UnitView candidate = unitViewSearchBuffer[i];
-                if (candidate == null || candidate == retainedView || candidate.RuntimeId != unitId)
-                {
-                    continue;
-                }
-
-                candidate.gameObject.SetActive(false);
-                Destroy(candidate.gameObject);
-            }
-
-            unitViewSearchBuffer.Clear();
-        }
-
-        private void ReleaseAllUnitViews(IReadOnlyDictionary<int, UnitView> retainedUnitViews)
-        {
-            for (int i = activeUnitViews.Count - 1; i >= 0; i--)
-            {
-                UnitView view = activeUnitViews[i];
-                if (view == null)
-                {
-                    continue;
-                }
-
-                if (IsRetainedUnitView(view, retainedUnitViews))
-                {
-                    continue;
-                }
-
-                view.gameObject.SetActive(false);
-                Destroy(view.gameObject);
-            }
-
-            activeUnitViews.Clear();
-            unitViewByUnitId.Clear();
-        }
-
-        private static bool IsRetainedUnitView(UnitView view, IReadOnlyDictionary<int, UnitView> retainedUnitViews)
-        {
-            if (view == null || retainedUnitViews == null)
-            {
-                return false;
-            }
-
-            UnitView retainedView;
-            return retainedUnitViews.TryGetValue(view.RuntimeId, out retainedView) && retainedView == view;
-        }
-
-        private void SpawnEffect(
-            PooledBattleEffect prefab,
-            Vector3 position,
-            List<PooledBattleEffect> activeEffects,
-            Stack<PooledBattleEffect> pooledEffects)
-        {
-            if (prefab == null)
-            {
-                return;
-            }
-
-            PooledBattleEffect effect = pooledEffects.Count > 0 ? pooledEffects.Pop() : Instantiate(prefab, effectRoot != null ? effectRoot : transform);
-            effect.Play(position);
-            activeEffects.Add(effect);
-        }
-
-        private ProjectileView GetProjectileView(ProjectileView prefab)
-        {
-            Stack<ProjectileView> pool;
-            if (!pooledProjectileViews.TryGetValue(prefab, out pool))
-            {
-                pool = new Stack<ProjectileView>(4);
-                pooledProjectileViews.Add(prefab, pool);
-            }
-
-            ProjectileView view = pool.Count > 0 ? pool.Pop() : Instantiate(prefab, effectRoot != null ? effectRoot : transform);
-            view.SetPoolPrefab(prefab);
-            return view;
-        }
-
-        private BattleRuntimeTuning CreateRuntimeTuning()
-        {
-            if (battleConfig != null && battleConfig.RuntimeTuningConfig != null)
-            {
-                return battleConfig.RuntimeTuningConfig.CreateRuntimeTuning();
-            }
-
-            return new BattleRuntimeTuning(attackCooldownMultiplier, attackRangeBonus, movementStepDuration);
-        }
-
-        private void HandleAttackWindupStarted(BattleEvent battleEvent)
-        {
-            if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) || view == null) return;
-            if (simulation.TryGetUnitById(battleEvent.TargetUnitId, out UnitRuntimeState target) && target != null)
-                view.FaceWorldPosition(boardPresenter.GetWorldPosition(target.CurrentHex));
-            view.BeginAttackWindup(battleEvent.SequenceId, battleEvent.Duration, battleEvent.TimeScale);
-        }
-
-        private void HandleAttackWindupCancelled(BattleEvent battleEvent)
-        {
-            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) && view != null)
-                view.CancelAttackWindup(battleEvent.SequenceId);
-        }
-
-        private void HandleAttackFired(BattleEvent battleEvent)
-        {
-            if (!unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) || view == null) return;
-            if (simulation.TryGetUnitById(battleEvent.UnitId, out UnitRuntimeState attacker) && attacker != null)
-            {
-                SpawnEffect(attackEffectPrefab, boardPresenter.GetWorldPosition(attacker.CurrentHex), activeAttackEffects, pooledAttackEffects);
-            }
-            view.PlayAttackFire(battleEvent.SequenceId);
-        }
-
-        private void HandleSpecialWindupStarted(BattleEvent battleEvent)
-        {
-            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) && view != null)
-                view.BeginSpecialWindup(battleEvent.SequenceId, battleEvent.Duration);
-        }
-
-        private void HandleSpecialWindupCancelled(BattleEvent battleEvent)
-        {
-            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) && view != null)
-                view.CancelSpecialWindup(battleEvent.SequenceId);
-        }
-
-        private void HandleUnitSpecialActivated(BattleEvent battleEvent)
-        {
-            if (unitViewByUnitId.TryGetValue(battleEvent.UnitId, out UnitView view) && view != null)
-                view.CompleteSpecialWindup(battleEvent.SequenceId);
-        }
-
-        private float ResolveStandaloneTickDuration()
-        {
-            float configuredDuration = battleTimingConfig != null
-                ? battleTimingConfig.CombatTickDuration
-                : tickDuration;
-            return Mathf.Max(BattleTiming.MinCombatTickDuration, configuredDuration);
-        }
-
-        private int ResolveStandaloneMaxCombatTicks()
-        {
-            int configuredTicks = battleTimingConfig != null
-                ? battleTimingConfig.MaxCombatTicks
-                : int.MaxValue;
-            return Mathf.Max(1, configuredTicks);
-        }
-
-        private int ResolveMaxTicksPerFrame()
-        {
-            int configuredTicks = battleTimingConfig != null
-                ? battleTimingConfig.MaxTicksPerFrame
-                : maxTicksPerFrame;
-            return Mathf.Max(1, configuredTicks);
-        }
-
-        private static void ReleaseCompletedEffects(List<PooledBattleEffect> activeEffects, Stack<PooledBattleEffect> pooledEffects)
-        {
-            for (int i = activeEffects.Count - 1; i >= 0; i--)
-            {
-                PooledBattleEffect effect = activeEffects[i];
-                if (effect != null && effect.IsPlaying)
-                {
-                    continue;
-                }
-
-                if (effect != null)
-                {
-                    effect.gameObject.SetActive(false);
-                    pooledEffects.Push(effect);
-                }
-
-                activeEffects.RemoveAt(i);
-            }
-        }
-
-        private static void ReleaseAllEffects(List<PooledBattleEffect> activeEffects, Stack<PooledBattleEffect> pooledEffects)
-        {
-            for (int i = activeEffects.Count - 1; i >= 0; i--)
-            {
-                PooledBattleEffect effect = activeEffects[i];
-                if (effect == null)
-                {
-                    continue;
-                }
-
-                effect.gameObject.SetActive(false);
-                pooledEffects.Push(effect);
-            }
-
-            activeEffects.Clear();
-        }
-
-        private void ReleaseCompletedProjectiles()
-        {
-            for (int i = activeProjectileViews.Count - 1; i >= 0; i--)
-            {
-                ProjectileView projectileView = activeProjectileViews[i];
-                if (projectileView != null && projectileView.IsPlaying)
-                {
-                    continue;
-                }
-
-                if (projectileView != null)
-                {
-                    projectileView.Release();
-                    ReturnProjectileViewToPool(projectileView);
-                }
-
-                activeProjectileViews.RemoveAt(i);
-            }
-        }
-
-        private void ReleaseAllProjectiles()
-        {
-            for (int i = activeProjectileViews.Count - 1; i >= 0; i--)
-            {
-                ProjectileView projectileView = activeProjectileViews[i];
-                if (projectileView == null)
-                {
-                    continue;
-                }
-
-                projectileView.Release();
-                ReturnProjectileViewToPool(projectileView);
-            }
-
-            activeProjectileViews.Clear();
-            projectileViewById.Clear();
-        }
-
-        private void ReturnProjectileViewToPool(ProjectileView projectileView)
-        {
-            ProjectileView prefab = projectileView.PoolPrefab;
-            if (prefab == null)
-            {
-                Destroy(projectileView.gameObject);
-                return;
-            }
-
-            Stack<ProjectileView> pool;
-            if (!pooledProjectileViews.TryGetValue(prefab, out pool))
-            {
-                pool = new Stack<ProjectileView>(4);
-                pooledProjectileViews.Add(prefab, pool);
-            }
-
-            pool.Push(projectileView);
-        }
-
-        [Serializable]
-        private sealed class SpawnEntry
-        {
-            public int UnitId;
-            public UnitDefinition Definition;
-            public BattleSide Side;
-            public int Q;
-            public int R;
-
-            public HexCoord ToHexCoord()
-            {
-                return new HexCoord(Q, R);
-            }
-        }
     }
 }

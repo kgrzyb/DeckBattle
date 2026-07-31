@@ -10,6 +10,8 @@ namespace DeckBattle.Tests
         public static BattleConfig CreateConfig()
         {
             BattleConfig config = Track(ScriptableObject.CreateInstance<BattleConfig>());
+            BattleRuntimeTuningConfig tuningConfig = Track(ScriptableObject.CreateInstance<BattleRuntimeTuningConfig>());
+            config.RuntimeTuningConfig = tuningConfig;
             config.StartingPlayerHp = 30;
             config.StartingEnemyHp = 30;
             config.StartingAp = 3;
@@ -110,7 +112,7 @@ namespace DeckBattle.Tests
             BattleEventQueue resolvedEvents = events ?? new BattleEventQueue();
             for (int i = 0; i < maxTicks; i++)
             {
-                BattleTickResult result = loop.Tick(simulation, resolvedEvents);
+                BattleTickResult result = loop.Tick(resolvedEvents);
                 if (result.Attacks > 0 || result.BattleEnded)
                 {
                     return result;

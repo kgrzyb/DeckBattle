@@ -18,15 +18,15 @@ namespace DeckBattle.Tests
         {
             BattleSimulation simulation = CreateSimulation(0.5f);
             UnitRuntimeState unit = simulation.Units[0];
-            unit.CurrentMana = unit.Definition.ManaThreshold;
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
             var loop = new BattleTickLoop(simulation, TickDuration);
             var events = new BattleEventQueue();
 
-            loop.Tick(simulation, events);
+            loop.Tick(events);
 
             Assert.AreEqual(UnitSpecialPhase.Windup, unit.SpecialPhase);
             Assert.That(unit.SpecialWindupEndTime, Is.EqualTo(0.75d).Within(0.000001d));
-            Assert.AreEqual(unit.Definition.ManaThreshold, unit.CurrentMana);
+            Assert.AreEqual(unit.CombatSpec.ManaThreshold, unit.CurrentMana);
             Assert.IsFalse(unit.Statuses.TryFind(StatusKind.Haste, unit.UnitId, out _));
             AssertEvent(events, BattleEventType.SpecialWindupStarted);
         }
@@ -40,13 +40,13 @@ namespace DeckBattle.Tests
                 simulation,
                 unit,
                 new StatusApplicationRequest(CreateHasteStatus(5f, 0.5f), unit.UnitId));
-            unit.CurrentMana = unit.Definition.ManaThreshold;
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
             var loop = new BattleTickLoop(simulation, TickDuration);
             var events = new BattleEventQueue();
 
-            loop.Tick(simulation, events);
-            loop.Tick(simulation, events);
-            loop.Tick(simulation, events);
+            loop.Tick(events);
+            loop.Tick(events);
+            loop.Tick(events);
 
             Assert.AreEqual(UnitSpecialPhase.Idle, unit.SpecialPhase);
             Assert.AreEqual(0, unit.CurrentMana);
@@ -58,9 +58,9 @@ namespace DeckBattle.Tests
         {
             BattleSimulation simulation = CreateSimulation(1f);
             UnitRuntimeState unit = simulation.Units[0];
-            unit.CurrentMana = unit.Definition.ManaThreshold;
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
             var loop = new BattleTickLoop(simulation, TickDuration);
-            loop.Tick(simulation, new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
             var events = new BattleEventQueue();
 
             StatusResolver.TryApply(
@@ -70,7 +70,7 @@ namespace DeckBattle.Tests
                 events);
 
             Assert.AreEqual(UnitSpecialPhase.Idle, unit.SpecialPhase);
-            Assert.AreEqual(unit.Definition.ManaThreshold, unit.CurrentMana);
+            Assert.AreEqual(unit.CombatSpec.ManaThreshold, unit.CurrentMana);
             AssertEvent(events, BattleEventType.SpecialWindupCancelled);
         }
 
@@ -79,12 +79,12 @@ namespace DeckBattle.Tests
         {
             BattleSimulation simulation = CreateSimulation(0.5f);
             UnitRuntimeState attacker = simulation.Units[0];
-            attacker.CurrentMana = attacker.Definition.ManaThreshold;
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
             attacker.NextAttackTime = 0d;
             attacker.SetTarget(simulation.Units[1]);
             var events = new BattleEventQueue();
 
-            new BattleTickLoop(simulation, TickDuration).Tick(simulation, events);
+            new BattleTickLoop(simulation, TickDuration).Tick(events);
 
             Assert.AreEqual(UnitAttackPhase.AcquireReload, attacker.AttackPhase);
             Assert.AreEqual(UnitSpecialPhase.Windup, attacker.SpecialPhase);
@@ -98,15 +98,15 @@ namespace DeckBattle.Tests
             BattleSimulation simulation = CreateSimulation(0.5f);
             UnitRuntimeState unit = simulation.Units[0];
             simulation.StartUnitMovement(unit, new HexCoord(0, 1));
-            unit.CurrentMana = unit.Definition.ManaThreshold;
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
             var loop = new BattleTickLoop(simulation, TickDuration);
 
-            loop.Tick(simulation, new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
 
             Assert.IsTrue(unit.IsMoving);
             Assert.AreEqual(UnitSpecialPhase.Idle, unit.SpecialPhase);
 
-            loop.Tick(simulation, new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
 
             Assert.IsFalse(unit.IsMoving);
             Assert.AreEqual(UnitSpecialPhase.Windup, unit.SpecialPhase);

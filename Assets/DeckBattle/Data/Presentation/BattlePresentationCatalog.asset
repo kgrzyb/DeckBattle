@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42e29171311946e8bd27d367f3f1cfce, type: 3}
+  m_Name: BattlePresentationCatalog
+  m_EditorClassIdentifier: 
+  units:
+  - PresentationId: 1814701280
+    Prefab: {fileID: 7506552908754966910, guid: 9f55c116b0c85a444999106aad1cbd6b,
+      type: 3}
+  - PresentationId: 980307849
+    Prefab: {fileID: 7506552908754966910, guid: 2450455a188ee904c8b0e83b91ac7496,
+      type: 3}
+  - PresentationId: 1493860293
+    Prefab: {fileID: 7506552908754966910, guid: 3fb0cc0f17ecd4a4b91f11868b5814d2,
+      type: 3}
+  - PresentationId: 461431620
+    Prefab: {fileID: 7506552908754966910, guid: 4af6bc9af37bc3044a281834f8ca89b6,
+      type: 3}
+  - PresentationId: 934565048
+    Prefab: {fileID: 7506552908754966910, guid: 4af6bc9af37bc3044a281834f8ca89b6,
+      type: 3}
+  - PresentationId: 85014503
+    Prefab: {fileID: 7506552908754966910, guid: b3716b717c4f54541bff7b52c30556e1,
+      type: 3}
+  - PresentationId: 1232673244
+    Prefab: {fileID: 7506552908754966910, guid: 3fb0cc0f17ecd4a4b91f11868b5814d2,
+      type: 3}
+  - PresentationId: 1224946991
+    Prefab: {fileID: 7506552908754966910, guid: 5c357a38d548e254c85649593359c4c8,
+      type: 3}
+  - PresentationId: 622613822
+    Prefab: {fileID: 7506552908754966910, guid: 4af6bc9af37bc3044a281834f8ca89b6,
+      type: 3}
+  projectiles:
+  - PresentationId: 765606969
+    Prefab: {fileID: 4748203947065325603, guid: d489ecfcafbd52448888b5feb027c4c4,
+      type: 3}
+    SpawnHeight: 0.5
+    HitHeight: 0.5
+  - PresentationId: 239601635
+    Prefab: {fileID: 642828672369201056, guid: 39c697f65e1de88409111dc6c605bca4, type: 3}
+    SpawnHeight: 0.5
+    HitHeight: 0.5

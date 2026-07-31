@@ -21,8 +21,8 @@ namespace DeckBattle
 
         [Header("Presentation")]
         [SerializeField] private BoardPresenter boardPresenter;
-        [SerializeField] private Transform unitRoot;
         [SerializeField] private BattleView battleView;
+        [SerializeField] private BattleCombatRunner combatRunner;
         [SerializeField] private UnitStatusOverlayController statusOverlayController;
         [SerializeField] private RoundAnnouncementView roundAnnouncementView;
 
@@ -31,11 +31,10 @@ namespace DeckBattle
         [SerializeField, HideInInspector] private int maxCombatTicks = BattleTiming.DefaultMaxCombatTicks;
         [SerializeField, HideInInspector] private float roundResolutionDelay = BattleTiming.DefaultRoundResolutionDelay;
 
-        private readonly List<UnitView> unitViews = new List<UnitView>(16);
-        private readonly List<UnitView> unitViewSearchBuffer = new List<UnitView>(16);
-        private readonly Dictionary<int, UnitView> unitViewByRuntimeId = new Dictionary<int, UnitView>(16);
+        private UnitViewRegistry unitViewRegistry;
         private BattleState state;
         private BattleSimulation activeSimulation;
+        private BattleCombatRunner activeCombatRunner;
         private CombatSimulationResult lastCombatResult;
         private RoundResolutionResult lastRoundResolutionResult;
         private int activeSeed;
@@ -80,6 +79,8 @@ namespace DeckBattle
         private void Awake()
         {
             ResolveBattleView();
+            ResolveCombatRunner();
+            ResolveUnitViewRegistry();
         }
 
         private void Start()
@@ -396,49 +397,46 @@ namespace DeckBattle
             lastRoundResolutionResult = null;
 
             BattleView resolvedBattleView = ResolveBattleView();
-            if (resolvedBattleView == null)
+            BattleCombatRunner resolvedCombatRunner = ResolveCombatRunner();
+            if (resolvedBattleView == null || resolvedCombatRunner == null)
             {
-                Debug.LogError("BattleController requires BattleView for realtime combat presentation.", this);
+                Debug.LogError("BattleController requires BattleView and BattleCombatRunner for realtime combat presentation.", this);
                 lastCombatResult = RunCombatSynchronously();
-                yield return FinishRoundAfterCombat(null);
+                yield return FinishRoundAfterCombat();
                 FinishCombatRoutine();
                 yield break;
             }
 
-            activeSimulation = BattleSimulationFactory.Create(state, BattleRuntimeTuning.Default);
+            activeSimulation = BattleSimulationFactory.Create(state);
             if (statusOverlayController != null)
             {
                 statusOverlayController.ReleaseAll();
             }
 
-            resolvedBattleView.BindSimulation(activeSimulation, ResolveCombatTickDuration(), ResolveMaxCombatTicks(), unitViewByRuntimeId);
-            ReleaseUnitViewOwnership();
+            float tickDuration = ResolveCombatTickDuration();
+            resolvedCombatRunner.StartCombat(
+                activeSimulation,
+                tickDuration,
+                ResolveMaxCombatTicks(),
+                ResolveMaxTicksPerFrame());
+            resolvedBattleView.BindInitialState(resolvedCombatRunner.PresentationSnapshot);
+            SubscribeCombatRunner(resolvedCombatRunner, resolvedBattleView);
 
             while (state != null
                 && state.Phase == BattlePhase.Combat
-                && activeSimulation != null
-                && !activeSimulation.IsBattleEnded
-                && !resolvedBattleView.MaxTicksReached)
+                && resolvedCombatRunner.IsRunning)
             {
                 yield return null;
             }
 
-            if (state != null && state.Phase == BattlePhase.Combat && activeSimulation != null)
-            {
-                state.Phase = BattlePhase.RoundResolution;
-                BattleSimulationResultApplier.Apply(state, activeSimulation);
-                lastCombatResult = activeSimulation.IsBattleEnded
-                    ? BattleSimulationCombatService.CreateCombatResult(resolvedBattleView.LastTickResult, resolvedBattleView.TicksElapsed)
-                    : CombatSimulationResult.MaxTicksReached(resolvedBattleView.TicksElapsed);
-                RaiseStateChanged();
-            }
-
-            yield return FinishRoundAfterCombat(resolvedBattleView);
+            yield return FinishRoundAfterCombat();
+            UnsubscribeCombatRunner();
+            resolvedCombatRunner.StopCombat();
             resolvedBattleView.ClearBattle(false);
             FinishCombatRoutine();
         }
 
-        private IEnumerator FinishRoundAfterCombat(BattleView combatView)
+        private IEnumerator FinishRoundAfterCombat()
         {
             if (state != null && state.Phase == BattlePhase.RoundResolution)
             {
@@ -449,7 +447,6 @@ namespace DeckBattle
                 }
 
                 lastRoundResolutionResult = RoundFlowService.ResolveRoundAndStartNext(state);
-                ReclaimUnitViews(combatView);
                 RefreshUnits();
                 RaiseStateChanged();
 
@@ -462,7 +459,7 @@ namespace DeckBattle
 
         private CombatSimulationResult RunCombatSynchronously()
         {
-            activeSimulation = BattleSimulationFactory.Create(state, BattleRuntimeTuning.Default);
+            activeSimulation = BattleSimulationFactory.Create(state);
             var activeTickLoop = new BattleTickLoop(activeSimulation, ResolveCombatTickDuration());
             var eventQueue = new BattleEventQueue(32);
             CombatSimulationResult result = BattleSimulationCombatService.RunToResolution(
@@ -490,6 +487,13 @@ namespace DeckBattle
             {
                 StopCoroutine(combatRoutine);
                 combatRoutine = null;
+            }
+
+            UnsubscribeCombatRunner();
+            BattleCombatRunner resolvedCombatRunner = ResolveCombatRunner();
+            if (resolvedCombatRunner != null)
+            {
+                resolvedCombatRunner.StopCombat();
             }
 
             BattleView resolvedBattleView = ResolveBattleView();
@@ -528,6 +532,56 @@ namespace DeckBattle
             return battleView;
         }
 
+        private BattleCombatRunner ResolveCombatRunner()
+        {
+            if (combatRunner == null)
+            {
+                combatRunner = GetComponent<BattleCombatRunner>();
+            }
+
+            return combatRunner;
+        }
+
+        private void SubscribeCombatRunner(BattleCombatRunner runner, BattleView view)
+        {
+            UnsubscribeCombatRunner();
+            activeCombatRunner = runner;
+            activeCombatRunner.TickProcessed += view.ProcessCombatTick;
+            activeCombatRunner.Completed += HandleCombatRunnerCompleted;
+        }
+
+        private void UnsubscribeCombatRunner()
+        {
+            if (activeCombatRunner == null)
+            {
+                return;
+            }
+
+            BattleView resolvedBattleView = ResolveBattleView();
+            if (resolvedBattleView != null)
+            {
+                activeCombatRunner.TickProcessed -= resolvedBattleView.ProcessCombatTick;
+            }
+
+            activeCombatRunner.Completed -= HandleCombatRunnerCompleted;
+            activeCombatRunner = null;
+        }
+
+        private void HandleCombatRunnerCompleted(BattleRunResult runResult)
+        {
+            if (runResult == null || state == null || state.Phase != BattlePhase.Combat || activeSimulation == null)
+            {
+                return;
+            }
+
+            state.Phase = BattlePhase.RoundResolution;
+            BattleSimulationResultApplier.Apply(state, activeSimulation);
+            lastCombatResult = runResult.MaxTicksReached
+                ? CombatSimulationResult.MaxTicksReached(runResult.Ticks)
+                : BattleSimulationCombatService.CreateCombatResult(runResult.LastTickResult, runResult.Ticks);
+            RaiseStateChanged();
+        }
+
         private float ResolveCombatTickDuration()
         {
             float configuredDuration = battleTimingConfig != null
@@ -541,6 +595,14 @@ namespace DeckBattle
             int configuredTicks = battleTimingConfig != null
                 ? battleTimingConfig.MaxCombatTicks
                 : maxCombatTicks;
+            return Mathf.Max(1, configuredTicks);
+        }
+
+        private int ResolveMaxTicksPerFrame()
+        {
+            int configuredTicks = battleTimingConfig != null
+                ? battleTimingConfig.MaxTicksPerFrame
+                : BattleTiming.DefaultMaxTicksPerFrame;
             return Mathf.Max(1, configuredTicks);
         }
 
@@ -665,33 +727,26 @@ namespace DeckBattle
 
         private void CreateOrUpdateUnitView(RuntimeUnit unit)
         {
-            UnitView view;
-            if (unitViewByRuntimeId.TryGetValue(unit.RuntimeId, out view) && view != null)
+            UnitViewRegistry registry = ResolveUnitViewRegistry();
+            if (registry == null || unit == null)
             {
-                view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
-                BindStatusOverlay(unit, view);
                 return;
             }
 
-            if (!TryFindExistingUnitView(unit.RuntimeId, out view))
+            UnitView view = registry.GetOrCreate(CreatePresentationState(unit));
+            if (view == null)
             {
-                view = CreateUnitView(unit.Definition);
-                if (view == null)
-                {
-                    return;
-                }
+                return;
             }
 
-            RemoveDuplicateUnitViews(unit.RuntimeId, view);
             view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
-            TrackUnitView(unit.RuntimeId, view);
             BindStatusOverlay(unit, view);
         }
 
         private void UpdateUnitView(RuntimeUnit unit)
         {
-            UnitView view;
-            if (!unitViewByRuntimeId.TryGetValue(unit.RuntimeId, out view) || view == null)
+            UnitViewRegistry registry = ResolveUnitViewRegistry();
+            if (registry == null || !registry.TryGet(unit.RuntimeId, out UnitView view))
             {
                 CreateOrUpdateUnitView(unit);
                 return;
@@ -727,37 +782,18 @@ namespace DeckBattle
                     continue;
                 }
 
-                UnitView view;
-                if (!unitViewByRuntimeId.TryGetValue(unit.RuntimeId, out view))
+                UnitViewRegistry registry = ResolveUnitViewRegistry();
+                if (registry == null || !registry.TryGet(unit.RuntimeId, out UnitView view))
                 {
                     continue;
                 }
 
-                unitViewByRuntimeId.Remove(unit.RuntimeId);
-                if (view != null)
+                registry.Release(unit.RuntimeId);
+                if (statusOverlayController != null)
                 {
-                    unitViews.Remove(view);
-                    if (statusOverlayController != null)
-                    {
-                        statusOverlayController.Release(unit.RuntimeId);
-                    }
-
-                    view.gameObject.SetActive(false);
-                    Destroy(view.gameObject);
+                    statusOverlayController.Release(unit.RuntimeId);
                 }
             }
-        }
-
-        private UnitView CreateUnitView(UnitDefinition definition)
-        {
-            if (definition == null || definition.UnitPrefab == null)
-            {
-                Debug.LogError("Runtime unit definition is missing UnitPrefab.", this);
-                return null;
-            }
-
-            Transform parent = unitRoot != null ? unitRoot : transform;
-            return Instantiate(definition.UnitPrefab, parent);
         }
 
         private void ClearUnitViews()
@@ -767,56 +803,10 @@ namespace DeckBattle
                 statusOverlayController.ReleaseAll();
             }
 
-            for (int i = unitViews.Count - 1; i >= 0; i--)
+            UnitViewRegistry registry = ResolveUnitViewRegistry();
+            if (registry != null)
             {
-                if (unitViews[i] != null)
-                {
-                    unitViews[i].gameObject.SetActive(false);
-                    Destroy(unitViews[i].gameObject);
-                }
-            }
-
-            unitViews.Clear();
-            unitViewByRuntimeId.Clear();
-        }
-
-        private void ReleaseUnitViewOwnership()
-        {
-            unitViews.Clear();
-            unitViewByRuntimeId.Clear();
-        }
-
-        private void ReclaimUnitViews(BattleView combatView)
-        {
-            if (combatView == null || state == null)
-            {
-                return;
-            }
-
-            ReclaimUnitViews(state.Player.Units, combatView);
-            ReclaimUnitViews(state.Enemy.Units, combatView);
-        }
-
-        private void ReclaimUnitViews(List<RuntimeUnit> units, BattleView combatView)
-        {
-            for (int i = 0; i < units.Count; i++)
-            {
-                RuntimeUnit unit = units[i];
-                if (unit == null || unitViewByRuntimeId.ContainsKey(unit.RuntimeId))
-                {
-                    continue;
-                }
-
-                UnitView view = combatView.DetachUnitView(unit.RuntimeId);
-                if (view == null)
-                {
-                    continue;
-                }
-
-                view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
-                RemoveDuplicateUnitViews(unit.RuntimeId, view);
-                TrackUnitView(unit.RuntimeId, view);
-                BindStatusOverlay(unit, view);
+                registry.ReleaseAll();
             }
         }
 
@@ -840,86 +830,32 @@ namespace DeckBattle
             statusOverlayController.BindRuntimeUnit(unit, view);
         }
 
-        private void TrackUnitView(int runtimeId, UnitView view)
+        private UnitViewRegistry ResolveUnitViewRegistry()
         {
-            if (view == null)
+            if (unitViewRegistry == null)
             {
-                return;
-            }
-
-            UnitView trackedView;
-            if (unitViewByRuntimeId.TryGetValue(runtimeId, out trackedView))
-            {
-                if (trackedView == view)
+                BattleView resolvedBattleView = ResolveBattleView();
+                if (resolvedBattleView != null)
                 {
-                    if (!unitViews.Contains(view))
-                    {
-                        unitViews.Add(view);
-                    }
-
-                    return;
+                    unitViewRegistry = resolvedBattleView.UnitViews;
                 }
-
-                if (trackedView != null)
-                {
-                    trackedView.gameObject.SetActive(false);
-                    Destroy(trackedView.gameObject);
-                    unitViews.Remove(trackedView);
-                }
-
-                unitViewByRuntimeId[runtimeId] = view;
-            }
-            else
-            {
-                unitViewByRuntimeId.Add(runtimeId, view);
             }
 
-            if (!unitViews.Contains(view))
-            {
-                unitViews.Add(view);
-            }
+            return unitViewRegistry;
         }
 
-        private bool TryFindExistingUnitView(int runtimeId, out UnitView view)
+        private static UnitPresentationState CreatePresentationState(RuntimeUnit unit)
         {
-            view = null;
-            Transform searchRoot = unitRoot != null ? unitRoot : transform;
-            searchRoot.GetComponentsInChildren(true, unitViewSearchBuffer);
-            for (int i = 0; i < unitViewSearchBuffer.Count; i++)
-            {
-                UnitView candidate = unitViewSearchBuffer[i];
-                if (candidate == null || candidate.RuntimeId != runtimeId || unitViews.Contains(candidate))
-                {
-                    continue;
-                }
-
-                if (view == null || (!view.gameObject.activeInHierarchy && candidate.gameObject.activeInHierarchy))
-                {
-                    view = candidate;
-                }
-            }
-
-            unitViewSearchBuffer.Clear();
-            return view != null;
-        }
-
-        private void RemoveDuplicateUnitViews(int runtimeId, UnitView retainedView)
-        {
-            Transform searchRoot = unitRoot != null ? unitRoot : transform;
-            searchRoot.GetComponentsInChildren(true, unitViewSearchBuffer);
-            for (int i = 0; i < unitViewSearchBuffer.Count; i++)
-            {
-                UnitView candidate = unitViewSearchBuffer[i];
-                if (candidate == null || candidate == retainedView || candidate.RuntimeId != runtimeId)
-                {
-                    continue;
-                }
-
-                candidate.gameObject.SetActive(false);
-                Destroy(candidate.gameObject);
-            }
-
-            unitViewSearchBuffer.Clear();
+            UnitCombatSpec combatSpec = UnitCombatSpec.FromDefinition(unit.Definition);
+            return new UnitPresentationState(
+                unit.RuntimeId,
+                combatSpec.PresentationId,
+                unit.Side,
+                unit.BattleCoord,
+                unit.CurrentHp,
+                combatSpec.MaxHp,
+                0,
+                combatSpec.ManaThreshold);
         }
 
         private void RaiseStateChanged()

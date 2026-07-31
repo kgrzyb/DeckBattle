@@ -19,7 +19,7 @@ namespace DeckBattle.Tests
             attacker.NextAttackTime = 0d;
             var loop = new BattleTickLoop(simulation, 0.25f);
             var events = new BattleEventQueue();
-            loop.Tick(simulation, events);
+            loop.Tick(events);
             Assert.AreEqual(UnitAttackPhase.Windup, attacker.AttackPhase);
 
             StatusDefinition stun = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
@@ -40,9 +40,9 @@ namespace DeckBattle.Tests
             AssertEvent(events, BattleEventType.AttackWindupCancelled);
             AssertEvent(events, BattleEventType.StatusApplied);
 
-            loop.Tick(simulation, events);
+            loop.Tick(events);
             Assert.AreEqual(1, attacker.Statuses.Count);
-            loop.Tick(simulation, events);
+            loop.Tick(events);
             Assert.AreEqual(0, attacker.Statuses.Count);
             Assert.IsFalse(attacker.StatusSnapshot.BlocksAttack);
             AssertEvent(events, BattleEventType.StatusRemoved);

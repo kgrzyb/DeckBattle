@@ -19,6 +19,7 @@ namespace DeckBattle.Tests
 
                 unitObject.transform.position = Vector3.zero;
                 view.FaceWorldPosition(new Vector3(1f, 2f, 0f));
+                InvokePrivateMethod(view, "UpdateFacing", 1f);
 
                 Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.right), Is.GreaterThan(0.999f));
             }
@@ -67,6 +68,7 @@ namespace DeckBattle.Tests
 
                 unitObject.transform.position = Vector3.zero;
                 view.FaceWorldPosition(new Vector3(1f, 0f, 0f));
+                InvokePrivateMethod(view, "UpdateFacing", 1f);
 
                 Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.right), Is.GreaterThan(0.999f));
                 Assert.That(Quaternion.Angle(Quaternion.identity, unitObject.transform.rotation), Is.LessThan(0.01f));
@@ -91,8 +93,68 @@ namespace DeckBattle.Tests
 
                 view.SetWorldPosition(Vector3.zero);
                 view.MoveToWorldPosition(new Vector3(0f, 0f, 1f), 0.25f);
+                InvokePrivateMethod(view, "UpdateFacing", 1f);
 
                 Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.forward), Is.GreaterThan(0.999f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(unitObject);
+            }
+        }
+
+        [Test]
+        public void FaceWorldPosition_UsesConfiguredConstantRotationSpeed()
+        {
+            GameObject unitObject = new GameObject("Unit", typeof(UnitView));
+            GameObject modelObject = new GameObject("Model");
+            try
+            {
+                modelObject.transform.SetParent(unitObject.transform);
+                UnitView view = unitObject.GetComponent<UnitView>();
+                SetPrivateField(view, "modelRoot", modelObject.transform);
+                SetPrivateField(view, "rotationSpeedDegreesPerSecond", 90f);
+                InvokePrivateMethod(view, "Awake");
+
+                view.FaceWorldPosition(Vector3.right);
+                InvokePrivateMethod(view, "UpdateFacing", 0.5f);
+
+                Assert.That(Vector3.Angle(modelObject.transform.forward, Vector3.forward), Is.EqualTo(45f).Within(0.1f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(unitObject);
+            }
+        }
+
+        [Test]
+        public void SetTargetWorldPosition_DuringQueuedMovement_FacesTargetOnlyAfterFinalHex()
+        {
+            GameObject unitObject = new GameObject("Unit", typeof(UnitView));
+            GameObject modelObject = new GameObject("Model");
+            try
+            {
+                modelObject.transform.SetParent(unitObject.transform);
+                UnitView view = unitObject.GetComponent<UnitView>();
+                SetPrivateField(view, "modelRoot", modelObject.transform);
+                SetPrivateField(view, "rotationSpeedDegreesPerSecond", 1000f);
+                InvokePrivateMethod(view, "Awake");
+
+                view.SetWorldPosition(Vector3.zero);
+                view.MoveToWorldPosition(Vector3.forward, 0.25f);
+                view.MoveToWorldPosition(Vector3.forward * 2f, 0.25f);
+                view.SetTargetWorldPosition(Vector3.right * 3f);
+
+                InvokePrivateMethod(view, "UpdateFacing", 1f);
+                Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.forward), Is.GreaterThan(0.999f));
+
+                InvokePrivateMethod(view, "UpdateMovement", 0.25f);
+                InvokePrivateMethod(view, "UpdateFacing", 1f);
+                Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.forward), Is.GreaterThan(0.999f));
+
+                InvokePrivateMethod(view, "UpdateMovement", 0.25f);
+                InvokePrivateMethod(view, "UpdateFacing", 1f);
+                Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.right), Is.GreaterThan(0.999f));
             }
             finally
             {
@@ -107,11 +169,11 @@ namespace DeckBattle.Tests
                 .SetValue(target, value);
         }
 
-        private static void InvokePrivateMethod(object target, string methodName)
+        private static void InvokePrivateMethod(object target, string methodName, params object[] arguments)
         {
             target.GetType()
                 .GetMethod(methodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-                .Invoke(target, null);
+                .Invoke(target, arguments);
         }
     }
 }

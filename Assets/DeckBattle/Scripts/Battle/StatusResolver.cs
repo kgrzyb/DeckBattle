@@ -17,12 +17,12 @@ namespace DeckBattle
             using (ApplyMarker.Auto())
             {
             if (simulation == null) throw new ArgumentNullException(nameof(simulation));
-            if (target == null || !target.IsAlive || request.Definition == null || request.Definition.Kind == StatusKind.None)
+            if (target == null || !target.IsAlive || request.CombatSpec.Kind == StatusKind.None)
             {
                 return Reject(target, request, StatusApplicationResult.RejectedInvalid, eventQueue);
             }
 
-            StatusDefinition definition = request.Definition;
+            StatusCombatSpec definition = request.CombatSpec;
             if (definition.Kind == StatusKind.Drain || definition.StackingRule == StatusStackingRule.InstantOnly)
             {
                 if (IsHarmful(definition.Category) && target.StatusSnapshot.Invulnerable)
@@ -128,6 +128,10 @@ namespace DeckBattle
             RebuildSnapshot(target);
             StatusInstance applied = target.Statuses[index < target.Statuses.Count ? index : target.Statuses.Count - 1];
             eventQueue?.Enqueue(BattleEvent.StatusApplied(target.UnitId, request.SourceUnitId, definition.Kind, applied.Stacks, duration));
+            if (definition.Kind == StatusKind.Shield)
+            {
+                eventQueue?.Enqueue(BattleEvent.ShieldChanged(target.UnitId, target.StatusSnapshot.TotalShield));
+            }
             return StatusApplicationResult.Applied;
             }
         }
@@ -202,7 +206,7 @@ namespace DeckBattle
 
         private static StatusApplicationResult Reject(UnitRuntimeState target, StatusApplicationRequest request, StatusApplicationResult reason, BattleEventQueue eventQueue)
         {
-            eventQueue?.Enqueue(BattleEvent.StatusRejected(target != null ? target.UnitId : 0, request.SourceUnitId, request.Definition != null ? request.Definition.Kind : StatusKind.None, reason));
+            eventQueue?.Enqueue(BattleEvent.StatusRejected(target != null ? target.UnitId : 0, request.SourceUnitId, request.CombatSpec.Kind, reason));
             return reason;
         }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -70,6 +71,32 @@ namespace DeckBattle.Tests
 
                 view.SetStatuses(statuses, 0);
                 Assert.IsFalse(shieldBar.gameObject.activeSelf);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void SetPresentationStatuses_UsesPresentationShadowWithoutRuntimeState()
+        {
+            GameObject root = new GameObject("Overlay", typeof(RectTransform), typeof(UnitStatusOverlayView));
+            var statuses = new List<StatusPresentationState>
+            {
+                new StatusPresentationState(StatusKind.Stun, 1, 1),
+                new StatusPresentationState(StatusKind.Burn, 2, 2)
+            };
+
+            try
+            {
+                UnitStatusOverlayView view = root.GetComponent<UnitStatusOverlayView>();
+                view.SetPresentationStatuses(statuses, 4, null);
+
+                Assert.AreEqual(5, root.GetComponentsInChildren<Image>(true).Length);
+                RectTransform shieldBar = root.transform.Find("ShieldBar") as RectTransform;
+                Assert.IsNotNull(shieldBar);
+                Assert.IsTrue(shieldBar.gameObject.activeSelf);
             }
             finally
             {

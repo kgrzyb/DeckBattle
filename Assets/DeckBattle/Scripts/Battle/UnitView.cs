@@ -28,6 +28,8 @@ namespace DeckBattle
         [SerializeField] private float groundOffset = 0.65f;
         [SerializeField] private float damageFlashDuration = 0.12f;
         [SerializeField] private float deathDuration = 0.25f;
+        [SerializeField] private float attackWindupAnimationDuration = 0.25f;
+        [SerializeField, Min(1f)] private float rotationSpeedDegreesPerSecond = 540f;
         [SerializeField] private Color playerColor = new Color(0.18f, 0.62f, 0.95f, 1f);
         [SerializeField] private Color enemyColor = new Color(0.95f, 0.35f, 0.25f, 1f);
         [SerializeField] private Color damageFlashColor = Color.white;
@@ -40,8 +42,10 @@ namespace DeckBattle
         private MaterialPropertyBlock propertyBlock;
         private Vector3 baseModelScale;
         private Quaternion baseModelRotation;
+        private Quaternion facingTargetRotation;
         private Vector3 moveFrom;
         private Vector3 moveTo;
+        private Vector3 lastKnownTargetWorldPosition;
         private readonly Vector3[] queuedMoveTargets = new Vector3[MaxQueuedMoves];
         private readonly float[] queuedMoveDurations = new float[MaxQueuedMoves];
         private Color sideColor;
@@ -53,6 +57,8 @@ namespace DeckBattle
         private int queuedMoveCount;
         private bool isMoving;
         private bool isDying;
+        private bool isTurning;
+        private bool hasKnownTargetWorldPosition;
         private int activeAttackSequenceId;
         private int activeSpecialSequenceId;
         private UnitVisualState visualState;
@@ -92,12 +98,13 @@ namespace DeckBattle
 
             float deltaTime = Time.deltaTime;
             UpdateMovement(deltaTime);
+            UpdateFacing(deltaTime);
             UpdateVisualTimers(deltaTime);
         }
 
         private bool HasActiveFrameWork
         {
-            get { return isMoving || damageTimer > 0f || isDying; }
+            get { return isMoving || isTurning || damageTimer > 0f || isDying; }
         }
 
         public void Bind(RuntimeUnit unit, Vector3 worldPosition)
@@ -116,8 +123,18 @@ namespace DeckBattle
             RealtimeUnit = unit;
             RuntimeId = unit.UnitId;
             ResetTransientState(worldPosition);
-            name = FormatUnitName(unit.Side, unit.UnitId, unit.Definition);
+            name = unit.Side + "_Unit_" + unit.UnitId;
             ApplySideColor(unit.Side);
+        }
+
+        public void Bind(UnitPresentationState state, Vector3 worldPosition)
+        {
+            Unit = null;
+            RealtimeUnit = null;
+            RuntimeId = state.UnitId;
+            ResetTransientState(worldPosition);
+            name = state.Side + "_Unit_" + state.UnitId;
+            ApplySideColor(state.Side);
         }
 
         public void SetWorldPosition(Vector3 worldPosition)
@@ -145,12 +162,12 @@ namespace DeckBattle
             StartMove(target, safeDuration);
         }
 
-        public void BeginAttackWindup(int sequenceId, float duration, float timeScale)
+        public void BeginAttackWindup(int sequenceId, float duration)
         {
             activeAttackSequenceId = sequenceId;
             if (animator != null)
             {
-                animator.SetFloat(AttackSpeedParameter, SanitizeAttackTimeScale(timeScale));
+                animator.SetFloat(AttackSpeedParameter, CalculateAttackAnimationSpeed(duration));
             }
 
             TriggerAnimation(UnitVisualState.Attack, true);
@@ -200,11 +217,23 @@ namespace DeckBattle
                 return;
             }
 
-            Quaternion targetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up) * baseModelRotation;
-            if (Quaternion.Angle(modelRoot.rotation, targetRotation) > 0.01f)
+            facingTargetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up) * baseModelRotation;
+            isTurning = Quaternion.Angle(modelRoot.rotation, facingTargetRotation) > 0.01f;
+        }
+
+        public void SetTargetWorldPosition(Vector3 worldPosition)
+        {
+            lastKnownTargetWorldPosition = worldPosition;
+            hasKnownTargetWorldPosition = true;
+            if (!isMoving && queuedMoveCount == 0)
             {
-                modelRoot.rotation = targetRotation;
+                FaceWorldPosition(worldPosition);
             }
+        }
+
+        public void ClearTargetWorldPosition()
+        {
+            hasKnownTargetWorldPosition = false;
         }
 
         public void PlayDamage(int remainingHp)
@@ -254,10 +283,13 @@ namespace DeckBattle
             deathTimer = 0f;
             activeAttackSequenceId = 0;
             activeSpecialSequenceId = 0;
+            isTurning = false;
+            hasKnownTargetWorldPosition = false;
             if (modelRoot != null)
             {
                 modelRoot.localScale = baseModelScale;
                 modelRoot.localRotation = baseModelRotation;
+                facingTargetRotation = modelRoot.rotation;
             }
 
             SetWorldPosition(worldPosition);
@@ -282,6 +314,7 @@ namespace DeckBattle
                 if (!TryStartNextQueuedMove())
                 {
                     isMoving = false;
+                    FaceLastKnownTarget();
                     TriggerAnimation(UnitVisualState.Idle);
                 }
             }
@@ -352,6 +385,30 @@ namespace DeckBattle
             }
         }
 
+        private void UpdateFacing(float deltaTime)
+        {
+            if (!isTurning || modelRoot == null)
+            {
+                return;
+            }
+
+            float maxDegreesDelta = Mathf.Max(1f, rotationSpeedDegreesPerSecond) * Mathf.Max(0f, deltaTime);
+            modelRoot.rotation = Quaternion.RotateTowards(modelRoot.rotation, facingTargetRotation, maxDegreesDelta);
+            if (Quaternion.Angle(modelRoot.rotation, facingTargetRotation) <= 0.01f)
+            {
+                modelRoot.rotation = facingTargetRotation;
+                isTurning = false;
+            }
+        }
+
+        private void FaceLastKnownTarget()
+        {
+            if (hasKnownTargetWorldPosition)
+            {
+                FaceWorldPosition(lastKnownTargetWorldPosition);
+            }
+        }
+
         private static string FormatUnitName(BattleSide side, int runtimeId, UnitDefinition definition)
         {
             string displayName = definition != null ? definition.DisplayName : "Unknown";
@@ -377,10 +434,11 @@ namespace DeckBattle
             animator.SetTrigger(IdleTrigger);
         }
 
-        private static float SanitizeAttackTimeScale(float timeScale)
+        private float CalculateAttackAnimationSpeed(float actualDuration)
         {
-            return timeScale > 0f && !float.IsNaN(timeScale) && !float.IsInfinity(timeScale)
-                ? timeScale
+            float baseDuration = Mathf.Max(0.01f, attackWindupAnimationDuration);
+            return actualDuration > 0f && !float.IsNaN(actualDuration) && !float.IsInfinity(actualDuration)
+                ? baseDuration / actualDuration
                 : 1f;
         }
 

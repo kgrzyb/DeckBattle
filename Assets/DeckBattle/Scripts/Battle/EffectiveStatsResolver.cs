@@ -24,7 +24,7 @@ namespace DeckBattle
 
         public static float GetCriticalMultiplier(UnitRuntimeState unit)
         {
-            return unit == null ? 1f : Math.Max(1f, unit.Definition.CritMultiplier + unit.StatusSnapshot.Criticality);
+            return unit == null ? 1f : Math.Max(1f, unit.CombatSpec.CritMultiplier + unit.StatusSnapshot.Criticality);
         }
 
         private static float Clamp(float value, float min, float max) { return Math.Max(min, Math.Min(max, value)); }

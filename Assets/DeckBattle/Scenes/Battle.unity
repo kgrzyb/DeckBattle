@@ -778,6 +778,7 @@ GameObject:
   - component: {fileID: 225271485}
   - component: {fileID: 225271486}
   - component: {fileID: 225271487}
+  - component: {fileID: 225271488}
   m_Layer: 0
   m_Name: BattleController
   m_TagString: Untagged
@@ -820,6 +821,7 @@ MonoBehaviour:
   boardPresenter: {fileID: 1201968723}
   unitRoot: {fileID: 763315698}
   battleView: {fileID: 225271485}
+  combatRunner: {fileID: 225271488}
   statusOverlayController: {fileID: 641749120}
   roundAnnouncementView: {fileID: 752130575}
   combatTickDuration: 0.25
@@ -873,21 +875,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd383772e1b1db24c8720187a06e4915, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  battleConfig: {fileID: 11400000, guid: 8108cc2527ed11245b2df1e4663bc2a2, type: 2}
-  battleTimingConfig: {fileID: 11400000, guid: 7ca68c547f47473db009e8a8e6b2d8b7, type: 2}
-  tickDuration: 0.35
-  maxTicksPerFrame: 4
-  attackCooldownMultiplier: 1
-  attackRangeBonus: 0
-  movementStepDuration: 0.4
-  startOnAwake: 0
-  initialUnits: []
   boardPresenter: {fileID: 1201968723}
   unitRoot: {fileID: 763315698}
   statusOverlayController: {fileID: 641749120}
   statusPresentationCatalog: {fileID: 11400000, guid: 12381e2df6b472d44a5f35e37d417a6b,
     type: 2}
   statusVfxController: {fileID: 225271487}
+  presentationCatalog: {fileID: 11400000, guid: d92b263dc86825b40b673eb5faa3d14f,
+    type: 2}
   attackEffectPrefab: {fileID: 0}
   damageEffectPrefab: {fileID: 0}
   effectRoot: {fileID: 763315698}
@@ -903,6 +898,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e011cf916e9728241abe65442abf6a7c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  combatRunner: {fileID: 225271488}
   battleView: {fileID: 225271485}
   boardPresenter: {fileID: 1201968723}
   playModeOnly: 1
@@ -938,6 +934,18 @@ MonoBehaviour:
   presentationCatalog: {fileID: 11400000, guid: 12381e2df6b472d44a5f35e37d417a6b,
     type: 2}
   poolRoot: {fileID: 35274782}
+--- !u!114 &225271488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 225271481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 375aca7990432c34bb714a8a13b7ef0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &408650581
 GameObject:
   m_ObjectHideFlags: 0

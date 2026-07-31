@@ -79,8 +79,8 @@ namespace DeckBattle
                 UnitSpawnData spawn = spawnData[i];
                 ValidateSpawn(board, spawn, unitByHex, unitById);
 
-                var unit = new UnitRuntimeState(spawn.UnitId, spawn.Definition, spawn.Side, spawn.StartHex, spawn.AttackBonusNextCombat, tuning.MaxStatusesPerUnit);
-                unit.NextAttackTime = tuning.GetAttackCooldown(spawn.Definition, unit);
+                var unit = new UnitRuntimeState(spawn.UnitId, spawn.CombatSpec, spawn.Side, spawn.StartHex, spawn.AttackBonusNextCombat, tuning.MaxStatusesPerUnit);
+                unit.NextAttackTime = tuning.GetAttackCooldown(spawn.CombatSpec, unit);
                 units.Add(unit);
                 unitByHex.Add(spawn.StartHex, unit);
                 unitById.Add(spawn.UnitId, unit);
@@ -109,7 +109,7 @@ namespace DeckBattle
             return unitById.TryGetValue(unitId, out unit);
         }
 
-        public void MoveUnit(UnitRuntimeState unit, HexCoord destination)
+        internal void MoveUnit(UnitRuntimeState unit, HexCoord destination)
         {
             if (unit == null)
             {
@@ -178,7 +178,7 @@ namespace DeckBattle
             unit.MovementDestination = unit.CurrentHex;
         }
 
-        public void StartUnitMovement(UnitRuntimeState unit, HexCoord destination)
+        internal void StartUnitMovement(UnitRuntimeState unit, HexCoord destination)
         {
             if (unit == null)
             {
@@ -236,7 +236,7 @@ namespace DeckBattle
             unit.MovementTimeRemaining = EffectiveStatsResolver.GetMovementStepDuration(unit, Tuning);
         }
 
-        public void CompleteUnitMovement(UnitRuntimeState unit)
+        internal void CompleteUnitMovement(UnitRuntimeState unit)
         {
             if (unit == null)
             {
@@ -286,7 +286,7 @@ namespace DeckBattle
             unit.MovementTimeRemaining = 0f;
         }
 
-        public void DefeatUnit(UnitRuntimeState unit)
+        internal void DefeatUnit(UnitRuntimeState unit)
         {
             if (unit == null)
             {
@@ -306,10 +306,10 @@ namespace DeckBattle
             unit.StatusVersion++;
         }
 
-        public ProjectileRuntimeState SpawnProjectile(
+        internal ProjectileRuntimeState SpawnProjectile(
             UnitRuntimeState attacker,
             UnitRuntimeState target,
-            ProjectileDefinition projectileDefinition,
+            ProjectileCombatSpec projectileCombatSpec,
             int damage,
             bool isCritical)
         {
@@ -323,19 +323,18 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(target));
             }
 
-            if (projectileDefinition == null)
+            if (!projectileCombatSpec.IsValid)
             {
-                throw new ArgumentNullException(nameof(projectileDefinition));
+                throw new ArgumentException("Projectile combat spec is invalid.", nameof(projectileCombatSpec));
             }
 
             float distance = Board.Distance(attacker.CurrentHex, target.CurrentHex) * Board.HexSize;
-            float travelDuration = distance / projectileDefinition.Speed;
+            float travelDuration = distance / projectileCombatSpec.Speed;
             var projectile = new ProjectileRuntimeState(
                 nextProjectileId,
                 attacker.UnitId,
                 target.UnitId,
-                attacker.Definition,
-                projectileDefinition,
+                projectileCombatSpec,
                 attacker.CurrentHex,
                 target.CurrentHex,
                 travelDuration,
@@ -347,7 +346,7 @@ namespace DeckBattle
             return projectile;
         }
 
-        public void RemoveProjectileAt(int index)
+        internal void RemoveProjectileAt(int index)
         {
             if (index < 0 || index >= projectiles.Count)
             {
@@ -357,7 +356,7 @@ namespace DeckBattle
             projectiles.RemoveAt(index);
         }
 
-        public void CompleteBattle(BattleSide winner, bool hasWinner)
+        internal void CompleteBattle(BattleSide winner, bool hasWinner)
         {
             IsBattleEnded = true;
             HasWinner = hasWinner;
@@ -380,9 +379,9 @@ namespace DeckBattle
                 throw new ArgumentException("Spawn data contains duplicate unit ids.", nameof(spawn));
             }
 
-            if (spawn.Definition == null)
+            if (spawn.CombatSpec.MaxHp <= 0)
             {
-                throw new ArgumentException("Spawn data contains a null unit definition.", nameof(spawn));
+                throw new ArgumentException("Spawn data contains an invalid combat spec.", nameof(spawn));
             }
 
             if (!board.IsValidHex(spawn.StartHex))

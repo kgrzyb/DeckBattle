@@ -24,14 +24,14 @@ namespace DeckBattle.Tests
             Assert.AreSame(state.Board, simulation.Board);
             Assert.AreEqual(2, simulation.Units.Count);
             Assert.AreEqual(42, simulation.Units[0].UnitId);
-            Assert.AreSame(playerDefinition, simulation.Units[0].Definition);
+            Assert.AreEqual(UnitCombatSpec.FromDefinition(playerDefinition).DefinitionId, simulation.Units[0].CombatSpec.DefinitionId);
             Assert.AreEqual(BattleSide.Player, simulation.Units[0].Side);
             Assert.AreEqual(new HexCoord(1, 1), simulation.Units[0].CurrentHex);
             Assert.AreEqual(77, simulation.Units[1].UnitId);
-            Assert.AreSame(enemyDefinition, simulation.Units[1].Definition);
+            Assert.AreEqual(UnitCombatSpec.FromDefinition(enemyDefinition).DefinitionId, simulation.Units[1].CombatSpec.DefinitionId);
             Assert.AreEqual(BattleSide.Enemy, simulation.Units[1].Side);
             Assert.AreEqual(new HexCoord(3, 4), simulation.Units[1].CurrentHex);
-            Assert.AreEqual(2, simulation.Tuning.GetAttackRange(playerDefinition));
+            Assert.AreEqual(2, simulation.Tuning.GetAttackRange(simulation.Units[0].CombatSpec));
         }
 
         [Test]
@@ -52,6 +52,34 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1, simulation.Units.Count);
             Assert.AreEqual(1, simulation.Units[0].UnitId);
             Assert.AreEqual(BattleSide.Player, simulation.Units[0].Side);
+        }
+
+        [Test]
+        public void Create_UsesRuntimeTuningFromBattleConfig()
+        {
+            BattleState state = CreateState();
+            state.Config.RuntimeTuningConfig.AttackCooldownMultiplier = 1.5f;
+            state.Config.RuntimeTuningConfig.AttackRangeBonus = 2;
+            state.Config.RuntimeTuningConfig.MovementStepDuration = 0.6f;
+            state.Config.RuntimeTuningConfig.MaxDamageMultiplier = 5f;
+            UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
+            state.Player.Units.Add(new RuntimeUnit(1, definition, BattleSide.Player, new HexCoord(0, 0)));
+
+            BattleSimulation simulation = BattleSimulationFactory.Create(state);
+
+            Assert.AreEqual(1.5f, simulation.Tuning.AttackCooldownMultiplier);
+            Assert.AreEqual(2, simulation.Tuning.AttackRangeBonus);
+            Assert.AreEqual(0.6f, simulation.Tuning.MovementStepDuration);
+            Assert.AreEqual(5f, simulation.Tuning.MaxDamageMultiplier);
+        }
+
+        [Test]
+        public void Create_RequiresRuntimeTuningConfig()
+        {
+            BattleState state = CreateState();
+            state.Config.RuntimeTuningConfig = null;
+
+            Assert.Throws<System.InvalidOperationException>(() => BattleSimulationFactory.Create(state));
         }
 
         private static BattleState CreateState()

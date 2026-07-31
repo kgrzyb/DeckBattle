@@ -49,8 +49,8 @@ namespace DeckBattle.Tests
             HitResolutionResult result = DamageResolver.Resolve(simulation, target, new DamageRequest(simulation.Units[0], 5), null);
 
             Assert.AreEqual(5, result.Damage);
-            Assert.AreEqual(target.Definition.MaxHp - 3, target.CurrentHp);
-            Assert.AreEqual(guard.Definition.MaxHp - 2, guard.CurrentHp);
+            Assert.AreEqual(target.CombatSpec.MaxHp - 3, target.CurrentHp);
+            Assert.AreEqual(guard.CombatSpec.MaxHp - 2, guard.CurrentHp);
         }
 
         [Test]
@@ -64,8 +64,8 @@ namespace DeckBattle.Tests
 
             DamageResolver.Resolve(simulation, target, new DamageRequest(simulation.Units[0], 4), null);
 
-            Assert.AreEqual(target.Definition.MaxHp - 2, target.CurrentHp);
-            Assert.AreEqual(firstGuard.Definition.MaxHp - 2, firstGuard.CurrentHp);
+            Assert.AreEqual(target.CombatSpec.MaxHp - 2, target.CurrentHp);
+            Assert.AreEqual(firstGuard.CombatSpec.MaxHp - 2, firstGuard.CurrentHp);
         }
 
         private static BattleSimulation CreateSimulation()

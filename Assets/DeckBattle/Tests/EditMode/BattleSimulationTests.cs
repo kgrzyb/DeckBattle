@@ -26,7 +26,7 @@ namespace DeckBattle.Tests
 
             UnitRuntimeState player = simulation.Units[0];
             Assert.AreEqual(7, player.UnitId);
-            Assert.AreSame(playerDefinition, player.Definition);
+            Assert.AreEqual(UnitCombatSpec.FromDefinition(playerDefinition).DefinitionId, player.CombatSpec.DefinitionId);
             Assert.AreEqual(BattleSide.Player, player.Side);
             Assert.AreEqual(new HexCoord(1, 1), player.CurrentHex);
             Assert.AreEqual(playerDefinition.MaxHp, player.CurrentHp);

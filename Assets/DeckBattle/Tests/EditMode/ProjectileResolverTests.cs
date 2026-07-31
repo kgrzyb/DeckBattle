@@ -111,15 +111,15 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
-            BattleTickResult windupTick = loop.Tick(simulation, events);
-            BattleTickResult launchTick = loop.Tick(simulation, events);
+            BattleTickResult windupTick = loop.Tick(events);
+            BattleTickResult launchTick = loop.Tick(events);
 
             Assert.AreEqual(0, windupTick.Attacks);
             Assert.IsFalse(launchTick.BattleEnded);
             Assert.IsTrue(simulation.Units[1].IsAlive);
             Assert.AreEqual(1, simulation.Projectiles.Count);
 
-            BattleTickResult hitTick = loop.Tick(simulation, events);
+            BattleTickResult hitTick = loop.Tick(events);
 
             Assert.IsTrue(hitTick.BattleEnded);
             Assert.IsTrue(simulation.Units[1].IsDefeated);
@@ -135,15 +135,15 @@ namespace DeckBattle.Tests
             var loop = new BattleTickLoop(simulation, 1f);
             var events = new BattleEventQueue();
 
-            BattleTickResult windupTick = loop.Tick(simulation, events);
-            BattleTickResult launchTick = loop.Tick(simulation, events);
+            BattleTickResult windupTick = loop.Tick(events);
+            BattleTickResult launchTick = loop.Tick(events);
 
             Assert.AreEqual(0, windupTick.Attacks);
             Assert.IsFalse(launchTick.BattleEnded);
             Assert.IsTrue(simulation.Units[0].IsDefeated);
             Assert.AreEqual(1, simulation.Projectiles.Count);
 
-            BattleTickResult hitTick = loop.Tick(simulation, events);
+            BattleTickResult hitTick = loop.Tick(events);
 
             Assert.IsTrue(hitTick.BattleEnded);
             Assert.IsFalse(hitTick.HasWinner);

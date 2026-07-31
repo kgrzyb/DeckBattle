@@ -219,7 +219,11 @@ namespace DeckBattle
                 winner.Unit.RecordPursuitStep(winner.Unit.TargetUnitId);
                 if (eventQueue != null)
                 {
-                    eventQueue.Enqueue(BattleEvent.UnitMoved(winner.Unit.UnitId, from, winner.Destination));
+                    eventQueue.Enqueue(BattleEvent.UnitMoved(
+                        winner.Unit.UnitId,
+                        from,
+                        winner.Destination,
+                        winner.Unit.MovementTimeRemaining));
                 }
             }
 

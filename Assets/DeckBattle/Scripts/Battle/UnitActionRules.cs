@@ -11,18 +11,16 @@ namespace DeckBattle
 
         public static bool HasReadySpecial(UnitRuntimeState unit)
         {
-            if (unit == null || !unit.IsAlive || unit.Definition == null)
+            if (unit == null || !unit.IsAlive || !unit.CombatSpec.HasSpecial)
             {
                 return false;
             }
 
-            UnitSpecialDefinition special = unit.Definition.Special;
-            return special != null
-                && special.Kind == UnitSpecialKind.HasteBurst
-                && special.AppliedStatus != null
+            UnitSpecialCombatSpec special = unit.CombatSpec.Special;
+            return special.Kind == UnitSpecialKind.HasteBurst
                 && special.AppliedStatus.Kind == StatusKind.Haste
-                && unit.Definition.ManaThreshold > 0
-                && unit.CurrentMana >= unit.Definition.ManaThreshold;
+                && unit.CombatSpec.ManaThreshold > 0
+                && unit.CurrentMana >= unit.CombatSpec.ManaThreshold;
         }
     }
 }

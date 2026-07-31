@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -129,7 +130,117 @@ namespace DeckBattle
             SetShield(totalShield);
         }
 
+        public void SetPresentationStatuses(
+            IReadOnlyList<StatusPresentationState> statuses,
+            int totalShield,
+            StatusPresentationCatalog presentationCatalog)
+        {
+            if (presentationCatalog != null)
+            {
+                SetCatalogPresentationStatuses(statuses, presentationCatalog);
+                SetShield(totalShield);
+                return;
+            }
+
+            EnsureStatusIconSlots();
+            int visibleCount = 0;
+            int hiddenCount = 0;
+            int statusCount = statuses != null ? statuses.Count : 0;
+            for (int priority = 0; priority <= 4; priority++)
+            {
+                for (int i = 0; i < statusCount; i++)
+                {
+                    StatusPresentationState status = statuses[i];
+                    if (status.Kind == StatusKind.Shield || GetPriority(status.Kind) != priority)
+                    {
+                        continue;
+                    }
+
+                    if (visibleCount < maxVisibleStatusIcons)
+                    {
+                        statusIconSlots[visibleCount].Set(status.Kind, status.Stacks, 0);
+                        visibleCount++;
+                    }
+                    else
+                    {
+                        hiddenCount++;
+                    }
+                }
+            }
+
+            for (int i = visibleCount; i < statusIconSlots.Length; i++)
+            {
+                statusIconSlots[i].SetVisible(false);
+            }
+
+            if (hiddenCount > 0 && visibleCount > 0)
+            {
+                statusIconSlots[visibleCount - 1].SetOverflow(hiddenCount + 1);
+            }
+
+            shownStatusVersion = statusCount;
+            SetShield(totalShield);
+        }
+
         private void SetCatalogStatuses(UnitStatusCollection statuses, StatusPresentationCatalog presentationCatalog)
+        {
+            EnsureStatusIconSlots();
+            int selectedCount = 0;
+            int statusCount = statuses != null ? statuses.Count : 0;
+            for (int i = 0; i < statusCount; i++)
+            {
+                StatusKind kind = statuses[i].Kind;
+                if (!presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) || entry.Mode != StatusPresentationMode.Icon)
+                {
+                    continue;
+                }
+
+                bool alreadySelected = false;
+                for (int selectedIndex = 0; selectedIndex < selectedCount; selectedIndex++)
+                {
+                    if (selectedStatusKinds[selectedIndex] == kind)
+                    {
+                        alreadySelected = true;
+                        break;
+                    }
+                }
+
+                if (alreadySelected || selectedCount >= selectedStatusKinds.Length)
+                {
+                    continue;
+                }
+
+                int insertIndex = selectedCount;
+                while (insertIndex > 0 && ComparePresentation(entry, kind, selectedStatusEntries[insertIndex - 1], selectedStatusKinds[insertIndex - 1]) < 0)
+                {
+                    selectedStatusKinds[insertIndex] = selectedStatusKinds[insertIndex - 1];
+                    selectedStatusEntries[insertIndex] = selectedStatusEntries[insertIndex - 1];
+                    insertIndex--;
+                }
+
+                selectedStatusKinds[insertIndex] = kind;
+                selectedStatusEntries[insertIndex] = entry;
+                selectedCount++;
+            }
+
+            int visibleCount = Mathf.Min(selectedCount, maxVisibleStatusIcons);
+            for (int i = 0; i < visibleCount; i++)
+            {
+                statusIconSlots[i].SetIcon(selectedStatusEntries[i].Icon);
+            }
+
+            for (int i = visibleCount; i < statusIconSlots.Length; i++)
+            {
+                statusIconSlots[i].SetVisible(false);
+            }
+
+            if (selectedCount > maxVisibleStatusIcons && visibleCount > 0)
+            {
+                statusIconSlots[visibleCount - 1].SetOverflow(selectedCount - maxVisibleStatusIcons + 1);
+            }
+        }
+
+        private void SetCatalogPresentationStatuses(IReadOnlyList<StatusPresentationState> statuses, StatusPresentationCatalog presentationCatalog)
         {
             EnsureStatusIconSlots();
             int selectedCount = 0;

@@ -15,7 +15,7 @@ namespace DeckBattle
                 return;
             }
 
-            int threshold = unit.Definition.ManaThreshold;
+            int threshold = unit.CombatSpec.ManaThreshold;
             unit.CurrentMana = threshold > 0
                 ? Math.Min(threshold, Math.Max(0, unit.CurrentMana + amount))
                 : Math.Max(0, unit.CurrentMana + amount);

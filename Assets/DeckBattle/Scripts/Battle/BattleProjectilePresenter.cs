@@ -1,0 +1,130 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace DeckBattle
+{
+    public sealed class BattleProjectilePresenter
+    {
+        private readonly BoardPresenter boardPresenter;
+        private readonly BattlePresentationCatalog presentationCatalog;
+        private readonly UnitViewRegistry unitViews;
+        private readonly Transform effectRoot;
+        private readonly List<ProjectileView> activeProjectileViews = new List<ProjectileView>(8);
+        private readonly Dictionary<int, ProjectileView> projectileViewById = new Dictionary<int, ProjectileView>(8);
+        private readonly Dictionary<ProjectileView, Stack<ProjectileView>> pooledProjectileViews = new Dictionary<ProjectileView, Stack<ProjectileView>>(4);
+
+        public BattleProjectilePresenter(
+            BoardPresenter boardPresenter,
+            BattlePresentationCatalog presentationCatalog,
+            UnitViewRegistry unitViews,
+            Transform effectRoot)
+        {
+            this.boardPresenter = boardPresenter;
+            this.presentationCatalog = presentationCatalog;
+            this.unitViews = unitViews;
+            this.effectRoot = effectRoot;
+        }
+
+        public void Tick()
+        {
+            for (int i = activeProjectileViews.Count - 1; i >= 0; i--)
+            {
+                ProjectileView projectileView = activeProjectileViews[i];
+                if (projectileView != null && projectileView.IsPlaying)
+                {
+                    continue;
+                }
+
+                if (projectileView != null)
+                {
+                    projectileView.Release();
+                    ReturnToPool(projectileView);
+                }
+
+                activeProjectileViews.RemoveAt(i);
+            }
+        }
+
+        public void HandleLaunched(BattleEvent battleEvent)
+        {
+            if (presentationCatalog == null
+                || !presentationCatalog.TryGetProjectile(
+                    battleEvent.PresentationId,
+                    out ProjectileView projectilePrefab,
+                    out float spawnHeight,
+                    out float hitHeight))
+            {
+                return;
+            }
+
+            Vector3 from = boardPresenter.GetWorldPosition(battleEvent.From);
+            from.y += spawnHeight;
+            Vector3 fallbackTarget = boardPresenter.GetWorldPosition(battleEvent.To);
+            fallbackTarget.y += hitHeight;
+            Transform targetTransform = unitViews.TryGet(battleEvent.TargetUnitId, out UnitView targetView)
+                ? targetView.transform
+                : null;
+
+            ProjectileView projectileView = GetFromPool(projectilePrefab);
+            projectileView.Play(from, targetTransform, fallbackTarget, battleEvent.Duration);
+            activeProjectileViews.Add(projectileView);
+            projectileViewById[battleEvent.ProjectileId] = projectileView;
+        }
+
+        public void HandleResolved(BattleEvent battleEvent)
+        {
+            if (projectileViewById.TryGetValue(battleEvent.ProjectileId, out ProjectileView view) && view != null)
+            {
+                view.Resolve();
+                projectileViewById.Remove(battleEvent.ProjectileId);
+            }
+        }
+
+        public void Clear()
+        {
+            for (int i = activeProjectileViews.Count - 1; i >= 0; i--)
+            {
+                ProjectileView projectileView = activeProjectileViews[i];
+                if (projectileView != null)
+                {
+                    projectileView.Release();
+                    ReturnToPool(projectileView);
+                }
+            }
+
+            activeProjectileViews.Clear();
+            projectileViewById.Clear();
+        }
+
+        private ProjectileView GetFromPool(ProjectileView prefab)
+        {
+            if (!pooledProjectileViews.TryGetValue(prefab, out Stack<ProjectileView> pool))
+            {
+                pool = new Stack<ProjectileView>(4);
+                pooledProjectileViews.Add(prefab, pool);
+            }
+
+            ProjectileView view = pool.Count > 0 ? pool.Pop() : Object.Instantiate(prefab, effectRoot);
+            view.SetPoolPrefab(prefab);
+            return view;
+        }
+
+        private void ReturnToPool(ProjectileView projectileView)
+        {
+            ProjectileView prefab = projectileView.PoolPrefab;
+            if (prefab == null)
+            {
+                Object.Destroy(projectileView.gameObject);
+                return;
+            }
+
+            if (!pooledProjectileViews.TryGetValue(prefab, out Stack<ProjectileView> pool))
+            {
+                pool = new Stack<ProjectileView>(4);
+                pooledProjectileViews.Add(prefab, pool);
+            }
+
+            pool.Push(projectileView);
+        }
+    }
+}
