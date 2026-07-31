@@ -10,6 +10,10 @@ namespace DeckBattle
         [SerializeField] private RectTransform rectTransform;
         [SerializeField] private Image hpFillImage;
         [SerializeField] private RectTransform hpFillTransform;
+        [SerializeField] private Image hpDamageFillImage;
+        [SerializeField] private RectTransform hpDamageFillTransform;
+        [SerializeField, Min(0f)] private float damageFillDelay = 0.15f;
+        [SerializeField, Min(0.01f)] private float damageFillDuration = 0.3f;
         [SerializeField] private Image manaFillImage;
         [SerializeField] private RectTransform manaFillTransform;
         [SerializeField] private Image shieldBarImage;
@@ -29,6 +33,12 @@ namespace DeckBattle
         private int shownMaxMana = -1;
         private int shownStatusVersion = -1;
         private int shownTotalShield = -1;
+        private float shownDamageFill;
+        private float damageFillStart;
+        private float damageFillTarget;
+        private float damageFillDelayRemaining;
+        private float damageFillElapsed;
+        private bool damageFillAnimating;
 
         public int UnitId
         {
@@ -63,6 +73,7 @@ namespace DeckBattle
             shownMaxHp = -1;
             shownMana = -1;
             shownMaxMana = -1;
+            ResetDamageFill();
 
             SetUnitName(displayName);
             SetHealth(currentHp, maxHp);
@@ -329,9 +340,22 @@ namespace DeckBattle
                 return;
             }
 
+            bool hadShownHealth = shownHp >= 0 && shownMaxHp > 0;
+            float normalized = (float)clampedHp / maxHp;
+            float previousNormalized = hadShownHealth ? (float)shownHp / shownMaxHp : normalized;
+
             shownHp = clampedHp;
             shownMaxHp = maxHp;
-            SetFill(hpFillImage, hpFillTransform, (float)clampedHp / maxHp);
+            SetFill(hpFillImage, hpFillTransform, normalized);
+            if (!hadShownHealth || clampedHp <= 0 || normalized >= previousNormalized)
+            {
+                SyncDamageFill(normalized);
+            }
+            else
+            {
+                BeginDamageFill(previousNormalized, normalized);
+            }
+
             SetText(hpText, clampedHp, maxHp);
             SetVisible(clampedHp > 0);
         }
@@ -368,8 +392,76 @@ namespace DeckBattle
             shownMaxMana = -1;
             shownStatusVersion = -1;
             shownTotalShield = -1;
+            ResetDamageFill();
             SetStatuses(null, 0);
             SetVisible(false);
+        }
+
+        private void BeginDamageFill(float previousNormalized, float targetNormalized)
+        {
+            damageFillStart = Mathf.Max(shownDamageFill, previousNormalized);
+            damageFillTarget = Mathf.Clamp01(targetNormalized);
+            damageFillDelayRemaining = Mathf.Max(0f, damageFillDelay);
+            damageFillElapsed = 0f;
+            damageFillAnimating = true;
+            SetDamageFill(damageFillStart);
+        }
+
+        private void SyncDamageFill(float normalized)
+        {
+            damageFillAnimating = false;
+            damageFillDelayRemaining = 0f;
+            damageFillElapsed = 0f;
+            damageFillStart = normalized;
+            damageFillTarget = normalized;
+            SetDamageFill(normalized);
+        }
+
+        private void ResetDamageFill()
+        {
+            damageFillAnimating = false;
+            damageFillDelayRemaining = 0f;
+            damageFillElapsed = 0f;
+            damageFillStart = 0f;
+            damageFillTarget = 0f;
+            shownDamageFill = 0f;
+        }
+
+        public void TickDamageFill(float deltaTime)
+        {
+            if (!damageFillAnimating)
+            {
+                return;
+            }
+
+            float remainingDeltaTime = Mathf.Max(0f, deltaTime);
+            if (damageFillDelayRemaining > 0f)
+            {
+                if (remainingDeltaTime <= damageFillDelayRemaining)
+                {
+                    damageFillDelayRemaining -= remainingDeltaTime;
+                    return;
+                }
+
+                remainingDeltaTime -= damageFillDelayRemaining;
+                damageFillDelayRemaining = 0f;
+            }
+
+            float duration = Mathf.Max(0.01f, damageFillDuration);
+            damageFillElapsed += remainingDeltaTime;
+            float progress = Mathf.Clamp01(damageFillElapsed / duration);
+            SetDamageFill(Mathf.SmoothStep(damageFillStart, damageFillTarget, progress));
+            if (progress >= 1f)
+            {
+                damageFillAnimating = false;
+                SetDamageFill(damageFillTarget);
+            }
+        }
+
+        private void SetDamageFill(float normalized)
+        {
+            shownDamageFill = Mathf.Clamp01(normalized);
+            SetFill(hpDamageFillImage, hpDamageFillTransform, shownDamageFill);
         }
 
         private void EnsureStatusIconSlots()

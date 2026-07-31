@@ -44,8 +44,14 @@ namespace DeckBattle
             }
 
             bool cameraOrRootChanged = HasProjectionStateChanged(root, camera);
+            float deltaTime = Time.deltaTime;
             foreach (TrackedOverlay tracked in activeOverlays.Values)
             {
+                if (tracked.View != null)
+                {
+                    tracked.View.TickDamageFill(deltaTime);
+                }
+
                 UpdateOverlayPosition(tracked, root, camera, cameraOrRootChanged);
             }
         }
