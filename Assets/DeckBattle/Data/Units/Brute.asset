@@ -19,8 +19,8 @@ MonoBehaviour:
   CardArt: {fileID: 0}
   cardKind: 0
   UnitType: 0
-  MaxHp: 100
-  Attack: 25
+  MaxHp: 1000
+  Attack: 150
   Power: 4
   AttackRange: 1
   CritChance: 0
@@ -31,7 +31,7 @@ MonoBehaviour:
   ManaPerAttack: 10
   ManaPerDamageTaken: 10
   Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
-  Armor: 40
+  Armor: 50
   ArmorPenetration: 0
   Projectile: {fileID: 0}
   UnitPrefab: {fileID: 7506552908754966910, guid: 2450455a188ee904c8b0e83b91ac7496,

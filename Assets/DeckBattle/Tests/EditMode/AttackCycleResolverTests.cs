@@ -242,6 +242,24 @@ namespace DeckBattle.Tests
             AssertNoEvent(events, BattleEventType.AttackFired);
         }
 
+        [Test]
+        public void MeleeAttack_EmitsManaChangedAfterDamage()
+        {
+            BattleSimulation simulation = CreateSimulation(1f);
+            simulation.Units[0].NextAttackTime = 0d;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            events.Clear();
+            loop.Tick(events);
+
+            int damageEventIndex = FindEventIndex(events, BattleEventType.UnitDamaged, simulation.Units[1].UnitId);
+            int manaEventIndex = FindEventIndex(events, BattleEventType.UnitManaChanged, simulation.Units[0].UnitId);
+
+            Assert.Less(damageEventIndex, manaEventIndex);
+        }
+
         private static BattleSimulation CreateSimulation(float cooldown)
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
@@ -298,6 +316,20 @@ namespace DeckBattle.Tests
             {
                 Assert.AreNotEqual(type, events[i].Type);
             }
+        }
+
+        private static int FindEventIndex(BattleEventQueue events, BattleEventType type, int unitId)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == type && events[i].UnitId == unitId)
+                {
+                    return i;
+                }
+            }
+
+            Assert.Fail("Expected event " + type + " for unit " + unitId + ".");
+            return -1;
         }
     }
 }

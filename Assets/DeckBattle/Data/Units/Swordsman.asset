@@ -19,8 +19,8 @@ MonoBehaviour:
   CardArt: {fileID: 21300000, guid: 5141242596f87d34082e117b06fac658, type: 3}
   cardKind: 0
   UnitType: 0
-  MaxHp: 70
-  Attack: 15
+  MaxHp: 700
+  Attack: 110
   Power: 3
   AttackRange: 1
   CritChance: 0

@@ -25,6 +25,9 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1, simulation.Projectiles.Count);
             AssertEventTypeExists(events, BattleEventType.ProjectileLaunched);
             AssertEventTypeDoesNotExist(events, BattleEventType.UnitDamaged);
+            Assert.Less(
+                FindEventIndex(events, BattleEventType.ProjectileLaunched, simulation.Units[0].UnitId),
+                FindEventIndex(events, BattleEventType.UnitManaChanged, simulation.Units[0].UnitId));
         }
 
         [Test]
@@ -260,6 +263,20 @@ namespace DeckBattle.Tests
             }
 
             Assert.Fail("Expected mana event was not emitted for unit " + unitId + " with mana " + currentMana + ".");
+        }
+
+        private static int FindEventIndex(BattleEventQueue events, BattleEventType type, int unitId)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == type && events[i].UnitId == unitId)
+                {
+                    return i;
+                }
+            }
+
+            Assert.Fail("Expected event " + type + " for unit " + unitId + ".");
+            return -1;
         }
     }
 }

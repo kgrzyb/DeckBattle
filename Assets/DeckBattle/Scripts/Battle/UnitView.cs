@@ -15,12 +15,17 @@ namespace DeckBattle
             Dead = 4
         }
 
-        private static readonly int IdleTrigger = Animator.StringToHash("idle");
-        private static readonly int RunTrigger = Animator.StringToHash("run");
-        private static readonly int AttackTrigger = Animator.StringToHash("attack");
+        private const int AnimatorLayerIndex = 0;
+        private const float LocomotionTransitionDuration = 0.1f;
+        private const float ActionTransitionDuration = 0.08f;
+        private const float DeathTransitionDuration = 0.05f;
+
+        private static readonly int IdleState = Animator.StringToHash("Base Layer.Idle");
+        private static readonly int RunState = Animator.StringToHash("Base Layer.Run");
+        private static readonly int AttackState = Animator.StringToHash("Base Layer.Attack");
         private static readonly int AttackSpeedParameter = Animator.StringToHash("attackSpeed");
-        private static readonly int SpecialTrigger = Animator.StringToHash("special");
-        private static readonly int DeadTrigger = Animator.StringToHash("dead");
+        private static readonly int SpecialState = Animator.StringToHash("Base Layer.Special");
+        private static readonly int DeadState = Animator.StringToHash("Base Layer.Dead");
 
         [SerializeField] private MeshRenderer meshRenderer;
         [SerializeField] private Transform modelRoot;
@@ -430,15 +435,10 @@ namespace DeckBattle
                 return;
             }
 
-            animator.ResetTrigger(IdleTrigger);
-            animator.ResetTrigger(RunTrigger);
-            animator.ResetTrigger(AttackTrigger);
-            animator.ResetTrigger(SpecialTrigger);
-            animator.ResetTrigger(DeadTrigger);
             animator.Rebind();
             animator.Update(0f);
             animator.SetFloat(AttackSpeedParameter, 1f);
-            animator.SetTrigger(IdleTrigger);
+            animator.Play(IdleState, AnimatorLayerIndex, 0f);
         }
 
         private float CalculateAttackAnimationSpeed(float actualDuration)
@@ -467,13 +467,37 @@ namespace DeckBattle
                 return;
             }
 
-            switch (nextState)
+            animator.CrossFadeInFixedTime(
+                GetAnimatorState(nextState),
+                GetTransitionDuration(nextState),
+                AnimatorLayerIndex,
+                0f);
+        }
+
+        private static int GetAnimatorState(UnitVisualState state)
+        {
+            switch (state)
             {
-                case UnitVisualState.Idle: animator.SetTrigger(IdleTrigger); break;
-                case UnitVisualState.Run: animator.SetTrigger(RunTrigger); break;
-                case UnitVisualState.Attack: animator.SetTrigger(AttackTrigger); break;
-                case UnitVisualState.Special: animator.SetTrigger(SpecialTrigger); break;
-                case UnitVisualState.Dead: animator.SetTrigger(DeadTrigger); break;
+                case UnitVisualState.Idle: return IdleState;
+                case UnitVisualState.Run: return RunState;
+                case UnitVisualState.Attack: return AttackState;
+                case UnitVisualState.Special: return SpecialState;
+                case UnitVisualState.Dead: return DeadState;
+                default: return IdleState;
+            }
+        }
+
+        private static float GetTransitionDuration(UnitVisualState state)
+        {
+            switch (state)
+            {
+                case UnitVisualState.Idle:
+                case UnitVisualState.Run:
+                    return LocomotionTransitionDuration;
+                case UnitVisualState.Dead:
+                    return DeathTransitionDuration;
+                default:
+                    return ActionTransitionDuration;
             }
         }
     }

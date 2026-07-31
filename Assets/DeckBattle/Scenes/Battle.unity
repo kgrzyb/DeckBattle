@@ -819,7 +819,6 @@ MonoBehaviour:
   randomizeSeedOnPlay: 1
   seed: 71347135
   boardPresenter: {fileID: 1201968723}
-  unitRoot: {fileID: 763315698}
   battleView: {fileID: 225271485}
   combatRunner: {fileID: 225271488}
   statusOverlayController: {fileID: 641749120}

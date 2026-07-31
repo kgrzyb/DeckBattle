@@ -19,8 +19,8 @@ MonoBehaviour:
   CardArt: {fileID: 0}
   cardKind: 0
   UnitType: 1
-  MaxHp: 30
-  Attack: 20
+  MaxHp: 300
+  Attack: 120
   Power: 3
   AttackRange: 4
   CritChance: 0

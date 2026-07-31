@@ -161,8 +161,6 @@ namespace DeckBattle
                     out bool isCritical);
                 attacker.AttackBonusNextCombat = 0;
 
-                CombatResolver.AddMana(simulation, attacker, attacker.CombatSpec.ManaPerAttack, eventQueue);
-
                 ProjectileCombatSpec projectileSpec = attacker.CombatSpec.Projectile;
                 bool useProjectile = attacker.CombatSpec.UnitType == UnitType.Range && projectileSpec.IsValid;
                 if (useProjectile)
@@ -181,6 +179,7 @@ namespace DeckBattle
                         projectile.LastKnownTargetHex,
                         projectile.TravelDuration,
                         projectileSpec.PresentationId));
+                    CombatResolver.AddMana(simulation, attacker, attacker.CombatSpec.ManaPerAttack, eventQueue);
                 }
                 else
                 {
@@ -191,6 +190,7 @@ namespace DeckBattle
                         damage,
                         isCritical,
                         eventQueue);
+                    CombatResolver.AddMana(simulation, attacker, attacker.CombatSpec.ManaPerAttack, eventQueue);
                     if (hit.DidHit)
                     {
                         totalDamage += hit.Damage;
