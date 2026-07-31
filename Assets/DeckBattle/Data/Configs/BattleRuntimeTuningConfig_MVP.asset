@@ -18,7 +18,7 @@ MonoBehaviour:
   MaxPursuitStepsAfterAttack: 2
   MaxStatusesPerUnit: 8
   MinDamageMultiplier: 0.1
-  MaxDamageMultiplier: 5
+  MaxDamageMultiplier: 10
   MinAttackCooldownMultiplier: 0.1
-  MaxAttackCooldownMultiplier: 4
+  MaxAttackCooldownMultiplier: 2.5
   MaxMovementSlowMultiplier: 3

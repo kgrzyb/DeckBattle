@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: BattleTimingConfig_MVP
   m_EditorClassIdentifier: 
   CombatTickDuration: 0.15
-  MaxCombatTicks: 1000
-  MaxTicksPerFrame: 4
+  MaxCombatTicks: 2000
+  MaxTicksPerFrame: 6
   RoundResolutionDelay: 0.25
