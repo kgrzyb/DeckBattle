@@ -33,6 +33,7 @@ namespace DeckBattle
             }
 
             view.Bind(state, boardPresenter.GetWorldPosition(state.Hex));
+            view.FaceWorldPosition(boardPresenter.GetWorldCenter(), true);
             statusOverlayController?.BindPresentationUnit(state, view);
             statusVfxController?.BindPresentationUnit(state.UnitId, view);
         }

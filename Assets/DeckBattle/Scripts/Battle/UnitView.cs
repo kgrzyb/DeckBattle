@@ -203,7 +203,7 @@ namespace DeckBattle
             TriggerAnimation(UnitVisualState.Idle);
         }
 
-        public void FaceWorldPosition(Vector3 worldPosition)
+        public void FaceWorldPosition(Vector3 worldPosition, bool immediately = false)
         {
             if (modelRoot == null)
             {
@@ -218,6 +218,13 @@ namespace DeckBattle
             }
 
             facingTargetRotation = Quaternion.LookRotation(direction.normalized, Vector3.up) * baseModelRotation;
+            if (immediately)
+            {
+                modelRoot.rotation = facingTargetRotation;
+                isTurning = false;
+                return;
+            }
+
             isTurning = Quaternion.Angle(modelRoot.rotation, facingTargetRotation) > 0.01f;
         }
 

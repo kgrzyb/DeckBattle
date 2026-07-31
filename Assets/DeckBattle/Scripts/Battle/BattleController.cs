@@ -740,6 +740,7 @@ namespace DeckBattle
             }
 
             view.Bind(unit, boardPresenter.GetWorldPosition(unit.BattleCoord));
+            view.FaceWorldPosition(boardPresenter.GetWorldCenter(), true);
             BindStatusOverlay(unit, view);
         }
 

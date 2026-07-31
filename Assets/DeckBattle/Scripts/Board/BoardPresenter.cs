@@ -69,6 +69,18 @@ namespace DeckBattle
             return transform.TransformPoint(board.ToLocalPosition(coord));
         }
 
+        public Vector3 GetWorldCenter()
+        {
+            if (board == null)
+            {
+                return transform.position;
+            }
+
+            Vector3 localMin = board.ToLocalPosition(new HexCoord(0, 0));
+            Vector3 localMax = board.ToLocalPosition(new HexCoord(board.Width - 1, board.Height - 1));
+            return transform.TransformPoint((localMin + localMax) * 0.5f);
+        }
+
         public HexTileView GetTileView(HexCoord coord)
         {
             HexTileView tile;
