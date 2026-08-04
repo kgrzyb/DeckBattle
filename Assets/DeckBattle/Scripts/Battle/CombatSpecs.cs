@@ -237,7 +237,7 @@ namespace DeckBattle
                 definition.AttackRange,
                 definition.CritChance,
                 definition.CritMultiplier,
-                definition.AttackCooldown,
+                1f / Math.Max(0.001f, definition.AttacksPerSecond),
                 definition.AttackWindupPercent,
                 definition.ManaThreshold,
                 definition.ManaPerAttack,

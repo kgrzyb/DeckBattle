@@ -111,7 +111,7 @@ namespace DeckBattle.Tests
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
             UnitDefinition target = TestDefinitions.CreateUnit("target", 1);
-            target.AttackCooldown = 999f;
+            target.AttacksPerSecond = 1f / 999f;
             return BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),
                 new[]

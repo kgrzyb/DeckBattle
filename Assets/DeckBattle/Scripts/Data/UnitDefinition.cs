@@ -29,7 +29,7 @@ namespace DeckBattle
         public int AttackRange = 1;
         public float CritChance = 0f;
         public float CritMultiplier = 2f;
-        public float AttackCooldown = 1f;
+        [Min(0.001f)] public float AttacksPerSecond = 1f;
         [Range(0f, 1f)] public float AttackWindupPercent = 0.25f;
         public int ManaThreshold = 100;
         public int ManaPerAttack = 10;
@@ -50,7 +50,7 @@ namespace DeckBattle
             AttackRange = Mathf.Max(1, AttackRange);
             CritChance = Mathf.Clamp(CritChance, 0f, 100f);
             CritMultiplier = Mathf.Max(1f, CritMultiplier);
-            AttackCooldown = Mathf.Max(0.01f, AttackCooldown);
+            AttacksPerSecond = Mathf.Max(0.001f, AttacksPerSecond);
             AttackWindupPercent = Mathf.Clamp01(AttackWindupPercent);
             ManaThreshold = Mathf.Max(0, ManaThreshold);
             ManaPerAttack = Mathf.Max(0, ManaPerAttack);

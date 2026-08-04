@@ -147,7 +147,7 @@ namespace DeckBattle
             SetText(powerText, "Power " + definition.Power);
             SetText(attackRangeText, "Range " + definition.AttackRange);
             SetText(critText, "Crit " + FormatPercent(definition.CritChance) + " x" + FormatNumber(definition.CritMultiplier));
-            SetText(cooldownText, "Cooldown " + FormatNumber(definition.AttackCooldown) + "s");
+            SetText(cooldownText, "Attack speed " + FormatNumber(definition.AttacksPerSecond) + "/s");
             SetText(manaText, "Mana " + definition.ManaThreshold + " / +" + definition.ManaPerAttack + " atk / +" + definition.ManaPerDamageTaken + " hit");
             SetText(armorText, "Armor " + FormatPercent(definition.Armor));
             SetText(armorPenetrationText, "Pen " + FormatPercent(definition.ArmorPenetration));

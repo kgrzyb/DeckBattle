@@ -85,7 +85,7 @@ namespace DeckBattle.Tests
             unit.Attack = attack;
             unit.AttackRange = attackRange;
             unit.Power = power;
-            unit.AttackCooldown = 1f;
+            unit.AttacksPerSecond = 1f;
             return unit;
         }
 

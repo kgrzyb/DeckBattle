@@ -25,7 +25,7 @@ MonoBehaviour:
   AttackRange: 4
   CritChance: 0
   CritMultiplier: 2
-  AttackCooldown: 1.7
+  AttacksPerSecond: 0.5882353
   AttackWindupPercent: 0.3
   ManaThreshold: 100
   ManaPerAttack: 25

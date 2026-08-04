@@ -31,7 +31,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(new HexCoord(1, 1), player.CurrentHex);
             Assert.AreEqual(playerDefinition.MaxHp, player.CurrentHp);
             Assert.AreEqual(UnitRuntimeState.NoTargetUnitId, player.TargetUnitId);
-            Assert.That(player.NextAttackTime, Is.EqualTo(playerDefinition.AttackCooldown).Within(0.000001d));
+            Assert.That(player.NextAttackTime, Is.EqualTo(1f / playerDefinition.AttacksPerSecond).Within(0.000001d));
             Assert.AreEqual(0, player.CurrentMana);
             Assert.IsTrue(player.IsAlive);
 

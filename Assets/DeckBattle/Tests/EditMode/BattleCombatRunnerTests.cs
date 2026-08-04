@@ -121,12 +121,12 @@ namespace DeckBattle.Tests
             UnitDefinition player = TestDefinitions.CreateUnit("runner-player", 1);
             player.Attack = 1;
             player.AttackRange = 1;
-            player.AttackCooldown = 10f;
+            player.AttacksPerSecond = 0.1f;
 
             UnitDefinition enemy = TestDefinitions.CreateUnit("runner-enemy", 1);
             enemy.Attack = 1;
             enemy.AttackRange = 1;
-            enemy.AttackCooldown = 10f;
+            enemy.AttacksPerSecond = 0.1f;
 
             return BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),
@@ -142,14 +142,14 @@ namespace DeckBattle.Tests
             UnitDefinition player = TestDefinitions.CreateUnit("runner-player", 1);
             player.Attack = 5;
             player.AttackRange = 3;
-            player.AttackCooldown = 1f;
+            player.AttacksPerSecond = 1f;
             player.AttackWindupPercent = 0.5f;
 
             UnitDefinition enemy = TestDefinitions.CreateUnit("runner-enemy", 1);
             enemy.MaxHp = 3;
             enemy.Attack = 0;
             enemy.AttackRange = 1;
-            enemy.AttackCooldown = 1f;
+            enemy.AttacksPerSecond = 1f;
 
             return BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),

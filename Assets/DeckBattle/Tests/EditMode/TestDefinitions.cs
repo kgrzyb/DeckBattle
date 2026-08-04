@@ -54,7 +54,7 @@ namespace DeckBattle.Tests
             unit.AttackRange = 1;
             unit.CritChance = 0f;
             unit.CritMultiplier = 2f;
-            unit.AttackCooldown = 1f;
+            unit.AttacksPerSecond = 1f;
             unit.AttackWindupPercent = 0.25f;
             unit.ManaThreshold = 100;
             unit.ManaPerAttack = 10;

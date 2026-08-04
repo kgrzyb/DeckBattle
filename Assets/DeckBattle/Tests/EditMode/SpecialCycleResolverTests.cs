@@ -190,11 +190,11 @@ namespace DeckBattle.Tests
         private static BattleSimulation CreateSimulation(float windupDuration, float castDuration = 0f)
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
-            attacker.AttackCooldown = 10f;
+            attacker.AttacksPerSecond = 0.1f;
             attacker.ManaThreshold = 10;
             attacker.Special = CreateHasteBurstSpecial(windupDuration, castDuration);
             UnitDefinition target = TestDefinitions.CreateUnit("target", 1);
-            target.AttackCooldown = 999f;
+            target.AttacksPerSecond = 1f / 999f;
             return BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),
                 new[]

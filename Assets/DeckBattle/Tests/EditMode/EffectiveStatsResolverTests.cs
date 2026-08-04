@@ -48,9 +48,9 @@ namespace DeckBattle.Tests
         private static BattleSimulation CreateSimulation()
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
-            attacker.AttackCooldown = 1f;
+            attacker.AttacksPerSecond = 1f;
             UnitDefinition target = TestDefinitions.CreateUnit("target", 1);
-            target.AttackCooldown = 999f;
+            target.AttacksPerSecond = 1f / 999f;
             return BattleSimulation.Create(new HexBoard(5, 6, 1f), new[]
             {
                 new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),

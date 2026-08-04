@@ -82,7 +82,7 @@ namespace DeckBattle.Tests
             player.MaxHp = 10;
             player.Attack = 3;
             player.AttackRange = 2;
-            player.AttackCooldown = 0.5f;
+            player.AttacksPerSecond = 2f;
             player.AttackWindupPercent = 0.5f;
             player.CritChance = 35f;
 
@@ -90,7 +90,7 @@ namespace DeckBattle.Tests
             enemy.MaxHp = 7;
             enemy.Attack = 1;
             enemy.AttackRange = 1;
-            enemy.AttackCooldown = 0.5f;
+            enemy.AttacksPerSecond = 2f;
             enemy.AttackWindupPercent = 0.5f;
 
             state.Player.Units.Add(new RuntimeUnit(1, player, BattleSide.Player, new HexCoord(0, 0)));

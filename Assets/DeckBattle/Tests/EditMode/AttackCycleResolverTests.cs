@@ -96,12 +96,12 @@ namespace DeckBattle.Tests
         public void MovementStep_BlocksWindupUntilItsFullDurationEnds()
         {
             UnitDefinition attackerDefinition = TestDefinitions.CreateUnit("moving-attacker", 1);
-            attackerDefinition.AttackCooldown = 1f;
+            attackerDefinition.AttacksPerSecond = 1f;
             attackerDefinition.AttackWindupPercent = 0.25f;
 
             UnitDefinition targetDefinition = TestDefinitions.CreateUnit("stationary-target", 1);
             targetDefinition.AttackRange = 3;
-            targetDefinition.AttackCooldown = 999f;
+            targetDefinition.AttacksPerSecond = 1f / 999f;
 
             var tuning = new BattleRuntimeTuning(1f, 0, 0.4f);
             BattleSimulation simulation = BattleSimulation.Create(
@@ -264,13 +264,13 @@ namespace DeckBattle.Tests
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
             attacker.Attack = 1;
-            attacker.AttackCooldown = cooldown;
+            attacker.AttacksPerSecond = 1f / cooldown;
             attacker.AttackWindupPercent = 0.25f;
 
             UnitDefinition target = TestDefinitions.CreateUnit("target", 1);
             target.MaxHp = 5;
             target.Attack = 0;
-            target.AttackCooldown = 999f;
+            target.AttacksPerSecond = 1f / 999f;
 
             return BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),

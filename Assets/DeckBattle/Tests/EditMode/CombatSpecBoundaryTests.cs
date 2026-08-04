@@ -20,6 +20,7 @@ namespace DeckBattle.Tests
             definition.MaxHp = 11;
             definition.Attack = 4;
             definition.ManaThreshold = 30;
+            definition.AttacksPerSecond = 2.5f;
 
             BattleSimulation simulation = BattleSimulation.Create(
                 new HexBoard(3, 3, 1f),
@@ -33,6 +34,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(11, combatSpec.MaxHp);
             Assert.AreEqual(4, combatSpec.Attack);
             Assert.AreEqual(30, combatSpec.ManaThreshold);
+            Assert.That(combatSpec.AttackCooldown, Is.EqualTo(0.4f).Within(0.000001f));
         }
 
         [Test]

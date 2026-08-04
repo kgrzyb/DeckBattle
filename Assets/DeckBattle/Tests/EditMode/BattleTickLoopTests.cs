@@ -461,7 +461,7 @@ namespace DeckBattle.Tests
             definition.MaxHp = hp;
             definition.Attack = attack;
             definition.AttackRange = attackRange;
-            definition.AttackCooldown = attackCooldown;
+            definition.AttacksPerSecond = 1f / attackCooldown;
             return definition;
         }
     }
