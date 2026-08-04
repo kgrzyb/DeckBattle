@@ -162,6 +162,66 @@ namespace DeckBattle.Tests
             }
         }
 
+        [Test]
+        public void QueuedMovement_ConsumesRemainingFrameTimeOnFollowingWaypoint()
+        {
+            GameObject unitObject = new GameObject("Unit", typeof(UnitView));
+            GameObject modelObject = new GameObject("Model");
+            try
+            {
+                modelObject.transform.SetParent(unitObject.transform);
+                UnitView view = unitObject.GetComponent<UnitView>();
+                SetPrivateField(view, "modelRoot", modelObject.transform);
+                InvokePrivateMethod(view, "Awake");
+
+                view.SetWorldPosition(Vector3.zero);
+                view.MoveToWorldPosition(Vector3.forward, 1f);
+                view.MoveToWorldPosition(Vector3.forward * 2f, 1f);
+
+                InvokePrivateMethod(view, "UpdateMovement", 1.25f);
+
+                Assert.That(unitObject.transform.position.z, Is.EqualTo(1.25f).Within(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(unitObject);
+            }
+        }
+
+        [Test]
+        public void MovementCompletion_DoesNotInterruptAttackWindupStartedDuringMovement()
+        {
+            GameObject unitObject = new GameObject("Unit", typeof(UnitView));
+            try
+            {
+                UnitView view = unitObject.GetComponent<UnitView>();
+                InvokePrivateMethod(view, "Awake");
+
+                view.SetWorldPosition(Vector3.zero);
+                view.MoveToWorldPosition(Vector3.forward, 0.25f);
+                view.BeginAttackWindup(1, 0.25f);
+
+                InvokePrivateMethod(view, "UpdateMovement", 0.25f);
+
+                object visualState = view.GetType()
+                    .GetField("visualState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .GetValue(view);
+                Assert.AreEqual("Attack", visualState.ToString());
+            }
+            finally
+            {
+                Object.DestroyImmediate(unitObject);
+            }
+        }
+
+        [Test]
+        public void PresentationMovementDuration_MatchesTheNextPossibleSimulationStep()
+        {
+            float duration = BattleUnitPresenter.CalculatePresentationMovementDuration(0.4f, 0.35f);
+
+            Assert.That(duration, Is.EqualTo(0.7f).Within(0.001f));
+        }
+
         private static void SetPrivateField(object target, string fieldName, object value)
         {
             target.GetType()

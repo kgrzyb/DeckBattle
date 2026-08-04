@@ -419,6 +419,7 @@ namespace DeckBattle
                 tickDuration,
                 ResolveMaxCombatTicks(),
                 ResolveMaxTicksPerFrame());
+            resolvedBattleView.SetPresentationTickDuration(tickDuration);
             resolvedBattleView.BindInitialState(resolvedCombatRunner.PresentationSnapshot);
             SubscribeCombatRunner(resolvedCombatRunner, resolvedBattleView);
 

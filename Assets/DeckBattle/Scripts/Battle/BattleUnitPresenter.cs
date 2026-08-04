@@ -45,8 +45,15 @@ namespace DeckBattle
                 return;
             }
 
-            float duration = battleEvent.Duration > 0f ? battleEvent.Duration : defaultTickDuration;
+            float duration = CalculatePresentationMovementDuration(battleEvent.Duration, defaultTickDuration);
             view.MoveToWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To), duration);
+        }
+
+        internal static float CalculatePresentationMovementDuration(float movementDuration, float tickDuration)
+        {
+            float safeTickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, tickDuration);
+            float safeMovementDuration = movementDuration > 0f ? movementDuration : safeTickDuration;
+            return Mathf.Ceil(safeMovementDuration / safeTickDuration) * safeTickDuration;
         }
 
         public void HandleDamaged(BattleEvent battleEvent)

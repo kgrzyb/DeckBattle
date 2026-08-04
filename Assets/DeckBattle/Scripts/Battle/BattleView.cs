@@ -37,6 +37,18 @@ namespace DeckBattle
             get { return EnsureUnitViewRegistry(); }
         }
 
+        public void SetPresentationTickDuration(float tickDuration)
+        {
+            float safeDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, tickDuration);
+            if (Mathf.Approximately(presentationTickDuration, safeDuration))
+            {
+                return;
+            }
+
+            presentationTickDuration = safeDuration;
+            unitPresenter = null;
+        }
+
         private void Awake()
         {
             if (statusOverlayController != null)

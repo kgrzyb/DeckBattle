@@ -315,19 +315,36 @@ namespace DeckBattle
                 return;
             }
 
-            moveElapsed += deltaTime;
-            float normalized = Mathf.Clamp01(moveElapsed / moveDuration);
-            float eased = normalized * normalized * (3f - 2f * normalized);
-            transform.position = Vector3.LerpUnclamped(moveFrom, moveTo, eased);
-
-            if (normalized >= 1f)
+            float remainingDeltaTime = Mathf.Max(0f, deltaTime);
+            while (isMoving)
             {
+                float segmentTimeRemaining = Mathf.Max(0f, moveDuration - moveElapsed);
+                if (segmentTimeRemaining > remainingDeltaTime)
+                {
+                    moveElapsed += remainingDeltaTime;
+                    float normalized = moveElapsed / moveDuration;
+                    transform.position = Vector3.LerpUnclamped(moveFrom, moveTo, normalized);
+                    return;
+                }
+
                 transform.position = moveTo;
+                remainingDeltaTime -= segmentTimeRemaining;
                 if (!TryStartNextQueuedMove())
                 {
                     isMoving = false;
                     FaceLastKnownTarget();
-                    TriggerAnimation(UnitVisualState.Idle);
+                    if (visualState == UnitVisualState.Run)
+                    {
+                        TriggerAnimation(UnitVisualState.Idle);
+                    }
+                    return;
+                }
+
+                // Consume leftover frame time on the following waypoint so the view
+                // retains its velocity while crossing adjacent hexes.
+                if (remainingDeltaTime <= 0f)
+                {
+                    return;
                 }
             }
         }
