@@ -49,6 +49,7 @@ namespace DeckBattle
         public HexCoord MovementDestination;
         public float MovementTimeRemaining;
         public int AttackBonusNextCombat;
+        public float BaseAttackBonusPercent;
         public bool IsDefeated;
         public readonly UnitStatusCollection Statuses;
         public UnitStatusSnapshot StatusSnapshot;
@@ -96,6 +97,7 @@ namespace DeckBattle
             MovementDestination = startHex;
             MovementTimeRemaining = 0f;
             AttackBonusNextCombat = Math.Max(0, attackBonusNextCombat);
+            BaseAttackBonusPercent = 0f;
             IsDefeated = false;
             Statuses = new UnitStatusCollection(maxStatusesPerUnit);
             StatusSnapshot = default;
@@ -179,6 +181,7 @@ namespace DeckBattle
             MovementDestination = startHex;
             MovementTimeRemaining = 0f;
             AttackBonusNextCombat = 0;
+            BaseAttackBonusPercent = 0f;
             IsDefeated = false;
             Statuses.Clear();
             StatusSnapshot = default;

@@ -21,6 +21,7 @@ namespace DeckBattle
         [SerializeField] private TextMeshProUGUI manaText;
         [SerializeField] private TextMeshProUGUI armorText;
         [SerializeField] private TextMeshProUGUI armorPenetrationText;
+        [SerializeField] private TextMeshProUGUI onPlayEffectText;
         [SerializeField] private TextMeshProUGUI typeText;
         [SerializeField] private TextMeshProUGUI rarityText;
         [SerializeField] private GameObject unitDetailsRoot;
@@ -151,6 +152,7 @@ namespace DeckBattle
             SetText(manaText, "Mana " + definition.ManaThreshold + " / +" + definition.ManaPerAttack + " atk / +" + definition.ManaPerDamageTaken + " hit");
             SetText(armorText, "Armor " + FormatPercent(definition.Armor));
             SetText(armorPenetrationText, "Pen " + FormatPercent(definition.ArmorPenetration));
+            SetText(onPlayEffectText, FormatOnPlayEffect(definition));
         }
 
         private void ApplySpellDetails(SpellDefinition definition)
@@ -191,6 +193,7 @@ namespace DeckBattle
             SetText(manaText, string.Empty);
             SetText(armorText, string.Empty);
             SetText(armorPenetrationText, string.Empty);
+            SetText(onPlayEffectText, string.Empty);
         }
 
         private void SetUnitDetailsVisible(bool visible)
@@ -205,6 +208,7 @@ namespace DeckBattle
             SetTextActive(manaText, visible);
             SetTextActive(armorText, visible);
             SetTextActive(armorPenetrationText, visible);
+            SetTextActive(onPlayEffectText, visible);
         }
 
         private void SetSpellDetailsVisible(bool visible)
@@ -293,6 +297,16 @@ namespace DeckBattle
             }
 
             return string.Empty;
+        }
+
+        private static string FormatOnPlayEffect(UnitDefinition definition)
+        {
+            if (definition == null || definition.OnPlayEffect == null)
+            {
+                return string.Empty;
+            }
+
+            return definition.OnPlayEffect.Description;
         }
 
         private static string FormatNumber(float value)
@@ -406,6 +420,12 @@ namespace DeckBattle
             if (manaText == null)
             {
                 manaText = CreateText("Mana", new Vector2(0.49f, 0.09f), new Vector2(0.94f, 0.22f), 20, TextAlignmentOptions.Left, "Mana 100", unitParent);
+            }
+
+            if (onPlayEffectText == null)
+            {
+                onPlayEffectText = CreateText("OnPlayEffect", new Vector2(0.27f, 0f), new Vector2(0.94f, 0.08f), 17, TextAlignmentOptions.Left, "", unitParent);
+                onPlayEffectText.enableWordWrapping = true;
             }
 
             if (spellTargetText == null)

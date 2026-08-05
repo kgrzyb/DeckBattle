@@ -48,7 +48,7 @@ namespace DeckBattle
                 return Reject(target, request, StatusApplicationResult.RejectedFearless, eventQueue);
             }
 
-            float duration = request.Duration >= 0f ? request.Duration : definition.DefaultDuration;
+            float duration = ResolveDuration(request, definition);
             if (duration <= 0f)
             {
                 return Reject(target, request, StatusApplicationResult.RejectedInvalid, eventQueue);
@@ -202,6 +202,21 @@ namespace DeckBattle
             }
 
             return (1f + accumulated) * (1f + value) - 1f;
+        }
+
+        private static float ResolveDuration(StatusApplicationRequest request, StatusCombatSpec definition)
+        {
+            if (request.LifetimeMode == StatusLifetimeMode.UntilCombatEnds)
+            {
+                return float.PositiveInfinity;
+            }
+
+            if (request.LifetimeMode == StatusLifetimeMode.OverrideSeconds)
+            {
+                return request.Duration;
+            }
+
+            return request.Duration >= 0f ? request.Duration : definition.DefaultDuration;
         }
 
         private static StatusApplicationResult Reject(UnitRuntimeState target, StatusApplicationRequest request, StatusApplicationResult reason, BattleEventQueue eventQueue)

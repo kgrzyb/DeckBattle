@@ -18,6 +18,7 @@ namespace DeckBattle
         public BattleSide InitialPreparationSide { get; private set; }
         public BattleSide ActivePreparationSide { get; internal set; }
         public int RoundNumber { get; private set; }
+        public PendingCombatEffectQueue PendingCombatEffects { get; private set; }
 
         private BattleState()
         {
@@ -50,7 +51,8 @@ namespace DeckBattle
                 Phase = BattlePhase.Preparation,
                 InitialPreparationSide = initialPreparationSide,
                 ActivePreparationSide = initialPreparationSide,
-                RoundNumber = 1
+                RoundNumber = 1,
+                PendingCombatEffects = new PendingCombatEffectQueue(config.MaxPendingCombatEffects)
             };
 
             var rng = new DeterministicRandom(seed);
@@ -99,6 +101,7 @@ namespace DeckBattle
             RoundNumber++;
             Phase = BattlePhase.RoundStart;
             ActivePreparationSide = GetPreparationStarterForRound();
+            PendingCombatEffects.RemoveBeforeRound(RoundNumber);
 
             PreparePlayerForNextRound(Player);
             PreparePlayerForNextRound(Enemy);

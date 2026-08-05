@@ -22,6 +22,12 @@ namespace DeckBattle
             return Clamp(1f + unit.StatusSnapshot.Empower - unit.StatusSnapshot.Weaken, tuning.MinDamageMultiplier, tuning.MaxDamageMultiplier);
         }
 
+        public static float GetBaseAttackMultiplier(UnitRuntimeState unit, BattleRuntimeTuning tuning)
+        {
+            if (unit == null) return 1f;
+            return Clamp(1f + unit.BaseAttackBonusPercent, 1f, tuning.MaxDamageMultiplier);
+        }
+
         public static float GetCriticalMultiplier(UnitRuntimeState unit)
         {
             return unit == null ? 1f : Math.Max(1f, unit.CombatSpec.CritMultiplier + unit.StatusSnapshot.Criticality);

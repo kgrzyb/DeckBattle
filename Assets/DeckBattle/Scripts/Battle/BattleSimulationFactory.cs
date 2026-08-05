@@ -31,7 +31,10 @@ namespace DeckBattle
             var spawnData = new List<UnitSpawnData>(state.Player.Units.Count + state.Enemy.Units.Count);
             AddUnits(state.Player.Units, spawnData);
             AddUnits(state.Enemy.Units, spawnData);
-            return BattleSimulation.Create(state.Board, spawnData, tuning);
+            BattleSimulation simulation = BattleSimulation.Create(state.Board, spawnData, tuning);
+            ApplyPendingCombatEffects(state, simulation);
+            InitializeAttackCooldowns(simulation);
+            return simulation;
         }
 
         private static void AddUnits(IList<RuntimeUnit> units, List<UnitSpawnData> spawnData)
@@ -51,6 +54,35 @@ namespace DeckBattle
                     unit.BattleCoord,
                     unit.AttackBonusNextCombat,
                     unit.Definition != null ? unit.Definition.DisplayName : null));
+            }
+        }
+
+        private static void ApplyPendingCombatEffects(BattleState state, BattleSimulation simulation)
+        {
+            PendingCombatEffectQueue effects = state.PendingCombatEffects;
+            for (int i = 0; i < effects.Count; i++)
+            {
+                PendingCombatEffect effect = effects[i];
+                if (effect.ScheduledRoundNumber != state.RoundNumber)
+                {
+                    continue;
+                }
+
+                CombatEffectResolver.TryResolveInitial(simulation, effect);
+            }
+        }
+
+        private static void InitializeAttackCooldowns(BattleSimulation simulation)
+        {
+            for (int i = 0; i < simulation.Units.Count; i++)
+            {
+                UnitRuntimeState unit = simulation.Units[i];
+                if (unit == null || !unit.IsAlive)
+                {
+                    continue;
+                }
+
+                unit.NextAttackTime = simulation.Tuning.GetAttackCooldown(unit.CombatSpec, unit);
             }
         }
     }

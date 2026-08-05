@@ -49,6 +49,36 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Snapshot_CapturesStatusesAlreadyActiveAtCombatStart()
+        {
+            UnitDefinition definition = TestDefinitions.CreateUnit("focused", 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(3, 3, 1f),
+                new[] { new UnitSpawnData(1, definition, BattleSide.Player, new HexCoord(0, 0)) });
+            StatusDefinition status = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
+            status.Kind = StatusKind.Haste;
+            status.Category = StatusCategory.Beneficial;
+            status.StackingRule = StatusStackingRule.RefreshPerSource;
+            status.DefaultDuration = 1f;
+            status.DefaultMagnitude = 0.25f;
+
+            Assert.AreEqual(
+                StatusApplicationResult.Applied,
+                StatusResolver.TryApply(
+                    simulation,
+                    simulation.Units[0],
+                    new StatusApplicationRequest(status, 1, lifetimeMode: StatusLifetimeMode.UntilCombatEnds)));
+
+            var snapshot = new BattlePresentationSnapshot(1);
+            snapshot.Capture(simulation);
+
+            Assert.AreEqual(1, snapshot.Units[0].StatusCount);
+            Assert.AreEqual(1, snapshot.Statuses.Count);
+            Assert.AreEqual(StatusKind.Haste, snapshot.Statuses[0].Kind);
+            Assert.AreEqual(1, snapshot.Statuses[0].SourceUnitId);
+        }
+
+        [Test]
         public void ProjectileEvent_CarriesStablePresentationId()
         {
             ProjectileDefinition definition = TestDefinitions.Track(ScriptableObject.CreateInstance<ProjectileDefinition>());

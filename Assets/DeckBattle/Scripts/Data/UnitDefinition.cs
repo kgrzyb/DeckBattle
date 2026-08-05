@@ -39,6 +39,7 @@ namespace DeckBattle
         public float ArmorPenetration = 0f;
         public ProjectileDefinition Projectile;
         public UnitView UnitPrefab;
+        public UnitOnPlayEffectDefinition OnPlayEffect;
 
         protected override void OnValidate()
         {

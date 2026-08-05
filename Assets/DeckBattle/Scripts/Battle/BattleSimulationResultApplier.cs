@@ -18,6 +18,7 @@ namespace DeckBattle
 
             ApplyUnits(state.Player, simulation);
             ApplyUnits(state.Enemy, simulation);
+            state.PendingCombatEffects.RemoveForRound(state.RoundNumber);
         }
 
         private static void ApplyUnits(PlayerBattleState player, BattleSimulation simulation)

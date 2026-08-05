@@ -12,7 +12,9 @@ namespace DeckBattle
             isCritical = RollCritical(attacker.CombatSpec, rng);
             float armorPenetration = ClampPercentage(attacker.CombatSpec.ArmorPenetration);
             float effectiveArmor = ClampPercentage(target.CombatSpec.Armor) * (1f - armorPenetration / 100f);
-            float damage = Math.Max(0, attacker.CombatSpec.Attack + Math.Max(0, attackBonus));
+            float damage = Math.Max(0, attacker.CombatSpec.Attack)
+                * EffectiveStatsResolver.GetBaseAttackMultiplier(attacker, tuning);
+            damage += Math.Max(0, attackBonus);
             damage *= EffectiveStatsResolver.GetOutgoingDamageMultiplier(attacker, tuning);
             damage *= 1f - effectiveArmor / 100f;
             if (isCritical) damage *= EffectiveStatsResolver.GetCriticalMultiplier(attacker);

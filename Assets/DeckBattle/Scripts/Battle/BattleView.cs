@@ -118,6 +118,7 @@ namespace DeckBattle
                 UnitPresentationState state = snapshot.Units[i];
                 presentationStateByUnitId[state.UnitId] = state;
                 unitPresenter.BindInitial(state);
+                BindInitialStatuses(snapshot, state);
             }
         }
 
@@ -240,6 +241,30 @@ namespace DeckBattle
                 statusOverlayController?.SetHealth(state.UnitId, battleEvent.RemainingHp, state.MaxHp);
                 effectPresenter.PlayDamage(boardPresenter.GetWorldPosition(battleEvent.To));
             }
+        }
+
+        private void BindInitialStatuses(BattlePresentationSnapshot snapshot, UnitPresentationState state)
+        {
+            if (state.StatusCount <= 0)
+            {
+                return;
+            }
+
+            var statuses = new List<StatusPresentationState>(state.StatusCount);
+            int endIndex = state.StatusStartIndex + state.StatusCount;
+            for (int i = state.StatusStartIndex; i < endIndex && i < snapshot.Statuses.Count; i++)
+            {
+                statuses.Add(snapshot.Statuses[i]);
+            }
+
+            if (statuses.Count == 0)
+            {
+                return;
+            }
+
+            statusStatesByUnitId[state.UnitId] = statuses;
+            shieldByUnitId[state.UnitId] = state.TotalShield;
+            statusOverlayController?.SetPresentationStatuses(state.UnitId, statuses, state.TotalShield);
         }
 
         private void HandleUnitDied(BattleEvent battleEvent)

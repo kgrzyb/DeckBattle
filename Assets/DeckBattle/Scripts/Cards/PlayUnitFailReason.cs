@@ -12,6 +12,8 @@ namespace DeckBattle
         NotInPreparation = 7,
         PlayerReady = 8,
         InvalidCardType = 9,
-        NotActivePreparationSide = 10
+        NotActivePreparationSide = 10,
+        InvalidOnPlayEffect = 11,
+        OnPlayEffectCapacityReached = 12
     }
 }

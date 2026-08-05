@@ -20,7 +20,13 @@ namespace DeckBattle
 
             var unit = new RuntimeUnit(battleState.AllocateRuntimeUnitId(), unitDefinition, player.Side, targetCoord);
             player.Units.Add(unit);
-            return PlayUnitResult.Succeeded(unit);
+            OnPlayEffectResolutionResult onPlayResult = UnitOnPlayEffectResolver.Resolve(battleState, player, unit);
+            if (!onPlayResult.Success)
+            {
+                throw new InvalidOperationException("Validated OnPlay effect failed to resolve.");
+            }
+
+            return PlayUnitResult.Succeeded(unit, onPlayResult.QueuedEffectCount);
         }
 
         public static PlayUnitFailReason ValidatePlay(BattleState battleState, PlayerBattleState player, CardRuntimeState card, HexCoord targetCoord)
@@ -84,6 +90,17 @@ namespace DeckBattle
             if (FormationService.IsOccupied(player, targetCoord, null))
             {
                 return PlayUnitFailReason.TileOccupied;
+            }
+
+            OnPlayEffectValidationResult onPlayValidation = UnitOnPlayEffectResolver.Validate(battleState, player, unitDefinition, targetCoord);
+            if (onPlayValidation == OnPlayEffectValidationResult.InvalidDefinition)
+            {
+                return PlayUnitFailReason.InvalidOnPlayEffect;
+            }
+
+            if (onPlayValidation == OnPlayEffectValidationResult.QueueCapacityReached)
+            {
+                return PlayUnitFailReason.OnPlayEffectCapacityReached;
             }
 
             return PlayUnitFailReason.None;

@@ -36,3 +36,4 @@ MonoBehaviour:
   Projectile: {fileID: 11400000, guid: ee570de75d9ef454c9bf51a76c1ddb96, type: 2}
   UnitPrefab: {fileID: 7506552908754966910, guid: 9f55c116b0c85a444999106aad1cbd6b,
     type: 3}
+  OnPlayEffect: {fileID: 11400000, guid: cfa0e0516847469aab6f34e5e6e45263, type: 2}
