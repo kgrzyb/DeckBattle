@@ -7,6 +7,7 @@ namespace DeckBattle
         InvalidTile = 2,
         TileOccupied = 3,
         NotInPreparation = 4,
-        PlayerReady = 5
+        PlayerReady = 5,
+        NotActivePreparationSide = 6
     }
 }

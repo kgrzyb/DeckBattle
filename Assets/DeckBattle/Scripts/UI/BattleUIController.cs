@@ -53,9 +53,9 @@ namespace DeckBattle
         private int shownUnits = int.MinValue;
         private int shownSlots = int.MinValue;
         private BattlePhase shownPhase = BattlePhase.None;
-        private bool shownPreparationCountdownActive;
-        private int shownPreparationCountdownSeconds = int.MinValue;
+        private BattleSide shownActivePreparationSide = (BattleSide)(-1);
         private bool shownPlayerReady;
+        private bool shownEnemyReady;
         private bool shownResultPanelActive;
         private string shownResultText;
 
@@ -220,24 +220,27 @@ namespace DeckBattle
                 slotsText.text = "Sloty " + units + "/" + slots;
             }
 
-            int countdownSeconds = state.PreparationCountdownActive ? Mathf.CeilToInt(state.PreparationCountdownRemaining) : 0;
             if (phaseText != null
                 && (shownPhase != state.Phase
-                    || shownPreparationCountdownActive != state.PreparationCountdownActive
-                    || shownPreparationCountdownSeconds != countdownSeconds
-                    || shownPlayerReady != state.Player.IsReady))
+                    || shownActivePreparationSide != state.ActivePreparationSide
+                    || shownPlayerReady != state.Player.IsReady
+                    || shownEnemyReady != state.Enemy.IsReady))
             {
                 shownPhase = state.Phase;
-                shownPreparationCountdownActive = state.PreparationCountdownActive;
-                shownPreparationCountdownSeconds = countdownSeconds;
+                shownActivePreparationSide = state.ActivePreparationSide;
                 shownPlayerReady = state.Player.IsReady;
-                if (state.PreparationCountdownActive)
+                shownEnemyReady = state.Enemy.IsReady;
+                if (state.Phase == BattlePhase.Preparation && state.Player.IsReady)
                 {
-                    phaseText.text = state.Phase + " " + countdownSeconds + "s";
+                    phaseText.text = "Gotowy - oczekiwanie na przeciwnika";
                 }
-                else if (state.Phase == BattlePhase.Preparation && state.Player.IsReady)
+                else if (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Player)
                 {
-                    phaseText.text = "Preparation Ready";
+                    phaseText.text = "Twoje przygotowanie";
+                }
+                else if (state.Phase == BattlePhase.Preparation)
+                {
+                    phaseText.text = "Przeciwnik sie przygotowuje";
                 }
                 else
                 {

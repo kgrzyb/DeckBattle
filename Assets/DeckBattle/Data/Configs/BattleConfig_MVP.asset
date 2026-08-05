@@ -33,4 +33,3 @@ MonoBehaviour:
   MaxRoundDamageBonus: 99
   BoardWidth: 5
   BoardHeight: 8
-  PreparationCountdownSeconds: 10

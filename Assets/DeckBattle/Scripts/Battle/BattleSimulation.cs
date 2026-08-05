@@ -79,7 +79,14 @@ namespace DeckBattle
                 UnitSpawnData spawn = spawnData[i];
                 ValidateSpawn(board, spawn, unitByHex, unitById);
 
-                var unit = new UnitRuntimeState(spawn.UnitId, spawn.CombatSpec, spawn.Side, spawn.StartHex, spawn.AttackBonusNextCombat, tuning.MaxStatusesPerUnit);
+                var unit = new UnitRuntimeState(
+                    spawn.UnitId,
+                    spawn.CombatSpec,
+                    spawn.Side,
+                    spawn.StartHex,
+                    spawn.AttackBonusNextCombat,
+                    tuning.MaxStatusesPerUnit,
+                    spawn.DisplayName);
                 unit.NextAttackTime = tuning.GetAttackCooldown(spawn.CombatSpec, unit);
                 units.Add(unit);
                 unitByHex.Add(spawn.StartHex, unit);

@@ -10,6 +10,7 @@ namespace DeckBattle
         SpellAlreadyPlayed = 5,
         NotEnoughAp = 6,
         InvalidTarget = 7,
-        UnsupportedEffect = 8
+        UnsupportedEffect = 8,
+        NotActivePreparationSide = 9
     }
 }

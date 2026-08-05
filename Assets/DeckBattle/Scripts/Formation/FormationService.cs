@@ -26,6 +26,11 @@ namespace DeckBattle
                 return FormationMoveResult.Failed(FormationMoveFailReason.PlayerReady);
             }
 
+            if (!PreparationTurnService.CanSidePrepare(battleState, player.Side))
+            {
+                return FormationMoveResult.Failed(FormationMoveFailReason.NotActivePreparationSide);
+            }
+
             if (unit == null || !player.Units.Contains(unit))
             {
                 return FormationMoveResult.Failed(FormationMoveFailReason.UnitMissing);

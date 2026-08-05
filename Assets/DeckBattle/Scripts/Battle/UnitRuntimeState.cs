@@ -24,6 +24,7 @@ namespace DeckBattle
         public readonly int UnitId;
         public readonly UnitCombatSpec CombatSpec;
         public readonly BattleSide Side;
+        public readonly string DisplayName;
 
         public int CurrentHp;
         public HexCoord CurrentHex;
@@ -54,16 +55,23 @@ namespace DeckBattle
         public int StatusVersion;
 
         public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex)
-            : this(unitId, UnitCombatSpec.FromDefinition(definition), side, startHex, 0)
+            : this(unitId, UnitCombatSpec.FromDefinition(definition), side, startHex, 0, 8, definition != null ? definition.DisplayName : null)
         {
         }
 
         public UnitRuntimeState(int unitId, UnitDefinition definition, BattleSide side, HexCoord startHex, int attackBonusNextCombat, int maxStatusesPerUnit = 8)
-            : this(unitId, UnitCombatSpec.FromDefinition(definition), side, startHex, attackBonusNextCombat, maxStatusesPerUnit)
+            : this(unitId, UnitCombatSpec.FromDefinition(definition), side, startHex, attackBonusNextCombat, maxStatusesPerUnit, definition != null ? definition.DisplayName : null)
         {
         }
 
-        public UnitRuntimeState(int unitId, UnitCombatSpec combatSpec, BattleSide side, HexCoord startHex, int attackBonusNextCombat = 0, int maxStatusesPerUnit = 8)
+        public UnitRuntimeState(
+            int unitId,
+            UnitCombatSpec combatSpec,
+            BattleSide side,
+            HexCoord startHex,
+            int attackBonusNextCombat = 0,
+            int maxStatusesPerUnit = 8,
+            string displayName = null)
         {
             if (unitId <= 0)
             {
@@ -73,6 +81,7 @@ namespace DeckBattle
             UnitId = unitId;
             CombatSpec = combatSpec;
             Side = side;
+            DisplayName = displayName;
             CurrentHex = startHex;
             PreviousHex = startHex;
             CurrentHp = combatSpec.MaxHp;

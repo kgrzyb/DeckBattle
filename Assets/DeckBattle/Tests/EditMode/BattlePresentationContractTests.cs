@@ -35,6 +35,20 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Snapshot_PreservesUnitDisplayNameForCombatPresentation()
+        {
+            UnitDefinition definition = TestDefinitions.CreateUnit("Shield Bearer", 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(3, 3, 1f),
+                new[] { new UnitSpawnData(1, definition, BattleSide.Player, new HexCoord(0, 0)) });
+            var snapshot = new BattlePresentationSnapshot(1);
+
+            snapshot.Capture(simulation);
+
+            Assert.AreEqual(definition.DisplayName, snapshot.Units[0].DisplayName);
+        }
+
+        [Test]
         public void ProjectileEvent_CarriesStablePresentationId()
         {
             ProjectileDefinition definition = TestDefinitions.Track(ScriptableObject.CreateInstance<ProjectileDefinition>());

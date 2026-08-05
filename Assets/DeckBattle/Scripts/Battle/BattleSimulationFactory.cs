@@ -49,7 +49,8 @@ namespace DeckBattle
                     UnitCombatSpec.FromDefinition(unit.Definition),
                     unit.Side,
                     unit.BattleCoord,
-                    unit.AttackBonusNextCombat));
+                    unit.AttackBonusNextCombat,
+                    unit.Definition != null ? unit.Definition.DisplayName : null));
             }
         }
     }

@@ -25,6 +25,23 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void ExecuteNextAction_PlaysOneUnitWithoutEndingEnemyPreparation()
+        {
+            BattleState state = CreateStateWithEnemyHand(
+                TestDefinitions.CreateUnit("first", 1),
+                TestDefinitions.CreateUnit("second", 1));
+
+            EnemyPreparationAIResult result = EnemyPreparationAI.ExecuteNextAction(state);
+
+            Assert.IsTrue(result.PlayedUnit);
+            Assert.IsFalse(result.PlayedSpell);
+            Assert.IsFalse(result.MarkedReady);
+            Assert.AreEqual(1, state.Enemy.Units.Count);
+            Assert.IsFalse(state.Enemy.IsReady);
+            Assert.AreEqual(BattleSide.Enemy, state.ActivePreparationSide);
+        }
+
+        [Test]
         public void PrepareFormation_PlaysSpellAfterUnitAndBuffsFriendlyTarget()
         {
             UnitDefinition guard = TestDefinitions.CreateUnit("guard", 1);
@@ -183,32 +200,35 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void ExecuteTurn_WithExistingUnitAndSpell_PlaysSingleSpellAction()
+        public void PrepareFormation_WhenEnemyIsInactive_DoesNotPlayCards()
         {
-            BattleState state = CreateStateWithEnemyHand(TestDefinitions.CreateSpell("warcry", 1, amount: 2));
-            var existingUnit = new RuntimeUnit(state.AllocateRuntimeUnitId(), TestDefinitions.CreateUnit("guard", 1), BattleSide.Enemy, new HexCoord(2, 5));
-            state.Enemy.Units.Add(existingUnit);
+            BattleState state = CreateStateWithEnemyHand(42, TestDefinitions.CreateUnit("guard", 1));
 
-            EnemyPreparationAIResult result = EnemyPreparationAI.ExecuteTurn(state);
+            EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
 
             Assert.IsFalse(result.PlayedUnit);
-            Assert.IsTrue(result.PlayedSpell);
-            Assert.AreEqual(1, result.PlayedCardCount);
-            Assert.AreEqual(2, existingUnit.AttackBonusNextCombat);
-            Assert.AreEqual(0, state.Enemy.Hand.Count);
+            Assert.IsFalse(result.PlayedSpell);
+            Assert.IsFalse(result.MarkedReady);
+            Assert.AreEqual(0, state.Enemy.Units.Count);
             Assert.IsFalse(state.Enemy.IsReady);
+            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
         }
 
         private static BattleState CreateState()
         {
             BattleConfig config = TestDefinitions.CreateConfig();
-            return BattleState.Create(config, CreateDeck("player"), CreateDeck("enemy"), 42);
+            return BattleState.Create(config, CreateDeck("player"), CreateDeck("enemy"), 7);
         }
 
         private static BattleState CreateStateWithEnemyHand(params CardDefinition[] enemyHandDefinitions)
         {
+            return CreateStateWithEnemyHand(7, enemyHandDefinitions);
+        }
+
+        private static BattleState CreateStateWithEnemyHand(int seed, params CardDefinition[] enemyHandDefinitions)
+        {
             BattleConfig config = TestDefinitions.CreateConfig();
-            BattleState state = BattleState.Create(config, CreateDeck("player"), CreateDeck("enemy"), 42);
+            BattleState state = BattleState.Create(config, CreateDeck("player"), CreateDeck("enemy"), seed);
             state.Enemy.Hand.Clear();
             state.Enemy.Deck.Clear();
             for (int i = 0; i < enemyHandDefinitions.Length; i++)

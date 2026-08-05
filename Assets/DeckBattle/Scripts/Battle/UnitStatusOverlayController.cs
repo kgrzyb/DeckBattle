@@ -80,7 +80,7 @@ namespace DeckBattle
             Bind(
                 unit.UnitId,
                 view.transform,
-                null,
+                unit.DisplayName,
                 unit.CurrentHp,
                 unit.CombatSpec.MaxHp,
                 unit.CurrentMana,
@@ -98,7 +98,7 @@ namespace DeckBattle
             Bind(
                 state.UnitId,
                 view.transform,
-                null,
+                state.DisplayName,
                 state.CurrentHp,
                 state.MaxHp,
                 state.CurrentMana,

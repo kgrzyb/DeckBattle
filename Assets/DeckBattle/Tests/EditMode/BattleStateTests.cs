@@ -59,7 +59,42 @@ namespace DeckBattle.Tests
             state.BeginPreparationAfterRoundStart();
 
             Assert.AreEqual(BattlePhase.Preparation, state.Phase);
-            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
+            Assert.AreEqual(state.InitialPreparationSide, state.ActivePreparationSide);
+        }
+
+        [Test]
+        public void Create_UsesDeterministicInitialPreparationSide()
+        {
+            BattleConfig config = TestDefinitions.CreateConfig();
+            BattleState first = BattleState.Create(config, CreateDeck(1), CreateDeck(1), 42);
+            BattleState second = BattleState.Create(config, CreateDeck(1), CreateDeck(1), 42);
+            BattleState differentSeed = BattleState.Create(config, CreateDeck(1), CreateDeck(1), 7);
+
+            Assert.AreEqual(first.InitialPreparationSide, second.InitialPreparationSide);
+            Assert.AreEqual(first.InitialPreparationSide, first.ActivePreparationSide);
+            Assert.AreNotEqual(first.InitialPreparationSide, differentSeed.InitialPreparationSide);
+        }
+
+        [Test]
+        public void BeginPreparationAfterRoundStart_AlternatesStarterEachRound()
+        {
+            BattleConfig config = TestDefinitions.CreateConfig();
+            BattleState state = BattleState.Create(config, CreateDeck(1), CreateDeck(1), 42);
+            BattleSide initialStarter = state.InitialPreparationSide;
+
+            state.BeginRoundStart();
+            state.BeginPreparationAfterRoundStart();
+            Assert.AreEqual(initialStarter, state.ActivePreparationSide);
+
+            state.Phase = BattlePhase.RoundResolution;
+            state.StartNextRound();
+            state.BeginPreparationAfterRoundStart();
+            Assert.AreNotEqual(initialStarter, state.ActivePreparationSide);
+
+            state.Phase = BattlePhase.RoundResolution;
+            state.StartNextRound();
+            state.BeginPreparationAfterRoundStart();
+            Assert.AreEqual(initialStarter, state.ActivePreparationSide);
         }
 
         private static List<UnitDefinition> CreateDeck(int count)

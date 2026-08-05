@@ -50,6 +50,23 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void MoveUnit_RejectsInactivePreparationSide()
+        {
+            BattleState state = CreateStateWithTwoUnits();
+            var enemyUnit = new RuntimeUnit(
+                state.AllocateRuntimeUnitId(),
+                TestDefinitions.CreateUnit("enemy-unit", 1),
+                BattleSide.Enemy,
+                new HexCoord(0, 5));
+            state.Enemy.Units.Add(enemyUnit);
+
+            FormationMoveResult result = FormationService.MoveUnit(state, state.Enemy, enemyUnit, new HexCoord(1, 5));
+
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(FormationMoveFailReason.NotActivePreparationSide, result.FailReason);
+        }
+
+        [Test]
         public void RestoreFormationAndResetRoundHealth_ResetsBattleStateForUnits()
         {
             BattleState state = CreateStateWithTwoUnits();

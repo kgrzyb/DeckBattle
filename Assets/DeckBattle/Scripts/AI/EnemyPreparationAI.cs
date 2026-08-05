@@ -20,37 +20,32 @@ namespace DeckBattle
             int playedSpellCount = 0;
             RuntimeUnit lastPlayedUnit = null;
             RuntimeUnit lastSpellTargetUnit = null;
-            EnemyPreparationAIPlay selectedPlay;
-            while (TryFindPlay(battleState, out selectedPlay))
+            while (PreparationTurnService.CanEnemyPrepare(battleState))
             {
-                if (selectedPlay.CardKind == CardKind.Unit)
-                {
-                    PlayUnitResult playResult = UnitPlayService.PlayUnit(battleState, battleState.Enemy, selectedPlay.Card, selectedPlay.UnitCoord);
-                    if (!playResult.Success)
-                    {
-                        break;
-                    }
-
-                    playedUnitCount++;
-                    lastPlayedUnit = playResult.Unit;
-                    continue;
-                }
-
-                PlaySpellResult spellResult = SpellPlayService.PlaySpell(battleState, battleState.Enemy, selectedPlay.Card, selectedPlay.SpellTarget);
-                if (!spellResult.Success)
+                EnemyPreparationAIResult actionResult = ExecuteNextAction(battleState);
+                if (!actionResult.PlayedUnit && !actionResult.PlayedSpell)
                 {
                     break;
                 }
 
-                playedSpellCount++;
-                lastSpellTargetUnit = spellResult.TargetUnit;
+                if (actionResult.PlayedUnit)
+                {
+                    playedUnitCount += actionResult.PlayedUnitCount;
+                    lastPlayedUnit = actionResult.Unit;
+                }
+
+                if (actionResult.PlayedSpell)
+                {
+                    playedSpellCount += actionResult.PlayedSpellCount;
+                    lastSpellTargetUnit = actionResult.SpellTargetUnit;
+                }
             }
 
-            PreparationTurnService.MarkEnemyReady(battleState);
-            return EnemyPreparationAIResult.Prepared(playedUnitCount, playedSpellCount, lastPlayedUnit, lastSpellTargetUnit);
+            bool markedReady = PreparationTurnService.MarkEnemyReady(battleState);
+            return EnemyPreparationAIResult.Prepared(playedUnitCount, playedSpellCount, markedReady, lastPlayedUnit, lastSpellTargetUnit);
         }
 
-        public static EnemyPreparationAIResult ExecuteTurn(BattleState battleState)
+        public static EnemyPreparationAIResult ExecuteNextAction(BattleState battleState)
         {
             if (battleState == null)
             {
@@ -63,30 +58,23 @@ namespace DeckBattle
             }
 
             EnemyPreparationAIPlay selectedPlay;
-            if (TryFindPlay(battleState, out selectedPlay))
+            if (!TryFindPlay(battleState, out selectedPlay))
             {
-                if (selectedPlay.CardKind == CardKind.Unit)
-                {
-                    PlayUnitResult playResult = UnitPlayService.PlayUnit(battleState, battleState.Enemy, selectedPlay.Card, selectedPlay.UnitCoord);
-                    if (!playResult.Success)
-                    {
-                        return EnemyPreparationAIResult.NoAction();
-                    }
-
-                    return EnemyPreparationAIResult.PlayedUnitCard(playResult.Unit);
-                }
-
-                PlaySpellResult spellResult = SpellPlayService.PlaySpell(battleState, battleState.Enemy, selectedPlay.Card, selectedPlay.SpellTarget);
-                if (!spellResult.Success)
-                {
-                    return EnemyPreparationAIResult.NoAction();
-                }
-
-                return EnemyPreparationAIResult.PlayedSpellCard(spellResult.TargetUnit);
+                return EnemyPreparationAIResult.NoAction();
             }
 
-            PreparationTurnService.MarkEnemyReady(battleState);
-            return EnemyPreparationAIResult.Passed();
+            if (selectedPlay.CardKind == CardKind.Unit)
+            {
+                PlayUnitResult playResult = UnitPlayService.PlayUnit(battleState, battleState.Enemy, selectedPlay.Card, selectedPlay.UnitCoord);
+                return playResult.Success
+                    ? EnemyPreparationAIResult.PlayedUnitCard(playResult.Unit)
+                    : EnemyPreparationAIResult.NoAction();
+            }
+
+            PlaySpellResult spellResult = SpellPlayService.PlaySpell(battleState, battleState.Enemy, selectedPlay.Card, selectedPlay.SpellTarget);
+            return spellResult.Success
+                ? EnemyPreparationAIResult.PlayedSpellCard(spellResult.TargetUnit)
+                : EnemyPreparationAIResult.NoAction();
         }
 
         private static bool TryFindPlay(BattleState battleState, out EnemyPreparationAIPlay selectedPlay)
@@ -313,9 +301,9 @@ namespace DeckBattle
             SpellTargetUnit = spellTargetUnit;
         }
 
-        public static EnemyPreparationAIResult Prepared(int playedUnitCount, int playedSpellCount, RuntimeUnit lastUnit, RuntimeUnit lastSpellTargetUnit)
+        public static EnemyPreparationAIResult Prepared(int playedUnitCount, int playedSpellCount, bool markedReady, RuntimeUnit lastUnit, RuntimeUnit lastSpellTargetUnit)
         {
-            return new EnemyPreparationAIResult(playedUnitCount > 0, playedSpellCount > 0, true, playedUnitCount, playedSpellCount, lastUnit, lastSpellTargetUnit);
+            return new EnemyPreparationAIResult(playedUnitCount > 0, playedSpellCount > 0, markedReady, playedUnitCount, playedSpellCount, lastUnit, lastSpellTargetUnit);
         }
 
         public static EnemyPreparationAIResult PlayedUnitCard(RuntimeUnit unit)
@@ -326,11 +314,6 @@ namespace DeckBattle
         public static EnemyPreparationAIResult PlayedSpellCard(RuntimeUnit targetUnit)
         {
             return new EnemyPreparationAIResult(false, true, false, 0, 1, null, targetUnit);
-        }
-
-        public static EnemyPreparationAIResult Passed()
-        {
-            return new EnemyPreparationAIResult(false, false, true, 0, 0, null, null);
         }
 
         public static EnemyPreparationAIResult NoAction()

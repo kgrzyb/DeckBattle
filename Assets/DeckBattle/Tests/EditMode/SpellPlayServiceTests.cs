@@ -43,6 +43,18 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void ValidatePlay_RejectsInactivePreparationSide()
+        {
+            BattleState state = CreateState();
+            CardRuntimeState spellCard = AddEnemySpellToHand(state, TestDefinitions.CreateSpell("enemy-warcry", 1));
+            RuntimeUnit target = AddEnemyUnit(state);
+
+            PlaySpellFailReason reason = SpellPlayService.ValidatePlay(state, state.Enemy, spellCard, SpellTarget.ForUnit(target));
+
+            Assert.AreEqual(PlaySpellFailReason.NotActivePreparationSide, reason);
+        }
+
+        [Test]
         public void ValidatePlay_RejectsCardMissingFromHand()
         {
             BattleState state = CreateState();
@@ -231,6 +243,14 @@ namespace DeckBattle.Tests
             var card = new CardRuntimeState(600 + state.Player.Hand.Count, spellDefinition);
             card.Location = CardLocation.Hand;
             state.Player.Hand.Add(card);
+            return card;
+        }
+
+        private static CardRuntimeState AddEnemySpellToHand(BattleState state, SpellDefinition spellDefinition)
+        {
+            var card = new CardRuntimeState(700 + state.Enemy.Hand.Count, spellDefinition);
+            card.Location = CardLocation.Hand;
+            state.Enemy.Hand.Add(card);
             return card;
         }
 

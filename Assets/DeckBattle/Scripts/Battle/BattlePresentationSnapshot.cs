@@ -13,6 +13,7 @@ namespace DeckBattle
         public readonly int MaxHp;
         public readonly int CurrentMana;
         public readonly int MaxMana;
+        public readonly string DisplayName;
 
         public UnitPresentationState(
             int unitId,
@@ -22,7 +23,8 @@ namespace DeckBattle
             int currentHp,
             int maxHp,
             int currentMana,
-            int maxMana)
+            int maxMana,
+            string displayName = null)
         {
             UnitId = unitId;
             PresentationId = presentationId;
@@ -32,6 +34,7 @@ namespace DeckBattle
             MaxHp = maxHp;
             CurrentMana = currentMana;
             MaxMana = maxMana;
+            DisplayName = displayName;
         }
     }
 
@@ -84,7 +87,8 @@ namespace DeckBattle
                     unit.CurrentHp,
                     unit.CombatSpec.MaxHp,
                     unit.CurrentMana,
-                    unit.CombatSpec.ManaThreshold));
+                    unit.CombatSpec.ManaThreshold,
+                    unit.DisplayName));
             }
         }
     }

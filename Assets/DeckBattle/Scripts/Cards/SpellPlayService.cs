@@ -56,6 +56,11 @@ namespace DeckBattle
                 return PlaySpellFailReason.PlayerReady;
             }
 
+            if (!PreparationTurnService.CanSidePrepare(battleState, player.Side))
+            {
+                return PlaySpellFailReason.NotActivePreparationSide;
+            }
+
             if (!HandService.IsInHand(player, card))
             {
                 return card != null && card.Location == CardLocation.Played ? PlaySpellFailReason.SpellAlreadyPlayed : PlaySpellFailReason.CardNotInHand;

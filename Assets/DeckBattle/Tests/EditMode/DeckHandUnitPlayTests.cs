@@ -157,6 +157,17 @@ namespace DeckBattle.Tests
             Assert.AreEqual(PlayUnitFailReason.UnitAlreadyPlayed, reason);
         }
 
+        [Test]
+        public void PlayUnit_RejectsInactivePreparationSide()
+        {
+            BattleState state = CreateState();
+            CardRuntimeState card = state.Enemy.Hand[0];
+
+            PlayUnitFailReason reason = UnitPlayService.ValidatePlay(state, state.Enemy, card, new HexCoord(0, 5));
+
+            Assert.AreEqual(PlayUnitFailReason.NotActivePreparationSide, reason);
+        }
+
         private static BattleState CreateState()
         {
             BattleConfig config = TestDefinitions.CreateConfig();
@@ -175,7 +186,7 @@ namespace DeckBattle.Tests
                 TestDefinitions.CreateUnit("enemy-scout", 1)
             };
 
-            return BattleState.Create(config, playerDeck, enemyDeck, 99);
+            return BattleState.Create(config, playerDeck, enemyDeck, 42);
         }
 
     }

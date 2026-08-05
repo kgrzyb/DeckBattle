@@ -5,6 +5,8 @@ namespace DeckBattle
 {
     public sealed class BattleState
     {
+        private const int PreparationOrderSeedSalt = 51696588;
+
         private int nextRuntimeCardId = 1;
         private int nextRuntimeUnitId = 1;
 
@@ -13,10 +15,9 @@ namespace DeckBattle
         public PlayerBattleState Player { get; private set; }
         public PlayerBattleState Enemy { get; private set; }
         public BattlePhase Phase { get; set; }
-        public BattleSide ActivePreparationSide { get; set; }
+        public BattleSide InitialPreparationSide { get; private set; }
+        public BattleSide ActivePreparationSide { get; internal set; }
         public int RoundNumber { get; private set; }
-        public bool PreparationCountdownActive { get; private set; }
-        public float PreparationCountdownRemaining { get; private set; }
 
         private BattleState()
         {
@@ -29,6 +30,7 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(config));
             }
 
+            BattleSide initialPreparationSide = ResolveInitialPreparationSide(seed);
             var state = new BattleState
             {
                 Config = config,
@@ -46,7 +48,8 @@ namespace DeckBattle
                     config.StartingDeploymentSlots,
                     config.StartingRoundDamageBonus),
                 Phase = BattlePhase.Preparation,
-                ActivePreparationSide = BattleSide.Player,
+                InitialPreparationSide = initialPreparationSide,
+                ActivePreparationSide = initialPreparationSide,
                 RoundNumber = 1
             };
 
@@ -57,7 +60,6 @@ namespace DeckBattle
             DeckService.Shuffle(state.Enemy.Deck, rng);
             DeckService.DrawCards(state.Player, config.StartingHandSize, config.MaxHandSize);
             DeckService.DrawCards(state.Enemy, config.StartingHandSize, config.MaxHandSize);
-            PreparationTurnService.EnsureActiveSideCanAct(state);
             return state;
         }
 
@@ -73,7 +75,6 @@ namespace DeckBattle
                 throw new InvalidOperationException("Round start can only be entered before preparation.");
             }
 
-            StopPreparationCountdown();
             Phase = BattlePhase.RoundStart;
         }
 
@@ -85,8 +86,7 @@ namespace DeckBattle
             }
 
             Phase = BattlePhase.Preparation;
-            ActivePreparationSide = BattleSide.Player;
-            PreparationTurnService.EnsureActiveSideCanAct(this);
+            ActivePreparationSide = GetPreparationStarterForRound();
         }
 
         public void StartNextRound()
@@ -98,8 +98,7 @@ namespace DeckBattle
 
             RoundNumber++;
             Phase = BattlePhase.RoundStart;
-            ActivePreparationSide = BattleSide.Player;
-            StopPreparationCountdown();
+            ActivePreparationSide = GetPreparationStarterForRound();
 
             PreparePlayerForNextRound(Player);
             PreparePlayerForNextRound(Enemy);
@@ -112,51 +111,22 @@ namespace DeckBattle
             return id;
         }
 
-        public void StartPreparationCountdown(float duration)
+        internal static BattleSide GetOppositeSide(BattleSide side)
         {
-            if (Phase != BattlePhase.Preparation)
-            {
-                throw new InvalidOperationException("Preparation countdown can only start during preparation.");
-            }
-
-            PreparationCountdownActive = duration > 0f;
-            PreparationCountdownRemaining = duration > 0f ? duration : 0f;
+            return side == BattleSide.Player ? BattleSide.Enemy : BattleSide.Player;
         }
 
-        public bool TickPreparationCountdown(float deltaTime)
+        private static BattleSide ResolveInitialPreparationSide(int seed)
         {
-            if (!PreparationCountdownActive)
-            {
-                return false;
-            }
-
-            float safeDeltaTime = deltaTime > 0f ? deltaTime : 0f;
-            PreparationCountdownRemaining -= safeDeltaTime;
-            if (PreparationCountdownRemaining < 0f)
-            {
-                PreparationCountdownRemaining = 0f;
-            }
-
-            return PreparationCountdownRemaining <= 0f;
+            var preparationOrderRandom = new DeterministicRandom(seed ^ PreparationOrderSeedSalt);
+            return preparationOrderRandom.NextInt(0, 2) == 0 ? BattleSide.Player : BattleSide.Enemy;
         }
 
-        public void StopPreparationCountdown()
+        private BattleSide GetPreparationStarterForRound()
         {
-            PreparationCountdownActive = false;
-            PreparationCountdownRemaining = 0f;
-        }
-
-        public void CompletePreparationCountdown()
-        {
-            if (Phase != BattlePhase.Preparation)
-            {
-                return;
-            }
-
-            Player.IsReady = true;
-            Enemy.IsReady = true;
-            StopPreparationCountdown();
-            Phase = BattlePhase.Combat;
+            return (RoundNumber & 1) == 1
+                ? InitialPreparationSide
+                : GetOppositeSide(InitialPreparationSide);
         }
 
         private void PreparePlayerForNextRound(PlayerBattleState player)

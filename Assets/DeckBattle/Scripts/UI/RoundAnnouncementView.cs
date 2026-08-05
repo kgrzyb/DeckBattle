@@ -7,6 +7,8 @@ namespace DeckBattle
 {
     public sealed class RoundAnnouncementView : MonoBehaviour
     {
+        public const string FightMessage = "Fight!";
+
         [Header("References")]
         [SerializeField] private RectTransform contentRoot;
         [SerializeField] private CanvasGroup canvasGroup;
@@ -61,6 +63,15 @@ namespace DeckBattle
                 "Round " + Mathf.Max(1, roundNumber),
                 roundStartFadeInSeconds,
                 roundStartHoldSeconds,
+                roundStartFadeOutSeconds);
+        }
+
+        public IEnumerator PlayFight()
+        {
+            yield return PlayMessage(
+                FightMessage,
+                roundStartFadeInSeconds,
+                Mathf.Min(roundStartHoldSeconds, 0.4f),
                 roundStartFadeOutSeconds);
         }
 

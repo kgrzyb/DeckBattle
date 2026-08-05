@@ -26,6 +26,10 @@ namespace DeckBattle
         [SerializeField] private UnitStatusOverlayController statusOverlayController;
         [SerializeField] private RoundAnnouncementView roundAnnouncementView;
 
+        [Header("AI Preparation Timing")]
+        [SerializeField] private float enemyUnitPlacementDelay = 0.4f;
+        [SerializeField] private float enemyReadyDelay = 0.4f;
+
         [Header("Combat Timing")]
         [SerializeField, HideInInspector] private float combatTickDuration = BattleTiming.DefaultCombatTickDuration;
         [SerializeField, HideInInspector] private int maxCombatTicks = BattleTiming.DefaultMaxCombatTicks;
@@ -40,9 +44,13 @@ namespace DeckBattle
         private int activeSeed;
         private Coroutine combatRoutine;
         private Coroutine roundAnnouncementRoutine;
-        private Coroutine preparationCountdownRoutine;
+        private Coroutine enemyPreparationRoutine;
+        private Coroutine fightAnnouncementRoutine;
         private bool isCombatAnimating;
         private bool isRoundAnnouncementAnimating;
+        private bool isEnemyPreparationAnimating;
+        private bool isFightAnnouncementAnimating;
+        private bool hasShownFightAnnouncement;
 
         public BattleState State
         {
@@ -74,6 +82,8 @@ namespace DeckBattle
             combatTickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, combatTickDuration);
             maxCombatTicks = Mathf.Max(1, maxCombatTicks);
             roundResolutionDelay = Mathf.Max(0f, roundResolutionDelay);
+            enemyUnitPlacementDelay = Mathf.Max(0f, enemyUnitPlacementDelay);
+            enemyReadyDelay = Mathf.Max(0f, enemyReadyDelay);
         }
 
         private void Awake()
@@ -98,7 +108,8 @@ namespace DeckBattle
 
             StopCombatRoutine();
             StopRoundAnnouncementRoutine();
-            StopPreparationCountdownRoutine();
+            StopEnemyPreparationRoutine();
+            StopFightAnnouncementRoutine();
             ClearUnitViews();
             BattleStartData startData;
             bool hasPendingStartData = BattleSession.TryConsumePendingStartData(out startData);
@@ -179,7 +190,6 @@ namespace DeckBattle
             }
 
             CreateOrUpdateUnitView(result.Unit);
-            EvaluatePreparationCountdownState();
             ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
@@ -204,7 +214,6 @@ namespace DeckBattle
                 return false;
             }
 
-            EvaluatePreparationCountdownState();
             ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
@@ -241,8 +250,11 @@ namespace DeckBattle
                 return false;
             }
 
-            PreparationTurnService.MarkPlayerReady(state);
-            EvaluatePreparationCountdownState();
+            if (!PreparationTurnService.TryConfirmReady(state, BattleSide.Player))
+            {
+                return false;
+            }
+
             ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
@@ -257,7 +269,7 @@ namespace DeckBattle
             }
 
             EnemyPreparationAIResult aiResult = EnemyPreparationAI.PrepareFormation(state);
-            return aiResult.PlayedUnit || aiResult.MarkedReady;
+            return aiResult.PlayedUnit || aiResult.PlayedSpell || aiResult.MarkedReady;
         }
 
         private bool ResolveCombatAndRoundIfReady()
@@ -267,7 +279,7 @@ namespace DeckBattle
                 return false;
             }
 
-            if (isCombatAnimating)
+            if (isCombatAnimating || isFightAnnouncementAnimating)
             {
                 return false;
             }
@@ -276,6 +288,13 @@ namespace DeckBattle
 
             if (Application.isPlaying)
             {
+                if (roundAnnouncementView != null && !hasShownFightAnnouncement)
+                {
+                    hasShownFightAnnouncement = true;
+                    fightAnnouncementRoutine = StartCoroutine(RunFightAnnouncementRoutine());
+                    return true;
+                }
+
                 combatRoutine = StartCoroutine(RunCombatRoutine());
                 return true;
             }
@@ -298,19 +317,12 @@ namespace DeckBattle
 
             for (int step = 0; step < MaxAutomaticFlowSteps; step++)
             {
-                EvaluatePreparationCountdownState();
-
-                if (isCombatAnimating || isRoundAnnouncementAnimating)
+                if (isCombatAnimating || isRoundAnnouncementAnimating || isEnemyPreparationAnimating || isFightAnnouncementAnimating)
                 {
                     return;
                 }
 
                 if (state.Phase == BattlePhase.MatchEnd)
-                {
-                    return;
-                }
-
-                if (state.PreparationCountdownActive)
                 {
                     return;
                 }
@@ -323,13 +335,24 @@ namespace DeckBattle
 
                 if (state.Phase == BattlePhase.Preparation)
                 {
-                    if (!state.Enemy.IsReady)
+                    if (state.ActivePreparationSide == BattleSide.Enemy)
                     {
-                        progressed = ExecuteEnemyPreparation();
-                        EvaluatePreparationCountdownState();
+                        if (Application.isPlaying)
+                        {
+                            progressed = StartEnemyPreparationRoutine();
+                        }
+                        else
+                        {
+                            progressed = ExecuteEnemyPreparation();
+                            if (progressed)
+                            {
+                                RefreshUnits();
+                                RaiseStateChanged();
+                            }
+                        }
                     }
 
-                    if (state.Phase == BattlePhase.Preparation && !state.Player.IsReady)
+                    if (state.Phase == BattlePhase.Preparation && state.ActivePreparationSide == BattleSide.Player)
                     {
                         return;
                     }
@@ -342,7 +365,6 @@ namespace DeckBattle
 
                 if (!progressed)
                 {
-                    EvaluatePreparationCountdownState();
                     return;
                 }
             }
@@ -356,6 +378,8 @@ namespace DeckBattle
             {
                 return false;
             }
+
+            hasShownFightAnnouncement = false;
 
             if (Application.isPlaying)
             {
@@ -387,6 +411,75 @@ namespace DeckBattle
 
             isRoundAnnouncementAnimating = false;
             roundAnnouncementRoutine = null;
+            ProgressAutomaticFlow();
+        }
+
+        private bool StartEnemyPreparationRoutine()
+        {
+            if (enemyPreparationRoutine != null || !PreparationTurnService.CanEnemyPrepare(state))
+            {
+                return false;
+            }
+
+            enemyPreparationRoutine = StartCoroutine(RunEnemyPreparationRoutine());
+            return true;
+        }
+
+        private IEnumerator RunEnemyPreparationRoutine()
+        {
+            isEnemyPreparationAnimating = true;
+
+            while (state != null && PreparationTurnService.CanEnemyPrepare(state))
+            {
+                EnemyPreparationAIResult actionResult = EnemyPreparationAI.ExecuteNextAction(state);
+                if (actionResult.PlayedUnit || actionResult.PlayedSpell)
+                {
+                    RefreshUnits();
+                    RaiseStateChanged();
+
+                    if (actionResult.PlayedUnit && enemyUnitPlacementDelay > 0f)
+                    {
+                        yield return new WaitForSeconds(enemyUnitPlacementDelay);
+                    }
+                    else
+                    {
+                        yield return null;
+                    }
+
+                    continue;
+                }
+
+                if (enemyReadyDelay > 0f)
+                {
+                    yield return new WaitForSeconds(enemyReadyDelay);
+                }
+
+                if (state != null && PreparationTurnService.CanEnemyPrepare(state))
+                {
+                    PreparationTurnService.TryConfirmReady(state, BattleSide.Enemy);
+                    RefreshUnits();
+                    RaiseStateChanged();
+                }
+
+                break;
+            }
+
+            isEnemyPreparationAnimating = false;
+            enemyPreparationRoutine = null;
+            ProgressAutomaticFlow();
+        }
+
+        private IEnumerator RunFightAnnouncementRoutine()
+        {
+            isFightAnnouncementAnimating = true;
+
+            if (roundAnnouncementView != null && state != null && state.Phase == BattlePhase.Combat)
+            {
+                yield return roundAnnouncementView.PlayFight();
+            }
+
+            isFightAnnouncementAnimating = false;
+            fightAnnouncementRoutine = null;
             ProgressAutomaticFlow();
         }
 
@@ -615,90 +708,6 @@ namespace DeckBattle
             return Mathf.Max(0f, configuredDelay);
         }
 
-        private void EvaluatePreparationCountdownState()
-        {
-            if (state == null || state.Phase != BattlePhase.Preparation)
-            {
-                StopPreparationCountdownRoutine();
-                return;
-            }
-
-            if (state.Player.IsReady && state.Enemy.IsReady)
-            {
-                StopPreparationCountdownRoutine();
-                PreparationTurnService.TryStartCombatIfReady(state);
-                return;
-            }
-
-            if (!PreparationTurnService.ShouldStartPreparationCountdown(state))
-            {
-                return;
-            }
-
-            float duration = state.Config != null ? state.Config.PreparationCountdownSeconds : 10f;
-            state.StartPreparationCountdown(duration);
-            if (state.PreparationCountdownActive && Application.isPlaying)
-            {
-                if (preparationCountdownRoutine == null)
-                {
-                    preparationCountdownRoutine = StartCoroutine(RunPreparationCountdownRoutine());
-                }
-            }
-            else
-            {
-                CompletePreparationCountdown();
-            }
-        }
-
-        private IEnumerator RunPreparationCountdownRoutine()
-        {
-            while (state != null && state.Phase == BattlePhase.Preparation && state.PreparationCountdownActive)
-            {
-                int previousSeconds = Mathf.CeilToInt(state.PreparationCountdownRemaining);
-                if (state.TickPreparationCountdown(Time.deltaTime))
-                {
-                    preparationCountdownRoutine = null;
-                    CompletePreparationCountdown();
-                    yield break;
-                }
-
-                int currentSeconds = Mathf.CeilToInt(state.PreparationCountdownRemaining);
-                if (currentSeconds != previousSeconds)
-                {
-                    RaiseStateChanged();
-                }
-
-                yield return null;
-            }
-
-            preparationCountdownRoutine = null;
-        }
-
-        private void CompletePreparationCountdown()
-        {
-            StopPreparationCountdownRoutine();
-            if (state == null)
-            {
-                return;
-            }
-
-            state.CompletePreparationCountdown();
-            RefreshUnits();
-            RaiseStateChanged();
-            ProgressAutomaticFlow();
-        }
-
-        private void StopPreparationCountdownRoutine()
-        {
-            if (preparationCountdownRoutine == null)
-            {
-                return;
-            }
-
-            StopCoroutine(preparationCountdownRoutine);
-            preparationCountdownRoutine = null;
-        }
-
         private void RefreshUnits()
         {
             if (state == null)
@@ -708,14 +717,7 @@ namespace DeckBattle
             }
 
             SyncUnitViews(state.Player.Units);
-            if (state.Phase == BattlePhase.RoundStart || state.Phase == BattlePhase.Preparation)
-            {
-                HideEnemyUnitViews();
-            }
-            else
-            {
-                SyncUnitViews(state.Enemy.Units);
-            }
+            SyncUnitViews(state.Enemy.Units);
         }
 
         private void SyncUnitViews(List<RuntimeUnit> units)
@@ -769,35 +771,6 @@ namespace DeckBattle
             SyncUnitViews(state.Enemy.Units);
         }
 
-        private void HideEnemyUnitViews()
-        {
-            if (state == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < state.Enemy.Units.Count; i++)
-            {
-                RuntimeUnit unit = state.Enemy.Units[i];
-                if (unit == null)
-                {
-                    continue;
-                }
-
-                UnitViewRegistry registry = ResolveUnitViewRegistry();
-                if (registry == null || !registry.TryGet(unit.RuntimeId, out UnitView view))
-                {
-                    continue;
-                }
-
-                registry.Release(unit.RuntimeId);
-                if (statusOverlayController != null)
-                {
-                    statusOverlayController.Release(unit.RuntimeId);
-                }
-            }
-        }
-
         private void ClearUnitViews()
         {
             if (statusOverlayController != null)
@@ -809,6 +782,34 @@ namespace DeckBattle
             if (registry != null)
             {
                 registry.ReleaseAll();
+            }
+        }
+
+        private void StopEnemyPreparationRoutine()
+        {
+            if (enemyPreparationRoutine != null)
+            {
+                StopCoroutine(enemyPreparationRoutine);
+                enemyPreparationRoutine = null;
+            }
+
+            isEnemyPreparationAnimating = false;
+        }
+
+        private void StopFightAnnouncementRoutine()
+        {
+            if (fightAnnouncementRoutine != null)
+            {
+                StopCoroutine(fightAnnouncementRoutine);
+                fightAnnouncementRoutine = null;
+            }
+
+            isFightAnnouncementAnimating = false;
+            hasShownFightAnnouncement = false;
+
+            if (roundAnnouncementView != null)
+            {
+                roundAnnouncementView.HideImmediate();
             }
         }
 
@@ -857,7 +858,8 @@ namespace DeckBattle
                 unit.CurrentHp,
                 combatSpec.MaxHp,
                 0,
-                combatSpec.ManaThreshold);
+                combatSpec.ManaThreshold,
+                unit.Definition != null ? unit.Definition.DisplayName : null);
         }
 
         private void RaiseStateChanged()

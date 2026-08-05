@@ -11,6 +11,7 @@ namespace DeckBattle
         UnitAlreadyPlayed = 6,
         NotInPreparation = 7,
         PlayerReady = 8,
-        InvalidCardType = 9
+        InvalidCardType = 9,
+        NotActivePreparationSide = 10
     }
 }

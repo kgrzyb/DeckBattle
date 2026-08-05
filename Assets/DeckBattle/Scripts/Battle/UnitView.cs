@@ -134,11 +134,17 @@ namespace DeckBattle
 
         public void Bind(UnitPresentationState state, Vector3 worldPosition)
         {
+            // The registry reuses the formation view when combat presentation begins.
+            bool preserveRuntimeUnitName = RuntimeId == state.UnitId && Unit != null;
             Unit = null;
             RealtimeUnit = null;
             RuntimeId = state.UnitId;
             ResetTransientState(worldPosition);
-            name = state.Side + "_Unit_" + state.UnitId;
+            if (!preserveRuntimeUnitName)
+            {
+                name = state.Side + "_Unit_" + state.UnitId;
+            }
+
             ApplySideColor(state.Side);
         }
 

@@ -5,6 +5,12 @@ namespace DeckBattle.Tests
     public sealed class RoundAnnouncementViewTests
     {
         [Test]
+        public void FightMessage_IsStableForTheCombatAnnouncement()
+        {
+            Assert.AreEqual("Fight!", RoundAnnouncementView.FightMessage);
+        }
+
+        [Test]
         public void FormatRoundResult_WhenPlayerDealsMoreDamage_ShowsRoundWon()
         {
             var result = new RoundResolutionResult(5, 2, 20, 15, false, false, BattleSide.Player);

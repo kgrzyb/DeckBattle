@@ -222,6 +222,33 @@ namespace DeckBattle.Tests
             Assert.That(duration, Is.EqualTo(0.7f).Within(0.001f));
         }
 
+        [Test]
+        public void BindPresentationState_PreservesTheExistingRuntimeUnitName()
+        {
+            GameObject unitObject = new GameObject("Unit", typeof(UnitView));
+            UnitDefinition definition = TestDefinitions.CreateUnit("swordsman", 1);
+            try
+            {
+                UnitView view = unitObject.GetComponent<UnitView>();
+                InvokePrivateMethod(view, "Awake");
+                var runtimeUnit = new RuntimeUnit(1, definition, BattleSide.Player, new HexCoord(0, 0));
+
+                view.Bind(runtimeUnit, Vector3.zero);
+                string preparationName = view.name;
+
+                view.Bind(
+                    new UnitPresentationState(1, BattlePresentationId.ForUnit(definition), BattleSide.Player, new HexCoord(0, 0), 10, 10, 0, 100),
+                    Vector3.zero);
+
+                Assert.AreEqual(preparationName, view.name);
+            }
+            finally
+            {
+                Object.DestroyImmediate(definition);
+                Object.DestroyImmediate(unitObject);
+            }
+        }
+
         private static void SetPrivateField(object target, string fieldName, object value)
         {
             target.GetType()

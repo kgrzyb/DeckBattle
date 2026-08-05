@@ -51,6 +51,11 @@ namespace DeckBattle
                 return PlayUnitFailReason.PlayerReady;
             }
 
+            if (!PreparationTurnService.CanSidePrepare(battleState, player.Side))
+            {
+                return PlayUnitFailReason.NotActivePreparationSide;
+            }
+
             if (!HandService.IsInHand(player, card))
             {
                 return card != null && card.Location == CardLocation.Played ? PlayUnitFailReason.UnitAlreadyPlayed : PlayUnitFailReason.CardNotInHand;

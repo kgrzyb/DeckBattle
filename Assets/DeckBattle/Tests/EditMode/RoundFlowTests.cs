@@ -107,7 +107,7 @@ namespace DeckBattle.Tests
             config.DeploymentSlotIncreaseEveryRounds = 1;
             config.DrawPerRound = 2;
 
-            BattleState state = BattleState.Create(config, CreateDeck("player", 3), CreateDeck("enemy", 3), 7);
+            BattleState state = BattleState.Create(config, CreateDeck("player", 3), CreateDeck("enemy", 3), 42);
             RuntimeUnit playerUnit = CreateRuntimeUnit(1, BattleSide.Player, new HexCoord(1, 0), 0);
             RuntimeUnit enemyUnit = CreateRuntimeUnit(2, BattleSide.Enemy, new HexCoord(1, 5), 0);
             playerUnit.CurrentHp = 1;
@@ -129,7 +129,7 @@ namespace DeckBattle.Tests
             Assert.IsFalse(result.MatchEnded);
             Assert.AreEqual(2, state.RoundNumber);
             Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
-            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
+            Assert.AreEqual(BattleSide.Enemy, state.ActivePreparationSide);
             Assert.AreEqual(4, state.Player.Ap);
             Assert.AreEqual(4, state.Enemy.Ap);
             Assert.AreEqual(3, state.Player.DeploymentSlots);
@@ -148,7 +148,7 @@ namespace DeckBattle.Tests
             state.BeginPreparationAfterRoundStart();
 
             Assert.AreEqual(BattlePhase.Preparation, state.Phase);
-            Assert.AreEqual(BattleSide.Player, state.ActivePreparationSide);
+            Assert.AreEqual(BattleSide.Enemy, state.ActivePreparationSide);
         }
 
         [Test]
@@ -170,7 +170,7 @@ namespace DeckBattle.Tests
             config.RoundDamageBonusIncreaseEveryRounds = 3;
             config.MaxRoundDamageBonus = 4;
 
-            BattleState state = BattleState.Create(config, CreateDeck("player", 0), CreateDeck("enemy", 0), 7);
+            BattleState state = BattleState.Create(config, CreateDeck("player", 0), CreateDeck("enemy", 0), 42);
 
             Assert.AreEqual(2, state.Player.Ap);
             Assert.AreEqual(1, state.Player.DeploymentSlots);
@@ -214,7 +214,7 @@ namespace DeckBattle.Tests
             config.MaxHandSize = 3;
             config.DrawPerRound = 5;
 
-            BattleState state = BattleState.Create(config, CreateDeck("player", 6), CreateDeck("enemy", 6), 7);
+            BattleState state = BattleState.Create(config, CreateDeck("player", 6), CreateDeck("enemy", 6), 42);
             state.Phase = BattlePhase.RoundResolution;
 
             RoundFlowService.ResolveRoundAndStartNext(state);
