@@ -96,7 +96,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void SetHealth_HealingLethalDamageAndRebind_SynchronizesDamageFill()
+        public void SetHealth_HealingLethalDamageAndRebind_AnimatesDamageFill()
         {
             GameObject root = new GameObject("Overlay", typeof(RectTransform), typeof(UnitStatusOverlayView));
             GameObject hpFillObject = new GameObject("HpFill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -118,9 +118,14 @@ namespace DeckBattle.Tests
                 view.SetHealth(8, 10);
                 Assert.AreEqual(0.8f, hpDamageImage.fillAmount);
 
+                SetPrivateValue(view, "damageFillDelay", 0f);
+                SetPrivateValue(view, "damageFillDuration", 0.2f);
                 view.SetHealth(0, 10);
+                Assert.AreEqual(0.8f, hpDamageImage.fillAmount);
+                Assert.IsTrue(root.activeSelf);
+
+                view.TickDamageFill(0.2f);
                 Assert.AreEqual(0f, hpDamageImage.fillAmount);
-                Assert.IsFalse(root.activeSelf);
 
                 view.Bind(2, root.transform, "Guard", 10, 10, 0, 20);
                 Assert.AreEqual(1f, hpDamageImage.fillAmount);

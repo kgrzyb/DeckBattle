@@ -51,14 +51,33 @@ namespace DeckBattle
 
             bool cameraOrRootChanged = HasProjectionStateChanged(root, camera);
             float deltaTime = Time.deltaTime * combatSpeed;
-            foreach (TrackedOverlay tracked in activeOverlays.Values)
+            int overlayToRelease = 0;
+            foreach (KeyValuePair<int, TrackedOverlay> entry in activeOverlays)
             {
+                TrackedOverlay tracked = entry.Value;
                 if (tracked.View != null)
                 {
                     tracked.View.TickDamageFill(deltaTime);
                 }
 
                 UpdateOverlayPosition(tracked, root, camera, cameraOrRootChanged);
+
+                if (tracked.ReleaseDelayRemaining < 0f)
+                {
+                    continue;
+                }
+
+                tracked.ReleaseDelayRemaining -= deltaTime;
+                if (tracked.ReleaseDelayRemaining <= 0f)
+                {
+                    overlayToRelease = entry.Key;
+                    break;
+                }
+            }
+
+            if (overlayToRelease > 0)
+            {
+                Release(overlayToRelease);
             }
         }
 
@@ -170,6 +189,17 @@ namespace DeckBattle
 
             activeOverlays.Remove(unitId);
             Pool(tracked.View);
+        }
+
+        public void ReleaseAfterDamageAnimation(int unitId)
+        {
+            TrackedOverlay tracked;
+            if (!activeOverlays.TryGetValue(unitId, out tracked) || tracked.View == null)
+            {
+                return;
+            }
+
+            tracked.ReleaseDelayRemaining = tracked.View.DamageFillAnimationDuration;
         }
 
         public void ReleaseAll()
@@ -339,6 +369,7 @@ namespace DeckBattle
             public bool HasPositionCache;
             public bool HasAnchoredPosition;
             public bool IsVisible;
+            public float ReleaseDelayRemaining = -1f;
 
             public TrackedOverlay(UnitStatusOverlayView view)
             {
@@ -350,6 +381,7 @@ namespace DeckBattle
                 HasPositionCache = false;
                 HasAnchoredPosition = false;
                 IsVisible = false;
+                ReleaseDelayRemaining = -1f;
             }
         }
     }

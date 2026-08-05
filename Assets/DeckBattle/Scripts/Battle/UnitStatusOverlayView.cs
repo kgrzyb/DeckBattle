@@ -58,6 +58,11 @@ namespace DeckBattle
             }
         }
 
+        public float DamageFillAnimationDuration
+        {
+            get { return Mathf.Max(0f, damageFillDelay) + Mathf.Max(0.01f, damageFillDuration); }
+        }
+
         private void Awake()
         {
             if (rectTransform == null)
@@ -347,7 +352,7 @@ namespace DeckBattle
             shownHp = clampedHp;
             shownMaxHp = maxHp;
             SetFill(hpFillImage, hpFillTransform, normalized);
-            if (!hadShownHealth || clampedHp <= 0 || normalized >= previousNormalized)
+            if (!hadShownHealth || normalized >= previousNormalized)
             {
                 SyncDamageFill(normalized);
             }
@@ -357,7 +362,6 @@ namespace DeckBattle
             }
 
             SetText(hpText, clampedHp, maxHp);
-            SetVisible(clampedHp > 0);
         }
 
         public void SetMana(int currentMana, int maximumMana)

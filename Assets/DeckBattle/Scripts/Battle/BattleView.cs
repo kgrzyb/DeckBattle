@@ -245,7 +245,7 @@ namespace DeckBattle
         private void HandleUnitDied(BattleEvent battleEvent)
         {
             unitPresenter.HandleDied(battleEvent);
-            statusOverlayController?.Release(battleEvent.UnitId);
+            statusOverlayController?.ReleaseAfterDamageAnimation(battleEvent.UnitId);
 
             statusStatesByUnitId.Remove(battleEvent.UnitId);
             shieldByUnitId.Remove(battleEvent.UnitId);

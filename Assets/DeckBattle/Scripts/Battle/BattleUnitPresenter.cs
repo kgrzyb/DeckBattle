@@ -71,7 +71,6 @@ namespace DeckBattle
                 view.PlayDeath();
             }
 
-            statusOverlayController?.Release(battleEvent.UnitId);
             statusVfxController?.Release(battleEvent.UnitId);
         }
 
