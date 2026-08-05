@@ -8,6 +8,8 @@ namespace DeckBattle
     public sealed class RoundAnnouncementView : MonoBehaviour
     {
         public const string FightMessage = "Fight!";
+        public const string PlayerPreparationMessage = "Prepare";
+        public const string EnemyPreparationMessage = "Opponent is preparing...";
 
         [Header("References")]
         [SerializeField] private RectTransform contentRoot;
@@ -72,6 +74,19 @@ namespace DeckBattle
                 FightMessage,
                 roundStartFadeInSeconds,
                 Mathf.Min(roundStartHoldSeconds, 0.4f),
+                roundStartFadeOutSeconds);
+        }
+
+        public IEnumerator PlayPreparationTurn(BattleSide side)
+        {
+            string message = side == BattleSide.Player
+                ? PlayerPreparationMessage
+                : EnemyPreparationMessage;
+
+            yield return PlayMessage(
+                message,
+                roundStartFadeInSeconds,
+                roundStartHoldSeconds,
                 roundStartFadeOutSeconds);
         }
 

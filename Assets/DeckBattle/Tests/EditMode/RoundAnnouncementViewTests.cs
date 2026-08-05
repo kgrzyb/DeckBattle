@@ -11,6 +11,13 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void PreparationMessages_DescribeTheActiveSide()
+        {
+            Assert.AreEqual("Prepare", RoundAnnouncementView.PlayerPreparationMessage);
+            Assert.AreEqual("Opponent is preparing...", RoundAnnouncementView.EnemyPreparationMessage);
+        }
+
+        [Test]
         public void FormatRoundResult_WhenPlayerDealsMoreDamage_ShowsRoundWon()
         {
             var result = new RoundResolutionResult(5, 2, 20, 15, false, false, BattleSide.Player);

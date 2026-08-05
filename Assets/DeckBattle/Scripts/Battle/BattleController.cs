@@ -255,9 +255,14 @@ namespace DeckBattle
                 return false;
             }
 
-            ProgressAutomaticFlow();
             RefreshUnits();
             RaiseStateChanged();
+
+            if (!StartPreparationTurnAnnouncement())
+            {
+                ProgressAutomaticFlow();
+            }
+
             return true;
         }
 
@@ -407,8 +412,37 @@ namespace DeckBattle
                 state.BeginPreparationAfterRoundStart();
                 RefreshUnits();
                 RaiseStateChanged();
+
+                if (roundAnnouncementView != null)
+                {
+                    yield return roundAnnouncementView.PlayPreparationTurn(state.ActivePreparationSide);
+                }
             }
 
+            isRoundAnnouncementAnimating = false;
+            roundAnnouncementRoutine = null;
+            ProgressAutomaticFlow();
+        }
+
+        private bool StartPreparationTurnAnnouncement()
+        {
+            if (!Application.isPlaying
+                || roundAnnouncementRoutine != null
+                || roundAnnouncementView == null
+                || state == null
+                || state.Phase != BattlePhase.Preparation)
+            {
+                return false;
+            }
+
+            roundAnnouncementRoutine = StartCoroutine(RunPreparationTurnAnnouncementRoutine(state.ActivePreparationSide));
+            return true;
+        }
+
+        private IEnumerator RunPreparationTurnAnnouncementRoutine(BattleSide side)
+        {
+            isRoundAnnouncementAnimating = true;
+            yield return roundAnnouncementView.PlayPreparationTurn(side);
             isRoundAnnouncementAnimating = false;
             roundAnnouncementRoutine = null;
             ProgressAutomaticFlow();
@@ -456,9 +490,12 @@ namespace DeckBattle
 
                 if (state != null && PreparationTurnService.CanEnemyPrepare(state))
                 {
-                    PreparationTurnService.TryConfirmReady(state, BattleSide.Enemy);
-                    RefreshUnits();
-                    RaiseStateChanged();
+                    if (PreparationTurnService.TryConfirmReady(state, BattleSide.Enemy))
+                    {
+                        RefreshUnits();
+                        RaiseStateChanged();
+                        StartPreparationTurnAnnouncement();
+                    }
                 }
 
                 break;
