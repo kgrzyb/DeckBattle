@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   AttackCooldownMultiplier: 1
   AttackRangeBonus: 0
-  MovementStepDuration: 0.6
+  MovementStepDuration: 0.38
   MaxPursuitStepsAfterAttack: 2
   MaxStatusesPerUnit: 8
   MinDamageMultiplier: 0.1
