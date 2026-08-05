@@ -12,6 +12,7 @@ namespace DeckBattle
         [SerializeField] private UnitStatusOverlayController statusOverlayController;
         [SerializeField] private StatusPresentationCatalog statusPresentationCatalog;
         [SerializeField] private UnitStatusVfxController statusVfxController;
+        [SerializeField] private FloatingDamageTextController floatingDamageTextController;
         [SerializeField] private BattlePresentationCatalog presentationCatalog;
         [SerializeField] private PooledBattleEffect attackEffectPrefab;
         [SerializeField] private PooledBattleEffect damageEffectPrefab;
@@ -64,6 +65,7 @@ namespace DeckBattle
             effectPresenter?.SetCombatSpeed(combatSpeed);
             statusOverlayController?.SetCombatSpeed(combatSpeed);
             statusVfxController?.SetCombatSpeed(combatSpeed);
+            floatingDamageTextController?.SetCombatSpeed(combatSpeed);
         }
 
         private void Awake()
@@ -112,6 +114,7 @@ namespace DeckBattle
             presentationStateByUnitId.Clear();
             statusStatesByUnitId.Clear();
             shieldByUnitId.Clear();
+            floatingDamageTextController?.ReleaseAll();
             EnsurePresenters();
             for (int i = 0; i < snapshot.Units.Count; i++)
             {
@@ -137,6 +140,8 @@ namespace DeckBattle
             {
                 statusVfxController.ReleaseAll();
             }
+
+            floatingDamageTextController?.ReleaseAll();
 
             if (releaseUnitViews)
             {
@@ -407,6 +412,7 @@ namespace DeckBattle
                     unitViews,
                     statusOverlayController,
                     statusVfxController,
+                    floatingDamageTextController,
                     presentationTickDuration);
             }
 

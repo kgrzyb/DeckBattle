@@ -52,6 +52,7 @@ namespace DeckBattle
         public readonly int StatusStackCount;
         public readonly int StatusStackDelta;
         public readonly int PresentationId;
+        public readonly bool IsCritical;
 
         private BattleEvent(
             BattleEventType type,
@@ -71,7 +72,8 @@ namespace DeckBattle
             StatusKind statusKind = StatusKind.None,
             int statusStackCount = 0,
             int statusStackDelta = 0,
-            int presentationId = 0)
+            int presentationId = 0,
+            bool isCritical = false)
         {
             Type = type;
             UnitId = unitId;
@@ -91,6 +93,7 @@ namespace DeckBattle
             StatusStackCount = statusStackCount;
             StatusStackDelta = statusStackDelta;
             PresentationId = presentationId;
+            IsCritical = isCritical;
         }
 
         public static BattleEvent UnitMoved(int unitId, HexCoord from, HexCoord to, float duration = 0f)
@@ -147,9 +150,23 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.UnitTargetChanged, unitId, targetUnitId, default, targetHex, 0, 0, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
-        public static BattleEvent UnitDamaged(int targetId, int amount, int remainingHp, HexCoord targetHex)
+        public static BattleEvent UnitDamaged(int targetId, int amount, int remainingHp, HexCoord targetHex, bool isCritical = false)
         {
-            return new BattleEvent(BattleEventType.UnitDamaged, targetId, 0, default, targetHex, amount, remainingHp, 0, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
+            return new BattleEvent(
+                BattleEventType.UnitDamaged,
+                targetId,
+                0,
+                default,
+                targetHex,
+                amount,
+                remainingHp,
+                0,
+                0,
+                0f,
+                UnitSpecialKind.None,
+                BattleSide.Player,
+                false,
+                isCritical: isCritical);
         }
 
         public static BattleEvent UnitDied(int unitId)

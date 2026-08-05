@@ -8,6 +8,7 @@ namespace DeckBattle
         private readonly UnitViewRegistry unitViews;
         private readonly UnitStatusOverlayController statusOverlayController;
         private readonly UnitStatusVfxController statusVfxController;
+        private readonly FloatingDamageTextController floatingDamageTextController;
         private readonly float defaultTickDuration;
 
         public BattleUnitPresenter(
@@ -15,12 +16,14 @@ namespace DeckBattle
             UnitViewRegistry unitViews,
             UnitStatusOverlayController statusOverlayController,
             UnitStatusVfxController statusVfxController,
+            FloatingDamageTextController floatingDamageTextController,
             float defaultTickDuration)
         {
             this.boardPresenter = boardPresenter;
             this.unitViews = unitViews;
             this.statusOverlayController = statusOverlayController;
             this.statusVfxController = statusVfxController;
+            this.floatingDamageTextController = floatingDamageTextController;
             this.defaultTickDuration = defaultTickDuration;
         }
 
@@ -61,7 +64,11 @@ namespace DeckBattle
             if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
             {
                 view.PlayDamage(battleEvent.RemainingHp);
+                ShowDamageText(view.transform.position, battleEvent);
+                return;
             }
+
+            ShowDamageText(boardPresenter.GetWorldPosition(battleEvent.To), battleEvent);
         }
 
         public void HandleDied(BattleEvent battleEvent)
@@ -148,6 +155,19 @@ namespace DeckBattle
             {
                 view.CompleteSpecialWindup(battleEvent.SequenceId);
             }
+        }
+
+        private void ShowDamageText(Vector3 worldPosition, BattleEvent battleEvent)
+        {
+            if (battleEvent.Amount <= 0 || floatingDamageTextController == null)
+            {
+                return;
+            }
+
+            floatingDamageTextController.Show(
+                worldPosition,
+                battleEvent.Amount,
+                battleEvent.IsCritical ? FloatingDamageTextType.Critical : FloatingDamageTextType.Normal);
         }
     }
 }

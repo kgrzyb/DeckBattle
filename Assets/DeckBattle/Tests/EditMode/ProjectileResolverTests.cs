@@ -102,6 +102,7 @@ namespace DeckBattle.Tests
 
             AssertEventTypeExists(events, BattleEventType.UnitCrit);
             AssertManaChangedEventExists(events, 2, 7);
+            Assert.IsTrue(FindEvent(events, BattleEventType.UnitDamaged).IsCritical);
         }
 
         [Test]
@@ -263,6 +264,20 @@ namespace DeckBattle.Tests
             }
 
             Assert.Fail("Expected mana event was not emitted for unit " + unitId + " with mana " + currentMana + ".");
+        }
+
+        private static BattleEvent FindEvent(BattleEventQueue events, BattleEventType type)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == type)
+                {
+                    return events[i];
+                }
+            }
+
+            Assert.Fail("Expected event type was not emitted: " + type);
+            return default;
         }
 
         private static int FindEventIndex(BattleEventQueue events, BattleEventType type, int unitId)

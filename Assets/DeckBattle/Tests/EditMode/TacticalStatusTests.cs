@@ -68,6 +68,38 @@ namespace DeckBattle.Tests
             Assert.AreEqual(firstGuard.CombatSpec.MaxHp - 2, firstGuard.CurrentHp);
         }
 
+        [Test]
+        public void Guard_CriticalDamageMarksBothAppliedDamageEventsWithoutDuplicatingCritEvent()
+        {
+            BattleSimulation simulation = CreateSimulation();
+            UnitRuntimeState target = simulation.Units[1];
+            UnitRuntimeState guard = simulation.Units[2];
+            Apply(simulation, target, StatusKind.Guard, StatusCategory.Beneficial, 0f, guard.UnitId);
+            var events = new BattleEventQueue();
+
+            DamageResolver.Resolve(simulation, target, new DamageRequest(simulation.Units[0], 5, isCritical: true), events);
+
+            int criticalEventCount = 0;
+            int criticalDamageEventCount = 0;
+            for (int i = 0; i < events.Count; i++)
+            {
+                BattleEvent battleEvent = events[i];
+                if (battleEvent.Type == BattleEventType.UnitCrit)
+                {
+                    criticalEventCount++;
+                }
+
+                if (battleEvent.Type == BattleEventType.UnitDamaged)
+                {
+                    Assert.IsTrue(battleEvent.IsCritical);
+                    criticalDamageEventCount++;
+                }
+            }
+
+            Assert.AreEqual(1, criticalEventCount);
+            Assert.AreEqual(2, criticalDamageEventCount);
+        }
+
         private static BattleSimulation CreateSimulation()
         {
             UnitDefinition first = TestDefinitions.CreateUnit("first", 1);

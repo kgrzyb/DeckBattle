@@ -11,16 +11,35 @@ namespace DeckBattle
         {
             using (ResolveMarker.Auto())
             {
-            if (simulation == null) throw new ArgumentNullException(nameof(simulation));
+                if (simulation == null) throw new ArgumentNullException(nameof(simulation));
+                if (target == null || !target.IsAlive) return default;
+                if (request.IsCritical)
+                {
+                    eventQueue?.Enqueue(BattleEvent.UnitCrit(request.Source != null ? request.Source.UnitId : 0, target.UnitId));
+                }
+
+                return ResolveInternal(simulation, target, request, eventQueue);
+            }
+        }
+
+        private static HitResolutionResult ResolveInternal(BattleSimulation simulation, UnitRuntimeState target, DamageRequest request, BattleEventQueue eventQueue)
+        {
             if (target == null || !target.IsAlive) return default;
-            if (request.IsCritical) eventQueue?.Enqueue(BattleEvent.UnitCrit(request.Source != null ? request.Source.UnitId : 0, target.UnitId));
             if (!request.BypassesGuard && !request.IsRedirected && IsGuardable(request.Kind) && TryGetGuard(simulation, target, out UnitRuntimeState guard))
             {
                 int guardAmount = Math.Max(0, request.Amount) / 2;
                 int targetAmount = Math.Max(0, request.Amount) - guardAmount;
-                HitResolutionResult guardResult = Resolve(simulation, guard, new DamageRequest(request.Source, guardAmount, request.Kind, false, true, true, false, false), eventQueue);
+                HitResolutionResult guardResult = ResolveInternal(
+                    simulation,
+                    guard,
+                    new DamageRequest(request.Source, guardAmount, request.Kind, request.IsCritical, true, true, false, false),
+                    eventQueue);
                 eventQueue?.Enqueue(BattleEvent.DamageRedirected(target.UnitId, guard.UnitId, guardAmount));
-                HitResolutionResult targetResult = Resolve(simulation, target, new DamageRequest(request.Source, targetAmount, request.Kind, false, false, true, request.CanTriggerMark, false), eventQueue);
+                HitResolutionResult targetResult = ResolveInternal(
+                    simulation,
+                    target,
+                    new DamageRequest(request.Source, targetAmount, request.Kind, request.IsCritical, true, true, request.CanTriggerMark, false),
+                    eventQueue);
                 if (request.CanApplyLifesteal && request.Kind == DamageKind.Direct) ApplyLifesteal(request.Source, guardResult.Damage + targetResult.Damage, eventQueue);
                 return new HitResolutionResult(targetResult.DidHit, guardResult.Damage + targetResult.Damage, targetResult.Died);
             }
@@ -45,7 +64,8 @@ namespace DeckBattle
                 target.UnitId,
                 remaining,
                 Math.Max(0, target.CurrentHp),
-                target.CurrentHex));
+                target.CurrentHex,
+                request.IsCritical));
             CombatResolver.AddMana(simulation, target, target.CombatSpec.ManaPerDamageTaken, eventQueue);
             WakeSleep(target, eventQueue);
             bool died = target.CurrentHp <= 0;
@@ -58,7 +78,6 @@ namespace DeckBattle
             if (request.CanApplyLifesteal && request.Kind == DamageKind.Direct) ApplyLifesteal(request.Source, remaining, eventQueue);
             if (!died) ResolveMark(simulation, target, request.Source, markDamage, eventQueue);
             return new HitResolutionResult(true, remaining, died);
-            }
         }
 
         private static bool IsGuardable(DamageKind kind)
