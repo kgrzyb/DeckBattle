@@ -7,10 +7,11 @@ namespace DeckBattle
         [SerializeField] private ParticleSystem[] particleSystems;
         [SerializeField, Min(0.01f)] private float oneShotLifetime = 0.5f;
 
-        private float releaseTime;
+        private float oneShotLifetimeRemaining;
+        private float combatSpeed = 1f;
         private bool isOneShot;
 
-        public bool IsOneShotComplete { get { return isOneShot && Time.time >= releaseTime; } }
+        public bool IsOneShotComplete { get { return isOneShot && oneShotLifetimeRemaining <= 0f; } }
 
         private void Awake()
         {
@@ -24,7 +25,7 @@ namespace DeckBattle
         {
             Attach(pivot, entry);
             isOneShot = true;
-            releaseTime = Time.time + Mathf.Max(0.01f, oneShotLifetime);
+            oneShotLifetimeRemaining = Mathf.Max(0.01f, oneShotLifetime);
             PlayParticles();
         }
 
@@ -32,8 +33,24 @@ namespace DeckBattle
         {
             Attach(pivot, entry);
             isOneShot = false;
-            releaseTime = 0f;
+            oneShotLifetimeRemaining = 0f;
             PlayParticles();
+        }
+
+        public void AdvanceOneShot(float deltaTime)
+        {
+            if (!isOneShot || oneShotLifetimeRemaining <= 0f)
+            {
+                return;
+            }
+
+            oneShotLifetimeRemaining = Mathf.Max(0f, oneShotLifetimeRemaining - Mathf.Max(0f, deltaTime));
+        }
+
+        public void SetCombatSpeed(float speed)
+        {
+            combatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
+            ApplyParticleSimulationSpeed();
         }
 
         public void Release()
@@ -41,7 +58,8 @@ namespace DeckBattle
             StopAndClearParticles();
 
             isOneShot = false;
-            releaseTime = 0f;
+            oneShotLifetimeRemaining = 0f;
+            SetCombatSpeed(1f);
             gameObject.SetActive(false);
         }
 
@@ -56,6 +74,7 @@ namespace DeckBattle
 
         private void PlayParticles()
         {
+            ApplyParticleSimulationSpeed();
             for (int i = 0; i < particleSystems.Length; i++)
             {
                 if (particleSystems[i] != null)
@@ -63,6 +82,21 @@ namespace DeckBattle
                     particleSystems[i].Clear(true);
                     particleSystems[i].Play(true);
                 }
+            }
+        }
+
+        private void ApplyParticleSimulationSpeed()
+        {
+            for (int i = 0; i < particleSystems.Length; i++)
+            {
+                ParticleSystem particleSystem = particleSystems[i];
+                if (particleSystem == null)
+                {
+                    continue;
+                }
+
+                ParticleSystem.MainModule main = particleSystem.main;
+                main.simulationSpeed = combatSpeed;
             }
         }
 

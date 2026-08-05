@@ -22,6 +22,9 @@ namespace DeckBattle
         [SerializeField] private TextMeshProUGUI slotsText;
         [SerializeField] private TextMeshProUGUI phaseText;
         [SerializeField] private Button readyButton;
+        [SerializeField] private BattleCombatRunner combatRunner;
+        [SerializeField] private GameObject roundTimer;
+        [SerializeField] private RectTransform roundTimerProgressBar;
 
         [Header("Result")]
         [SerializeField] private GameObject resultPanel;
@@ -45,6 +48,7 @@ namespace DeckBattle
         private readonly List<CardRuntimeState> shownHand = new List<CardRuntimeState>(8);
         private CardRuntimeState selectedCard;
         private Canvas uiCanvas;
+        private Vector3 roundTimerProgressBarBaseScale = Vector3.one;
 
         private int shownPlayerHp = int.MinValue;
         private int shownEnemyHp = int.MinValue;
@@ -58,6 +62,8 @@ namespace DeckBattle
         private bool shownEnemyReady;
         private bool shownResultPanelActive;
         private string shownResultText;
+        private bool isRoundTimerVisible;
+        private bool shouldTrackRoundTimer;
 
         private void Awake()
         {
@@ -73,6 +79,12 @@ namespace DeckBattle
                 mainMenuButton.onClick.AddListener(HandleMainMenuClicked);
             }
 
+            if (roundTimerProgressBar != null)
+            {
+                roundTimerProgressBarBaseScale = roundTimerProgressBar.localScale;
+            }
+
+            SetRoundTimerVisible(false);
             HideCardDetails();
         }
 
@@ -87,6 +99,14 @@ namespace DeckBattle
         private void OnRectTransformDimensionsChange()
         {
             LayoutHand();
+        }
+
+        private void Update()
+        {
+            if (shouldTrackRoundTimer)
+            {
+                RefreshRoundTimer();
+            }
         }
 
         private void OnEnable()
@@ -252,6 +272,58 @@ namespace DeckBattle
             {
                 readyButton.interactable = PreparationTurnService.CanPlayerPrepare(state);
             }
+
+            shouldTrackRoundTimer = state.Phase == BattlePhase.Combat;
+            if (!shouldTrackRoundTimer)
+            {
+                SetRoundTimerVisible(false);
+            }
+        }
+
+        private void RefreshRoundTimer()
+        {
+            if (combatRunner == null
+                || !combatRunner.IsRunning
+                || !combatRunner.IsCombatAccelerationEnabled
+                || combatRunner.CurrentCombatSpeed > 1f)
+            {
+                SetRoundTimerVisible(false);
+                return;
+            }
+
+            float normalizedElapsed = Mathf.Clamp01(combatRunner.CombatElapsedTime / combatRunner.CombatAccelerationDelay);
+            SetRoundTimerProgress(1f - normalizedElapsed);
+            SetRoundTimerVisible(true);
+        }
+
+        private void SetRoundTimerVisible(bool visible)
+        {
+            if (roundTimer == null)
+            {
+                return;
+            }
+
+            if (isRoundTimerVisible == visible && roundTimer.activeSelf == visible)
+            {
+                return;
+            }
+
+            isRoundTimerVisible = visible;
+            roundTimer.SetActive(visible);
+        }
+
+        private void SetRoundTimerProgress(float normalizedProgress)
+        {
+            if (roundTimerProgressBar == null)
+            {
+                return;
+            }
+
+            float progress = Mathf.Clamp01(normalizedProgress);
+            roundTimerProgressBar.localScale = new Vector3(
+                roundTimerProgressBarBaseScale.x * progress,
+                roundTimerProgressBarBaseScale.y,
+                roundTimerProgressBarBaseScale.z);
         }
 
         private void RefreshResult(BattleState state)

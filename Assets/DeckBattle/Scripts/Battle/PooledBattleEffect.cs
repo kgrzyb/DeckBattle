@@ -13,6 +13,7 @@ namespace DeckBattle
         private MaterialPropertyBlock propertyBlock;
         private float remaining;
         private float durationReciprocal;
+        private float combatSpeed = 1f;
 
         public bool IsPlaying
         {
@@ -37,7 +38,7 @@ namespace DeckBattle
                 return;
             }
 
-            remaining = Mathf.Max(0f, remaining - Time.deltaTime);
+            remaining = Mathf.Max(0f, remaining - Time.deltaTime * combatSpeed);
             float normalized = 1f - remaining * durationReciprocal;
             float scale = Mathf.Lerp(startScale, endScale, normalized);
             transform.localScale = new Vector3(scale, scale, scale);
@@ -51,6 +52,11 @@ namespace DeckBattle
             durationReciprocal = 1f / remaining;
             transform.localScale = new Vector3(startScale, startScale, startScale);
             ApplyColor();
+        }
+
+        public void SetCombatSpeed(float speed)
+        {
+            combatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
         }
 
         private void ApplyColor()

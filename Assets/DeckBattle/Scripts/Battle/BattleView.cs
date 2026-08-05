@@ -26,6 +26,7 @@ namespace DeckBattle
         private readonly Dictionary<int, List<StatusPresentationState>> statusStatesByUnitId = new Dictionary<int, List<StatusPresentationState>>(16);
         private readonly Dictionary<int, int> shieldByUnitId = new Dictionary<int, int>(16);
         private float presentationTickDuration = BattleTiming.DefaultCombatTickDuration;
+        private float combatSpeed = 1f;
 
         public BoardPresenter BoardPresenter
         {
@@ -47,6 +48,22 @@ namespace DeckBattle
 
             presentationTickDuration = safeDuration;
             unitPresenter = null;
+        }
+
+        public void SetCombatSpeed(float speed)
+        {
+            float safeSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
+            if (Mathf.Approximately(combatSpeed, safeSpeed))
+            {
+                return;
+            }
+
+            combatSpeed = safeSpeed;
+            unitViewRegistry?.SetCombatSpeed(combatSpeed);
+            projectilePresenter?.SetCombatSpeed(combatSpeed);
+            effectPresenter?.SetCombatSpeed(combatSpeed);
+            statusOverlayController?.SetCombatSpeed(combatSpeed);
+            statusVfxController?.SetCombatSpeed(combatSpeed);
         }
 
         private void Awake()
@@ -111,6 +128,7 @@ namespace DeckBattle
 
         public void ClearBattle(bool releaseUnitViews)
         {
+            SetCombatSpeed(1f);
             presentationStateByUnitId.Clear();
             statusStatesByUnitId.Clear();
             shieldByUnitId.Clear();
@@ -348,6 +366,7 @@ namespace DeckBattle
                     presentationCatalog,
                     unitRoot != null ? unitRoot : transform,
                     this);
+                unitViewRegistry.SetCombatSpeed(combatSpeed);
             }
 
             return unitViewRegistry;
@@ -373,6 +392,7 @@ namespace DeckBattle
                     presentationCatalog,
                     unitViews,
                     effectRoot != null ? effectRoot : transform);
+                projectilePresenter.SetCombatSpeed(combatSpeed);
             }
 
             if (effectPresenter == null)
@@ -381,6 +401,7 @@ namespace DeckBattle
                     attackEffectPrefab,
                     damageEffectPrefab,
                     effectRoot != null ? effectRoot : transform);
+                effectPresenter.SetCombatSpeed(combatSpeed);
             }
         }
 

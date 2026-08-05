@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace DeckBattle
 {
+    [DefaultExecutionOrder(-100)]
     public sealed class BattleCombatRunner : MonoBehaviour
     {
 #if DEVELOPMENT_BUILD && !UNITY_EDITOR
@@ -18,6 +19,9 @@ namespace DeckBattle
         private BattleSimulation simulation;
         private BattleTickLoop tickLoop;
         private float tickAccumulator;
+        private float combatAccelerationDelay;
+        private float acceleratedCombatSpeed;
+        private bool accelerationActivated;
         private int maxTicks;
         private int maxTicksPerFrame;
         private int ticksElapsed;
@@ -26,8 +30,13 @@ namespace DeckBattle
 
         public event Action<BattleTickResult, IReadOnlyList<BattleEvent>> TickProcessed;
         public event Action<BattleRunResult> Completed;
+        public event Action<float> CombatSpeedChanged;
 
         public bool IsRunning { get; private set; }
+        public float CurrentCombatSpeed { get; private set; }
+        public float CombatElapsedTime { get; private set; }
+        public float CombatAccelerationDelay { get { return combatAccelerationDelay; } }
+        public bool IsCombatAccelerationEnabled { get { return acceleratedCombatSpeed > 1f && combatAccelerationDelay > 0f; } }
         public BattleSimulation Simulation { get { return simulation; } }
         public BattleRunResult Result { get { return result; } }
         public BattleDebugSnapshot DebugSnapshot { get { return debugSnapshot; } }
@@ -39,6 +48,23 @@ namespace DeckBattle
         }
 
         public void StartCombat(BattleSimulation nextSimulation, float tickDuration, int nextMaxTicks, int nextMaxTicksPerFrame)
+        {
+            StartCombat(
+                nextSimulation,
+                tickDuration,
+                nextMaxTicks,
+                nextMaxTicksPerFrame,
+                0f,
+                1f);
+        }
+
+        public void StartCombat(
+            BattleSimulation nextSimulation,
+            float tickDuration,
+            int nextMaxTicks,
+            int nextMaxTicksPerFrame,
+            float nextCombatAccelerationDelay,
+            float nextAcceleratedCombatSpeed)
         {
             if (nextSimulation == null)
             {
@@ -54,6 +80,13 @@ namespace DeckBattle
             tickLoop = new BattleTickLoop(simulation, tickDuration);
             maxTicks = Math.Max(1, nextMaxTicks);
             maxTicksPerFrame = Math.Max(1, nextMaxTicksPerFrame);
+            combatAccelerationDelay = BattleTiming.ResolveCombatAccelerationDelay(nextCombatAccelerationDelay);
+            acceleratedCombatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(nextAcceleratedCombatSpeed);
+            CombatElapsedTime = 0f;
+            CurrentCombatSpeed = combatAccelerationDelay <= 0f
+                ? acceleratedCombatSpeed
+                : 1f;
+            accelerationActivated = combatAccelerationDelay <= 0f || acceleratedCombatSpeed <= 1f;
             tickAccumulator = 0f;
             ticksElapsed = 0;
             lastTickResult = new BattleTickResult(0, 0, false, false, BattleSide.Player);
@@ -75,6 +108,11 @@ namespace DeckBattle
             simulation = null;
             tickLoop = null;
             tickAccumulator = 0f;
+            combatAccelerationDelay = BattleTiming.DefaultCombatAccelerationDelay;
+            acceleratedCombatSpeed = BattleTiming.DefaultAcceleratedCombatSpeed;
+            accelerationActivated = false;
+            CombatElapsedTime = 0f;
+            CurrentCombatSpeed = 1f;
             ticksElapsed = 0;
             result = null;
             eventQueue.Clear();
@@ -88,7 +126,11 @@ namespace DeckBattle
                 return;
             }
 
-            tickAccumulator += Mathf.Max(0f, deltaTime);
+            UpdateCombatSpeedForFrame();
+
+            float baseDeltaTime = Mathf.Max(0f, deltaTime);
+            CombatElapsedTime += baseDeltaTime;
+            tickAccumulator += baseDeltaTime * CurrentCombatSpeed;
             int ticksThisFrame = 0;
             while (tickAccumulator >= tickLoop.TickDuration && ticksThisFrame < maxTicksPerFrame)
             {
@@ -137,6 +179,21 @@ namespace DeckBattle
             tickAccumulator = 0f;
             result = new BattleRunResult(ticksElapsed, lastTickResult, endReason == CombatEndReason.MaxTicksReached, endReason);
             Completed?.Invoke(result);
+        }
+
+        private void UpdateCombatSpeedForFrame()
+        {
+            if (accelerationActivated || CombatElapsedTime < combatAccelerationDelay)
+            {
+                return;
+            }
+
+            accelerationActivated = true;
+            CurrentCombatSpeed = acceleratedCombatSpeed;
+            if (CurrentCombatSpeed > 1f)
+            {
+                CombatSpeedChanged?.Invoke(CurrentCombatSpeed);
+            }
         }
 
         [Conditional("UNITY_EDITOR")]

@@ -109,6 +109,69 @@ namespace DeckBattle.Tests
             Assert.AreEqual(ticksAtCompletion, processedTicks);
         }
 
+        [Test]
+        public void Advance_UsesNormalTimeUntilTheAccelerationThreshold()
+        {
+            BattleCombatRunner runner = CreateRunner();
+            BattleSimulation simulation = CreateUnresolvedSimulation();
+            int processedTicks = 0;
+            int speedChangeCount = 0;
+            float changedSpeed = 0f;
+            runner.TickProcessed += (result, events) => processedTicks++;
+            runner.CombatSpeedChanged += speed =>
+            {
+                changedSpeed = speed;
+                speedChangeCount++;
+            };
+
+            runner.StartCombat(simulation, 0.25f, 16, 16, 0.5f, 2f);
+            runner.Advance(0.5f);
+
+            Assert.AreEqual(1f, runner.CurrentCombatSpeed);
+            Assert.AreEqual(0.5f, runner.CombatElapsedTime);
+            Assert.AreEqual(2, processedTicks);
+            Assert.AreEqual(0f, changedSpeed);
+            Assert.AreEqual(0, speedChangeCount);
+
+            runner.Advance(0.25f);
+
+            Assert.AreEqual(2f, runner.CurrentCombatSpeed);
+            Assert.AreEqual(0.75f, runner.CombatElapsedTime);
+            Assert.AreEqual(4, processedTicks);
+            Assert.AreEqual(2f, changedSpeed);
+            Assert.AreEqual(1, speedChangeCount);
+
+            runner.Advance(0.25f);
+
+            Assert.AreEqual(1, speedChangeCount);
+        }
+
+        [Test]
+        public void StartCombat_AccelerationAtZeroDelayStartsImmediately()
+        {
+            BattleCombatRunner runner = CreateRunner();
+
+            runner.StartCombat(CreateUnresolvedSimulation(), 0.25f, 16, 16, 0f, 2f);
+            runner.Advance(0.25f);
+
+            Assert.AreEqual(2f, runner.CurrentCombatSpeed);
+            Assert.AreEqual(0.5d, runner.Simulation.ElapsedTime, 0.001d);
+        }
+
+        [Test]
+        public void StopCombat_ResetsAccelerationForTheNextCombat()
+        {
+            BattleCombatRunner runner = CreateRunner();
+            runner.StartCombat(CreateUnresolvedSimulation(), 0.25f, 16, 16, 0f, 2f);
+            runner.Advance(0.25f);
+
+            runner.StopCombat();
+            runner.StartCombat(CreateUnresolvedSimulation(), 0.25f, 16, 16, 1f, 2f);
+
+            Assert.AreEqual(1f, runner.CurrentCombatSpeed);
+            Assert.AreEqual(0f, runner.CombatElapsedTime);
+        }
+
         private BattleCombatRunner CreateRunner()
         {
             var gameObject = new GameObject("BattleCombatRunnerTests");

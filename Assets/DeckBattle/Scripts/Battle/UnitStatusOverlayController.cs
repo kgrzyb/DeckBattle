@@ -22,6 +22,7 @@ namespace DeckBattle
         private int lastScreenWidth;
         private int lastScreenHeight;
         private bool projectionStateInitialized;
+        private float combatSpeed = 1f;
 
         private void Awake()
         {
@@ -34,6 +35,11 @@ namespace DeckBattle
             presentationCatalog = catalog;
         }
 
+        public void SetCombatSpeed(float speed)
+        {
+            combatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
+        }
+
         private void LateUpdate()
         {
             RectTransform root = ResolveRoot();
@@ -44,7 +50,7 @@ namespace DeckBattle
             }
 
             bool cameraOrRootChanged = HasProjectionStateChanged(root, camera);
-            float deltaTime = Time.deltaTime;
+            float deltaTime = Time.deltaTime * combatSpeed;
             foreach (TrackedOverlay tracked in activeOverlays.Values)
             {
                 if (tracked.View != null)

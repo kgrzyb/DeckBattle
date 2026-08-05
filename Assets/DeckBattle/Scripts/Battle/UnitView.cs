@@ -58,6 +58,7 @@ namespace DeckBattle
         private float moveDuration;
         private float damageTimer;
         private float deathTimer;
+        private float combatSpeed = 1f;
         private int queuedMoveHead;
         private int queuedMoveCount;
         private bool isMoving;
@@ -87,6 +88,7 @@ namespace DeckBattle
             if (animator != null)
             {
                 animator.applyRootMotion = false;
+                animator.speed = combatSpeed;
             }
 
             baseModelScale = modelRoot.localScale;
@@ -101,7 +103,7 @@ namespace DeckBattle
                 return;
             }
 
-            float deltaTime = Time.deltaTime;
+            float deltaTime = Time.deltaTime * combatSpeed;
             UpdateMovement(deltaTime);
             UpdateFacing(deltaTime);
             UpdateVisualTimers(deltaTime);
@@ -158,6 +160,15 @@ namespace DeckBattle
             queuedMoveHead = 0;
             queuedMoveCount = 0;
             isMoving = false;
+        }
+
+        public void SetCombatSpeed(float speed)
+        {
+            combatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
+            if (animator != null)
+            {
+                animator.speed = combatSpeed;
+            }
         }
 
         public void MoveToWorldPosition(Vector3 worldPosition, float duration)
@@ -460,6 +471,7 @@ namespace DeckBattle
 
             animator.Rebind();
             animator.Update(0f);
+            animator.speed = combatSpeed;
             animator.SetFloat(AttackSpeedParameter, 1f);
             animator.Play(IdleState, AnimatorLayerIndex, 0f);
         }

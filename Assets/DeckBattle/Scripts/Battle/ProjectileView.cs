@@ -10,6 +10,7 @@ namespace DeckBattle
         private ProjectileView poolPrefab;
         private float duration;
         private float elapsed;
+        private float combatSpeed = 1f;
         private bool isPlaying;
 
         public bool IsPlaying
@@ -34,7 +35,7 @@ namespace DeckBattle
                 return;
             }
 
-            elapsed += Time.deltaTime;
+            elapsed += Time.deltaTime * combatSpeed;
             float t = duration > 0f ? Mathf.Clamp01(elapsed / duration) : 1f;
             Vector3 destination = ResolveDestination();
             transform.position = Vector3.Lerp(from, destination, t);
@@ -66,10 +67,16 @@ namespace DeckBattle
             Play(fromPosition, null, targetPosition, travelDuration);
         }
 
+        public void SetCombatSpeed(float speed)
+        {
+            combatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
+        }
+
         public void Release()
         {
             isPlaying = false;
             target = null;
+            combatSpeed = 1f;
             gameObject.SetActive(false);
         }
 

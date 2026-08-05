@@ -46,6 +46,8 @@ namespace DeckBattle
             if (battleView != null)
             {
                 combatRunner.TickProcessed -= battleView.ProcessCombatTick;
+                combatRunner.CombatSpeedChanged -= battleView.SetCombatSpeed;
+                battleView.SetCombatSpeed(1f);
             }
 
             combatRunner.StopCombat();
@@ -92,15 +94,27 @@ namespace DeckBattle
             float resolvedTickDuration = battleTimingConfig != null ? battleTimingConfig.CombatTickDuration : tickDuration;
             int resolvedMaxTicks = battleTimingConfig != null ? battleTimingConfig.MaxCombatTicks : maxTicks;
             int resolvedMaxTicksPerFrame = battleTimingConfig != null ? battleTimingConfig.MaxTicksPerFrame : maxTicksPerFrame;
+            float resolvedAccelerationDelay = battleTimingConfig != null
+                ? battleTimingConfig.CombatAccelerationDelay
+                : BattleTiming.DefaultCombatAccelerationDelay;
+            float resolvedAcceleratedCombatSpeed = battleTimingConfig != null
+                ? battleTimingConfig.AcceleratedCombatSpeed
+                : BattleTiming.DefaultAcceleratedCombatSpeed;
 
             combatRunner.TickProcessed -= battleView.ProcessCombatTick;
+            combatRunner.CombatSpeedChanged -= battleView.SetCombatSpeed;
             combatRunner.StartCombat(
                 simulation,
                 Mathf.Max(BattleTiming.MinCombatTickDuration, resolvedTickDuration),
                 Mathf.Max(1, resolvedMaxTicks),
-                Mathf.Max(1, resolvedMaxTicksPerFrame));
+                Mathf.Max(1, resolvedMaxTicksPerFrame),
+                resolvedAccelerationDelay,
+                resolvedAcceleratedCombatSpeed);
+            battleView.SetPresentationTickDuration(resolvedTickDuration);
             battleView.BindInitialState(combatRunner.PresentationSnapshot);
             combatRunner.TickProcessed += battleView.ProcessCombatTick;
+            combatRunner.CombatSpeedChanged += battleView.SetCombatSpeed;
+            battleView.SetCombatSpeed(combatRunner.CurrentCombatSpeed);
         }
 
         [Serializable]

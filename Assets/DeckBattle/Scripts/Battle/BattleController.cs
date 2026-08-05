@@ -33,6 +33,8 @@ namespace DeckBattle
         [Header("Combat Timing")]
         [SerializeField, HideInInspector] private float combatTickDuration = BattleTiming.DefaultCombatTickDuration;
         [SerializeField, HideInInspector] private int maxCombatTicks = BattleTiming.DefaultMaxCombatTicks;
+        [SerializeField, HideInInspector] private float combatAccelerationDelay = BattleTiming.DefaultCombatAccelerationDelay;
+        [SerializeField, HideInInspector] private float acceleratedCombatSpeed = BattleTiming.DefaultAcceleratedCombatSpeed;
         [SerializeField, HideInInspector] private float roundResolutionDelay = BattleTiming.DefaultRoundResolutionDelay;
 
         private UnitViewRegistry unitViewRegistry;
@@ -81,6 +83,8 @@ namespace DeckBattle
         {
             combatTickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, combatTickDuration);
             maxCombatTicks = Mathf.Max(1, maxCombatTicks);
+            combatAccelerationDelay = BattleTiming.ResolveCombatAccelerationDelay(combatAccelerationDelay);
+            acceleratedCombatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(acceleratedCombatSpeed);
             roundResolutionDelay = Mathf.Max(0f, roundResolutionDelay);
             enemyUnitPlacementDelay = Mathf.Max(0f, enemyUnitPlacementDelay);
             enemyReadyDelay = Mathf.Max(0f, enemyReadyDelay);
@@ -548,7 +552,9 @@ namespace DeckBattle
                 activeSimulation,
                 tickDuration,
                 ResolveMaxCombatTicks(),
-                ResolveMaxTicksPerFrame());
+                ResolveMaxTicksPerFrame(),
+                ResolveCombatAccelerationDelay(),
+                ResolveAcceleratedCombatSpeed());
             resolvedBattleView.SetPresentationTickDuration(tickDuration);
             resolvedBattleView.BindInitialState(resolvedCombatRunner.PresentationSnapshot);
             SubscribeCombatRunner(resolvedCombatRunner, resolvedBattleView);
@@ -679,6 +685,8 @@ namespace DeckBattle
             activeCombatRunner = runner;
             activeCombatRunner.TickProcessed += view.ProcessCombatTick;
             activeCombatRunner.Completed += HandleCombatRunnerCompleted;
+            activeCombatRunner.CombatSpeedChanged += view.SetCombatSpeed;
+            view.SetCombatSpeed(activeCombatRunner.CurrentCombatSpeed);
         }
 
         private void UnsubscribeCombatRunner()
@@ -692,6 +700,7 @@ namespace DeckBattle
             if (resolvedBattleView != null)
             {
                 activeCombatRunner.TickProcessed -= resolvedBattleView.ProcessCombatTick;
+                activeCombatRunner.CombatSpeedChanged -= resolvedBattleView.SetCombatSpeed;
             }
 
             activeCombatRunner.Completed -= HandleCombatRunnerCompleted;
@@ -735,6 +744,22 @@ namespace DeckBattle
                 ? battleTimingConfig.MaxTicksPerFrame
                 : BattleTiming.DefaultMaxTicksPerFrame;
             return Mathf.Max(1, configuredTicks);
+        }
+
+        private float ResolveCombatAccelerationDelay()
+        {
+            float configuredDelay = battleTimingConfig != null
+                ? battleTimingConfig.CombatAccelerationDelay
+                : combatAccelerationDelay;
+            return BattleTiming.ResolveCombatAccelerationDelay(configuredDelay);
+        }
+
+        private float ResolveAcceleratedCombatSpeed()
+        {
+            float configuredSpeed = battleTimingConfig != null
+                ? battleTimingConfig.AcceleratedCombatSpeed
+                : acceleratedCombatSpeed;
+            return BattleTiming.ResolveAcceleratedCombatSpeed(configuredSpeed);
         }
 
         private float ResolveRoundResolutionDelay()

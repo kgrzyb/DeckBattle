@@ -12,6 +12,7 @@ namespace DeckBattle
         private readonly List<PooledBattleEffect> activeDamageEffects = new List<PooledBattleEffect>(8);
         private readonly Stack<PooledBattleEffect> pooledAttackEffects = new Stack<PooledBattleEffect>(8);
         private readonly Stack<PooledBattleEffect> pooledDamageEffects = new Stack<PooledBattleEffect>(8);
+        private float combatSpeed = 1f;
 
         public BattleEffectPresenter(PooledBattleEffect attackEffectPrefab, PooledBattleEffect damageEffectPrefab, Transform effectRoot)
         {
@@ -24,6 +25,19 @@ namespace DeckBattle
         {
             ReleaseCompleted(activeAttackEffects, pooledAttackEffects);
             ReleaseCompleted(activeDamageEffects, pooledDamageEffects);
+        }
+
+        public void SetCombatSpeed(float speed)
+        {
+            float safeSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
+            if (Mathf.Approximately(combatSpeed, safeSpeed))
+            {
+                return;
+            }
+
+            combatSpeed = safeSpeed;
+            SetActiveCombatSpeed(activeAttackEffects, combatSpeed);
+            SetActiveCombatSpeed(activeDamageEffects, combatSpeed);
         }
 
         public void PlayAttack(Vector3 position)
@@ -50,6 +64,7 @@ namespace DeckBattle
             }
 
             PooledBattleEffect effect = pooledEffects.Count > 0 ? pooledEffects.Pop() : Object.Instantiate(prefab, effectRoot);
+            effect.SetCombatSpeed(combatSpeed);
             effect.Play(position);
             activeEffects.Add(effect);
         }
@@ -66,6 +81,7 @@ namespace DeckBattle
 
                 if (effect != null)
                 {
+                    effect.SetCombatSpeed(1f);
                     effect.gameObject.SetActive(false);
                     pooledEffects.Push(effect);
                 }
@@ -81,12 +97,25 @@ namespace DeckBattle
                 PooledBattleEffect effect = activeEffects[i];
                 if (effect != null)
                 {
+                    effect.SetCombatSpeed(1f);
                     effect.gameObject.SetActive(false);
                     pooledEffects.Push(effect);
                 }
             }
 
             activeEffects.Clear();
+        }
+
+        private static void SetActiveCombatSpeed(List<PooledBattleEffect> activeEffects, float speed)
+        {
+            for (int i = 0; i < activeEffects.Count; i++)
+            {
+                PooledBattleEffect effect = activeEffects[i];
+                if (effect != null)
+                {
+                    effect.SetCombatSpeed(speed);
+                }
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ namespace DeckBattle
         private readonly List<ProjectileView> activeProjectileViews = new List<ProjectileView>(8);
         private readonly Dictionary<int, ProjectileView> projectileViewById = new Dictionary<int, ProjectileView>(8);
         private readonly Dictionary<ProjectileView, Stack<ProjectileView>> pooledProjectileViews = new Dictionary<ProjectileView, Stack<ProjectileView>>(4);
+        private float combatSpeed = 1f;
 
         public BattleProjectilePresenter(
             BoardPresenter boardPresenter,
@@ -45,6 +46,25 @@ namespace DeckBattle
             }
         }
 
+        public void SetCombatSpeed(float speed)
+        {
+            float safeSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
+            if (Mathf.Approximately(combatSpeed, safeSpeed))
+            {
+                return;
+            }
+
+            combatSpeed = safeSpeed;
+            for (int i = 0; i < activeProjectileViews.Count; i++)
+            {
+                ProjectileView projectileView = activeProjectileViews[i];
+                if (projectileView != null)
+                {
+                    projectileView.SetCombatSpeed(combatSpeed);
+                }
+            }
+        }
+
         public void HandleLaunched(BattleEvent battleEvent)
         {
             if (presentationCatalog == null
@@ -66,6 +86,7 @@ namespace DeckBattle
                 : null;
 
             ProjectileView projectileView = GetFromPool(projectilePrefab);
+            projectileView.SetCombatSpeed(combatSpeed);
             projectileView.Play(from, targetTransform, fallbackTarget, battleEvent.Duration);
             activeProjectileViews.Add(projectileView);
             projectileViewById[battleEvent.ProjectileId] = projectileView;
@@ -111,6 +132,7 @@ namespace DeckBattle
 
         private void ReturnToPool(ProjectileView projectileView)
         {
+            projectileView.SetCombatSpeed(1f);
             ProjectileView prefab = projectileView.PoolPrefab;
             if (prefab == null)
             {

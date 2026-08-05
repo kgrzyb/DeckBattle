@@ -17,6 +17,7 @@ namespace DeckBattle
         private readonly List<ShadowStatus> shadowStatuses = new List<ShadowStatus>(32);
         private readonly int[] syncVersions = new int[StatusKindCapacity];
         private int syncVersion = 1;
+        private float combatSpeed = 1f;
 
         public void Initialize(StatusPresentationCatalog catalog)
         {
@@ -24,11 +25,45 @@ namespace DeckBattle
             Prewarm();
         }
 
+        public void SetCombatSpeed(float speed)
+        {
+            float safeSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
+            if (Mathf.Approximately(combatSpeed, safeSpeed))
+            {
+                return;
+            }
+
+            combatSpeed = safeSpeed;
+            for (int i = 0; i < activeVfx.Count; i++)
+            {
+                ActiveVfx active = activeVfx[i];
+                if (active.View != null)
+                {
+                    active.View.SetCombatSpeed(combatSpeed);
+                }
+            }
+
+            for (int i = 0; i < activeOneShots.Count; i++)
+            {
+                OneShotVfx oneShot = activeOneShots[i];
+                if (oneShot.View != null)
+                {
+                    oneShot.View.SetCombatSpeed(combatSpeed);
+                }
+            }
+        }
+
         private void Update()
         {
+            float deltaTime = Time.deltaTime * combatSpeed;
             for (int i = activeOneShots.Count - 1; i >= 0; i--)
             {
                 OneShotVfx oneShot = activeOneShots[i];
+                if (oneShot.View != null)
+                {
+                    oneShot.View.AdvanceOneShot(deltaTime);
+                }
+
                 if (oneShot.View != null && !oneShot.View.IsOneShotComplete)
                 {
                     continue;
@@ -218,6 +253,7 @@ namespace DeckBattle
             {
                 StatusVfxView view = GetFromPool(entry != null ? entry.ActiveVfxPrefab : null);
                 if (view == null) return;
+                view.SetCombatSpeed(combatSpeed);
                 view.BeginActive(pivot, entry);
                 activeVfx.Add(new ActiveVfx(unitId, kind, entry.ActiveVfxPrefab, view));
                 currentCount++;
@@ -244,6 +280,7 @@ namespace DeckBattle
             {
                 StatusVfxView view = GetFromPool(prefab);
                 if (view == null) return;
+                view.SetCombatSpeed(combatSpeed);
                 view.PlayOneShot(pivot, entry);
                 activeOneShots.Add(new OneShotVfx(unitId, prefab, view));
             }
