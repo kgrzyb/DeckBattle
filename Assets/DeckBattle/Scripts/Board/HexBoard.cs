@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace DeckBattle
 {
@@ -422,16 +421,6 @@ namespace DeckBattle
             }
 
             return left.R.CompareTo(right.R);
-        }
-
-        public Vector3 ToLocalPosition(HexCoord coord)
-        {
-            float rowOffset = (coord.R & 1) == 0 ? -0.25f : 0.25f;
-            float centeredColumn = coord.Q - (Width - 1) * 0.5f + rowOffset;
-            float x = HexSize * Mathf.Sqrt(3f) * centeredColumn;
-            float z = HexSize * 1.5f * coord.R;
-            float centerZ = HexSize * 1.5f * (Height - 1) * 0.5f;
-            return new Vector3(x, 0f, z - centerZ);
         }
 
         private static void OffsetToCube(HexCoord coord, out int x, out int y, out int z)

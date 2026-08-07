@@ -165,11 +165,13 @@ namespace DeckBattle
                     && draggedCard.SpellDefinition != null
                     && draggedCard.SpellDefinition.TargetingKind == SpellTargetingKind.None)
                 {
-                    boardPresenter.ClearHoverHighlight();
+                    boardPresenter.ClearHoverVisualState();
                 }
                 else
                 {
-                    boardPresenter.HighlightSingleTile(tile, legal);
+                    boardPresenter.SetHoverVisualState(
+                        tile,
+                        legal ? PreparationHexVisualState.Legal : PreparationHexVisualState.Blocked);
                 }
             }
         }
@@ -227,7 +229,7 @@ namespace DeckBattle
                 BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
                 if (boardPresenter != null)
                 {
-                    boardPresenter.ClearAllHighlights();
+                    boardPresenter.ClearAllVisualStates();
                 }
             }
         }
@@ -308,7 +310,7 @@ namespace DeckBattle
             BoardPresenter boardPresenter = battleController.BoardPresenter;
             if (boardPresenter != null)
             {
-                boardPresenter.HighlightFormationTiles(state, state.Player, selectedUnit);
+                HighlightFormationTiles(state, state.Player, selectedUnit, boardPresenter);
             }
         }
 
@@ -433,7 +435,9 @@ namespace DeckBattle
             BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
             if (boardPresenter != null)
             {
-                boardPresenter.HighlightSingleTile(targetTile, legal);
+                boardPresenter.SetHoverVisualState(
+                    targetTile,
+                    legal ? PreparationHexVisualState.Legal : PreparationHexVisualState.Blocked);
             }
 
             MovePressedUnitView(screenPosition);
@@ -532,9 +536,26 @@ namespace DeckBattle
         {
             BattleState state = battleController != null ? battleController.State : null;
             BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
-            if (boardPresenter != null)
+            if (boardPresenter == null)
             {
-                boardPresenter.HighlightCardPlayableTiles(state, state != null ? state.Player : null, selectedCard);
+                return;
+            }
+
+            boardPresenter.ClearAllVisualStates();
+            if (state == null || state.Player == null || selectedCard == null || selectedCard.Definition == null)
+            {
+                return;
+            }
+
+            if (selectedCard.Definition.CardKind == CardKind.Unit && selectedCard.UnitDefinition != null)
+            {
+                HighlightUnitPlayableTiles(state, state.Player, selectedCard, boardPresenter);
+                return;
+            }
+
+            if (selectedCard.Definition.CardKind == CardKind.Spell && selectedCard.SpellDefinition != null)
+            {
+                HighlightSpellTargetTiles(state, state.Player, selectedCard, boardPresenter);
             }
         }
 
@@ -781,7 +802,87 @@ namespace DeckBattle
             BoardPresenter boardPresenter = battleController != null ? battleController.BoardPresenter : null;
             if (boardPresenter != null)
             {
-                boardPresenter.ClearAllHighlights();
+                boardPresenter.ClearAllVisualStates();
+            }
+        }
+
+        private static void HighlightFormationTiles(
+            BattleState state,
+            PlayerBattleState player,
+            RuntimeUnit unit,
+            BoardPresenter boardPresenter)
+        {
+            boardPresenter.ClearAllVisualStates();
+            if (state == null || player == null || unit == null || state.Board == null)
+            {
+                return;
+            }
+
+            HexBoard board = state.Board;
+            for (int r = 0; r < board.Height; r++)
+            {
+                for (int q = 0; q < board.Width; q++)
+                {
+                    HexCoord coord = new HexCoord(q, r);
+                    if (board.IsDeploymentCoord(player.Side, coord))
+                    {
+                        boardPresenter.SetTileVisualState(coord, PreparationHexVisualState.Legal);
+                    }
+                }
+            }
+
+            boardPresenter.SetTileVisualState(unit.FormationCoord, PreparationHexVisualState.Selected);
+        }
+
+        private static void HighlightUnitPlayableTiles(
+            BattleState state,
+            PlayerBattleState player,
+            CardRuntimeState card,
+            BoardPresenter boardPresenter)
+        {
+            HexBoard board = state.Board;
+            if (board == null)
+            {
+                return;
+            }
+
+            for (int r = 0; r < board.Height; r++)
+            {
+                for (int q = 0; q < board.Width; q++)
+                {
+                    HexCoord coord = new HexCoord(q, r);
+                    if (UnitPlayService.ValidatePlay(state, player, card, coord) == PlayUnitFailReason.None)
+                    {
+                        boardPresenter.SetTileVisualState(coord, PreparationHexVisualState.Legal);
+                    }
+                }
+            }
+        }
+
+        private static void HighlightSpellTargetTiles(
+            BattleState state,
+            PlayerBattleState player,
+            CardRuntimeState card,
+            BoardPresenter boardPresenter)
+        {
+            SpellDefinition spellDefinition = card.SpellDefinition;
+            if (spellDefinition == null || spellDefinition.TargetingKind != SpellTargetingKind.FriendlyUnit)
+            {
+                return;
+            }
+
+            for (int i = 0; i < player.Units.Count; i++)
+            {
+                RuntimeUnit unit = player.Units[i];
+                if (unit == null || !unit.IsAlive)
+                {
+                    continue;
+                }
+
+                if (SpellPlayService.ValidatePlay(state, player, card, SpellTarget.ForUnit(unit)) == PlaySpellFailReason.None)
+                {
+                    boardPresenter.SetTileVisualState(unit.BattleCoord, PreparationHexVisualState.Legal);
+                }
             }
         }
 

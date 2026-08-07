@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace DeckBattle
@@ -8,14 +7,28 @@ namespace DeckBattle
         [SerializeField] private HexTileView tilePrefab;
         [SerializeField] private Transform tileRoot;
 
-        private readonly List<HexTileView> tiles = new List<HexTileView>(32);
-        private readonly Dictionary<HexCoord, HexTileView> tileByCoord = new Dictionary<HexCoord, HexTileView>(32);
         private HexBoard board;
-        private HexTileView highlightedTile;
+        private HexBoardLayout layout;
+        private PreparationHexGridView preparationHexGridView;
 
         public HexBoard Board
         {
             get { return board; }
+        }
+
+        public int TileCount
+        {
+            get
+            {
+                EnsurePreparationHexGridView();
+                return preparationHexGridView.TileCount;
+            }
+        }
+
+        private void Awake()
+        {
+            EnsurePreparationHexGridView();
+            preparationHexGridView.SetVisible(false);
         }
 
         public void EnsureBuilt(HexBoard sourceBoard)
@@ -26,320 +39,94 @@ namespace DeckBattle
                 return;
             }
 
-            if (HasMatchingTopology(sourceBoard))
-            {
-                board = sourceBoard;
-                return;
-            }
-
-            Rebuild(sourceBoard);
-        }
-
-        private void Rebuild(HexBoard sourceBoard)
-        {
             board = sourceBoard;
-            ClearExistingTiles();
-
-            Transform parent = tileRoot != null ? tileRoot : transform;
-            Quaternion tileRotation = tilePrefab.transform.localRotation;
-            for (int r = 0; r < board.Height; r++)
+            if (layout == null || !layout.Matches(sourceBoard))
             {
-                for (int q = 0; q < board.Width; q++)
-                {
-                    HexCoord coord = new HexCoord(q, r);
-                    HexTileView tile = Instantiate(tilePrefab, parent);
-                    tile.transform.localPosition = board.ToLocalPosition(coord);
-                    tile.transform.localRotation = tileRotation;
-                    tile.transform.localScale = Vector3.one * board.HexSize;
-                    tile.Initialize(coord, GetDeploymentSide(coord));
-                    tiles.Add(tile);
-                    tileByCoord.Add(coord, tile);
-                }
+                layout = new HexBoardLayout(sourceBoard);
             }
+
+            EnsurePreparationHexGridView();
+            preparationHexGridView.EnsureBuilt(sourceBoard, layout);
         }
 
         public Vector3 GetWorldPosition(HexCoord coord)
         {
-            if (board == null)
+            EnsureLayout();
+            if (layout == null)
             {
                 return transform.position;
             }
 
-            return transform.TransformPoint(board.ToLocalPosition(coord));
+            return transform.TransformPoint(layout.GetLocalPosition(coord));
         }
 
         public Vector3 GetWorldCenter()
         {
-            if (board == null)
+            EnsureLayout();
+            if (layout == null)
             {
                 return transform.position;
             }
 
-            Vector3 localMin = board.ToLocalPosition(new HexCoord(0, 0));
-            Vector3 localMax = board.ToLocalPosition(new HexCoord(board.Width - 1, board.Height - 1));
-            return transform.TransformPoint((localMin + localMax) * 0.5f);
+            return transform.TransformPoint(layout.GetLocalCenter());
         }
 
         public HexTileView GetTileView(HexCoord coord)
         {
-            HexTileView tile;
-            tileByCoord.TryGetValue(coord, out tile);
-            return tile;
+            EnsurePreparationHexGridView();
+            return preparationHexGridView.GetTile(coord);
         }
 
-        public void HighlightSingleTile(HexTileView tile, bool isLegal)
+        public void SetTileVisualState(HexCoord coord, PreparationHexVisualState state)
         {
-            if (highlightedTile == tile)
-            {
-                if (highlightedTile != null)
-                {
-                    if (isLegal)
-                    {
-                        highlightedTile.SetLegalHighlight();
-                    }
-                    else
-                    {
-                        highlightedTile.SetBlockedHighlight();
-                    }
-                }
-
-                return;
-            }
-
-            ClearHoverHighlight();
-
-            highlightedTile = tile;
-            if (highlightedTile == null)
-            {
-                return;
-            }
-
-            if (isLegal)
-            {
-                highlightedTile.SetLegalHighlight();
-            }
-            else
-            {
-                highlightedTile.SetBlockedHighlight();
-            }
+            EnsurePreparationHexGridView();
+            preparationHexGridView.SetTileVisualState(coord, state);
         }
 
-        public void HighlightFormationTiles(BattleState state, PlayerBattleState player, RuntimeUnit selectedUnit)
+        public void SetHoverVisualState(HexTileView tile, PreparationHexVisualState state)
         {
-            ClearHoverHighlight();
-
-            if (state == null || player == null || selectedUnit == null || board == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < tiles.Count; i++)
-            {
-                HexTileView tile = tiles[i];
-                bool legal = board.IsDeploymentCoord(player.Side, tile.Coord);
-                if (legal)
-                {
-                    tile.SetLegalHighlight();
-                }
-                else
-                {
-                    tile.ClearHighlight();
-                }
-            }
-
-            HexTileView selectedTile = GetTileView(selectedUnit.FormationCoord);
-            if (selectedTile != null)
-            {
-                selectedTile.SetSelectedHighlight();
-            }
+            EnsurePreparationHexGridView();
+            preparationHexGridView.SetHoverVisualState(tile, state);
         }
 
-        private bool HasMatchingTopology(HexBoard sourceBoard)
+        public void ClearHoverVisualState()
         {
-            if (board == null
-                || board.Width != sourceBoard.Width
-                || board.Height != sourceBoard.Height
-                || !Mathf.Approximately(board.HexSize, sourceBoard.HexSize))
-            {
-                return false;
-            }
-
-            int expectedTileCount = sourceBoard.Width * sourceBoard.Height;
-            if (tiles.Count != expectedTileCount || tileByCoord.Count != expectedTileCount)
-            {
-                return false;
-            }
-
-            Transform parent = tileRoot != null ? tileRoot : transform;
-            if (parent.childCount != expectedTileCount)
-            {
-                return false;
-            }
-
-            for (int r = 0; r < sourceBoard.Height; r++)
-            {
-                for (int q = 0; q < sourceBoard.Width; q++)
-                {
-                    HexCoord coord = new HexCoord(q, r);
-                    HexTileView tile;
-                    if (!tileByCoord.TryGetValue(coord, out tile) || tile == null || tile.Coord != coord)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
+            EnsurePreparationHexGridView();
+            preparationHexGridView.ClearHoverVisualState();
         }
 
-        public void HighlightCardPlayableTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
+        public void ClearAllVisualStates()
         {
-            if (selectedCard == null || selectedCard.Definition == null)
-            {
-                ClearAllHighlights();
-                return;
-            }
-
-            if (selectedCard.Definition.CardKind == CardKind.Unit && selectedCard.UnitDefinition != null)
-            {
-                HighlightUnitPlayableTiles(state, player, selectedCard);
-                return;
-            }
-
-            if (selectedCard.Definition.CardKind == CardKind.Spell && selectedCard.SpellDefinition != null)
-            {
-                HighlightSpellTargetTiles(state, player, selectedCard);
-                return;
-            }
-
-            ClearAllHighlights();
+            EnsurePreparationHexGridView();
+            preparationHexGridView.ClearAllVisualStates();
         }
 
-        public void HighlightUnitPlayableTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
+        public void SetPreparationHexesVisible(bool visible)
         {
-            ClearHoverHighlight();
-
-            if (state == null || player == null || selectedCard == null || selectedCard.UnitDefinition == null || board == null)
+            EnsurePreparationHexGridView();
+            if (!visible)
             {
-                return;
+                preparationHexGridView.ClearAllVisualStates();
             }
 
-            for (int i = 0; i < tiles.Count; i++)
-            {
-                HexTileView tile = tiles[i];
-                bool legal = UnitPlayService.ValidatePlay(state, player, selectedCard, tile.Coord) == PlayUnitFailReason.None;
-                if (legal)
-                {
-                    tile.SetLegalHighlight();
-                }
-                else
-                {
-                    tile.ClearHighlight();
-                }
-            }
+            preparationHexGridView.SetVisible(visible);
         }
 
-        public void HighlightSpellTargetTiles(BattleState state, PlayerBattleState player, CardRuntimeState selectedCard)
+        private void EnsurePreparationHexGridView()
         {
-            ClearAllHighlights();
-
-            SpellDefinition spellDefinition = selectedCard != null ? selectedCard.SpellDefinition : null;
-            if (state == null || player == null || spellDefinition == null)
+            if (preparationHexGridView == null)
             {
-                return;
+                preparationHexGridView = new PreparationHexGridView(transform);
             }
 
-            if (spellDefinition.TargetingKind == SpellTargetingKind.None)
-            {
-                return;
-            }
-
-            if (spellDefinition.TargetingKind != SpellTargetingKind.FriendlyUnit)
-            {
-                return;
-            }
-
-            for (int i = 0; i < player.Units.Count; i++)
-            {
-                RuntimeUnit unit = player.Units[i];
-                if (unit == null || !unit.IsAlive)
-                {
-                    continue;
-                }
-
-                if (SpellPlayService.ValidatePlay(state, player, selectedCard, SpellTarget.ForUnit(unit)) != PlaySpellFailReason.None)
-                {
-                    continue;
-                }
-
-                HexTileView tile = GetTileView(unit.BattleCoord);
-                if (tile != null)
-                {
-                    tile.SetLegalHighlight();
-                }
-            }
+            preparationHexGridView.Configure(tilePrefab, tileRoot);
         }
 
-        public void ClearAllHighlights()
+        private void EnsureLayout()
         {
-            highlightedTile = null;
-            for (int i = 0; i < tiles.Count; i++)
+            if (board != null && (layout == null || !layout.Matches(board)))
             {
-                tiles[i].ClearHighlight();
-            }
-        }
-
-        public void ClearHoverHighlight()
-        {
-            if (highlightedTile == null)
-            {
-                return;
-            }
-
-            highlightedTile.ClearHighlight();
-            highlightedTile = null;
-        }
-
-        private BattleSide? GetDeploymentSide(HexCoord coord)
-        {
-            bool player = board.IsDeploymentCoord(BattleSide.Player, coord);
-            bool enemy = board.IsDeploymentCoord(BattleSide.Enemy, coord);
-
-            if (player && !enemy)
-            {
-                return BattleSide.Player;
-            }
-
-            if (enemy && !player)
-            {
-                return BattleSide.Enemy;
-            }
-
-            return null;
-        }
-
-        private void ClearExistingTiles()
-        {
-            Transform parent = tileRoot != null ? tileRoot : transform;
-            for (int i = parent.childCount - 1; i >= 0; i--)
-            {
-                DestroyTileObject(parent.GetChild(i).gameObject);
-            }
-
-            tiles.Clear();
-            tileByCoord.Clear();
-            highlightedTile = null;
-        }
-
-        private static void DestroyTileObject(GameObject tileObject)
-        {
-            if (Application.isPlaying)
-            {
-                Destroy(tileObject);
-            }
-            else
-            {
-                DestroyImmediate(tileObject);
+                layout = new HexBoardLayout(board);
             }
         }
     }

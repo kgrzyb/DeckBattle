@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -21,12 +20,13 @@ namespace DeckBattle.Tests
                 SetPrivateField(presenter, "tileRoot", tileRootObject.transform);
 
                 presenter.EnsureBuilt(new HexBoard(3, 2, 1f));
-                List<HexTileView> initialTiles = new List<HexTileView>(GetTiles(presenter));
+                HexTileView initialTile = presenter.GetTileView(new HexCoord(1, 1));
 
                 presenter.EnsureBuilt(new HexBoard(3, 2, 1f));
 
                 Assert.AreEqual(6, tileRootObject.transform.childCount);
-                CollectionAssert.AreEqual(initialTiles, GetTiles(presenter));
+                Assert.AreEqual(6, presenter.TileCount);
+                Assert.AreSame(initialTile, presenter.GetTileView(new HexCoord(1, 1)));
             }
             finally
             {
@@ -53,7 +53,7 @@ namespace DeckBattle.Tests
                 presenter.EnsureBuilt(new HexBoard(4, 2, 1f));
 
                 Assert.AreEqual(8, tileRootObject.transform.childCount);
-                Assert.AreEqual(8, GetTiles(presenter).Count);
+                Assert.AreEqual(8, presenter.TileCount);
                 Assert.IsNotNull(presenter.GetTileView(new HexCoord(3, 1)));
             }
             finally
@@ -78,15 +78,16 @@ namespace DeckBattle.Tests
                 SetPrivateField(presenter, "tileRoot", tileRootObject.transform);
 
                 presenter.EnsureBuilt(new HexBoard(3, 2, 1f));
-                HexTileView firstTile = GetTiles(presenter)[0];
+                HexTileView firstTile = presenter.GetTileView(new HexCoord(0, 0));
                 var resizedBoard = new HexBoard(3, 2, 1.5f);
+                var resizedLayout = new HexBoardLayout(resizedBoard);
 
                 presenter.EnsureBuilt(resizedBoard);
 
                 HexTileView resizedTile = presenter.GetTileView(new HexCoord(2, 1));
-                Assert.AreNotSame(firstTile, GetTiles(presenter)[0]);
+                Assert.AreNotSame(firstTile, presenter.GetTileView(new HexCoord(0, 0)));
                 Assert.AreEqual(Vector3.one * resizedBoard.HexSize, resizedTile.transform.localScale);
-                Assert.AreEqual(resizedBoard.ToLocalPosition(new HexCoord(2, 1)), resizedTile.transform.localPosition);
+                Assert.AreEqual(resizedLayout.GetLocalPosition(new HexCoord(2, 1)), resizedTile.transform.localPosition);
             }
             finally
             {
@@ -96,11 +97,33 @@ namespace DeckBattle.Tests
             }
         }
 
-        private static List<HexTileView> GetTiles(BoardPresenter presenter)
+        [Test]
+        public void SetPreparationHexesVisible_TogglesTileRootWithoutChangingWorldMapping()
         {
-            return (List<HexTileView>)typeof(BoardPresenter)
-                .GetField("tiles", BindingFlags.Instance | BindingFlags.NonPublic)
-                .GetValue(presenter);
+            GameObject presenterObject = new GameObject("BoardPresenter", typeof(BoardPresenter));
+            GameObject tilePrefabObject = new GameObject("TilePrefab", typeof(HexTileView));
+            GameObject tileRootObject = new GameObject("TileRoot");
+
+            try
+            {
+                BoardPresenter presenter = presenterObject.GetComponent<BoardPresenter>();
+                SetPrivateField(presenter, "tilePrefab", tilePrefabObject.GetComponent<HexTileView>());
+                SetPrivateField(presenter, "tileRoot", tileRootObject.transform);
+                HexBoard board = new HexBoard(3, 2, 1f);
+                presenter.EnsureBuilt(board);
+                Vector3 worldPosition = presenter.GetWorldPosition(new HexCoord(2, 1));
+
+                presenter.SetPreparationHexesVisible(false);
+
+                Assert.IsFalse(tileRootObject.activeSelf);
+                Assert.AreEqual(worldPosition, presenter.GetWorldPosition(new HexCoord(2, 1)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(tileRootObject);
+                Object.DestroyImmediate(tilePrefabObject);
+                Object.DestroyImmediate(presenterObject);
+            }
         }
 
         private static void SetPrivateField(object target, string fieldName, Object value)

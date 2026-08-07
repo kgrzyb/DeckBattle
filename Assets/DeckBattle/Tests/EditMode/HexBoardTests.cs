@@ -300,9 +300,10 @@ namespace DeckBattle.Tests
         public void ToLocalPosition_CentersBoardAroundOrigin()
         {
             var board = new HexBoard(5, 6, 1f);
+            var layout = new HexBoardLayout(board);
 
-            Vector3 first = board.ToLocalPosition(new HexCoord(0, 0));
-            Vector3 last = board.ToLocalPosition(new HexCoord(4, 5));
+            Vector3 first = layout.GetLocalPosition(new HexCoord(0, 0));
+            Vector3 last = layout.GetLocalPosition(new HexCoord(4, 5));
 
             Assert.That(first.x + last.x, Is.EqualTo(0f).Within(0.001f));
             Assert.That(first.z + last.z, Is.EqualTo(0f).Within(0.001f));
@@ -312,11 +313,12 @@ namespace DeckBattle.Tests
         public void ToLocalPosition_KeepsRowsVisuallySymmetric()
         {
             var board = new HexBoard(5, 6, 1f);
+            var layout = new HexBoardLayout(board);
 
-            Vector3 bottomLeft = board.ToLocalPosition(new HexCoord(0, 0));
-            Vector3 bottomRight = board.ToLocalPosition(new HexCoord(4, 0));
-            Vector3 topLeft = board.ToLocalPosition(new HexCoord(0, 5));
-            Vector3 topRight = board.ToLocalPosition(new HexCoord(4, 5));
+            Vector3 bottomLeft = layout.GetLocalPosition(new HexCoord(0, 0));
+            Vector3 bottomRight = layout.GetLocalPosition(new HexCoord(4, 0));
+            Vector3 topLeft = layout.GetLocalPosition(new HexCoord(0, 5));
+            Vector3 topRight = layout.GetLocalPosition(new HexCoord(4, 5));
 
             Assert.That(bottomRight.x - bottomLeft.x, Is.EqualTo(topRight.x - topLeft.x).Within(0.001f));
             Assert.That(Mathf.Abs(bottomLeft.x), Is.EqualTo(Mathf.Abs(topRight.x)).Within(0.001f));
@@ -327,23 +329,24 @@ namespace DeckBattle.Tests
         public void ToLocalPosition_MatchesOffsetRowNeighborGeometry()
         {
             var board = new HexBoard(5, 6, 1f);
+            var layout = new HexBoardLayout(board);
             HexCoord center = new HexCoord(2, 2);
             var neighbors = new List<HexCoord>(6);
 
             board.FillNeighbors(center, neighbors);
 
-            float expectedDistance = Vector3.Distance(board.ToLocalPosition(center), board.ToLocalPosition(neighbors[0]));
+            float expectedDistance = Vector3.Distance(layout.GetLocalPosition(center), layout.GetLocalPosition(neighbors[0]));
             for (int i = 1; i < neighbors.Count; i++)
             {
-                float distance = Vector3.Distance(board.ToLocalPosition(center), board.ToLocalPosition(neighbors[i]));
+                float distance = Vector3.Distance(layout.GetLocalPosition(center), layout.GetLocalPosition(neighbors[i]));
                 Assert.That(distance, Is.EqualTo(expectedDistance).Within(0.001f));
             }
 
             Assert.That(
-                Vector3.Distance(board.ToLocalPosition(new HexCoord(3, 3)), board.ToLocalPosition(new HexCoord(3, 4))),
+                Vector3.Distance(layout.GetLocalPosition(new HexCoord(3, 3)), layout.GetLocalPosition(new HexCoord(3, 4))),
                 Is.EqualTo(expectedDistance).Within(0.001f));
             Assert.That(
-                Vector3.Distance(board.ToLocalPosition(new HexCoord(3, 3)), board.ToLocalPosition(new HexCoord(2, 4))),
+                Vector3.Distance(layout.GetLocalPosition(new HexCoord(3, 3)), layout.GetLocalPosition(new HexCoord(2, 4))),
                 Is.GreaterThan(expectedDistance));
         }
     }

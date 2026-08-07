@@ -926,10 +926,22 @@ namespace DeckBattle
 
         private void RaiseStateChanged()
         {
+            RefreshPreparationHexVisibility();
+
             if (StateChanged != null)
             {
                 StateChanged.Invoke();
             }
+        }
+
+        private void RefreshPreparationHexVisibility()
+        {
+            if (boardPresenter == null)
+            {
+                return;
+            }
+
+            boardPresenter.SetPreparationHexesVisible(state != null && state.Phase == BattlePhase.Preparation);
         }
     }
 }
