@@ -2867,7 +2867,6 @@ MonoBehaviour:
   tilePrefab: {fileID: 4422744890964404386, guid: 3db2ded3361913f4786e62d6443e68ec,
     type: 3}
   tileRoot: {fileID: 1074389606}
-  hexSize: 1
 --- !u!4 &1201968724
 Transform:
   m_ObjectHideFlags: 0

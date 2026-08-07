@@ -35,7 +35,7 @@ namespace DeckBattle
             var state = new BattleState
             {
                 Config = config,
-                Board = new HexBoard(config.BoardWidth, config.BoardHeight, 1f),
+                Board = new HexBoard(config.BoardWidth, config.BoardHeight, config.HexSize),
                 Player = new PlayerBattleState(
                     BattleSide.Player,
                     config.StartingPlayerHp,

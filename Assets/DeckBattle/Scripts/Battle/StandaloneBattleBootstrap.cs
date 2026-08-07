@@ -55,7 +55,11 @@ namespace DeckBattle
 
         public void StartConfiguredBattle()
         {
-            if (battleConfig == null || battleView == null || combatRunner == null || initialUnits.Count == 0)
+            if (battleConfig == null
+                || battleView == null
+                || battleView.BoardPresenter == null
+                || combatRunner == null
+                || initialUnits.Count == 0)
             {
                 Debug.LogWarning("Standalone battle bootstrap is missing required configuration.", this);
                 return;
@@ -88,9 +92,10 @@ namespace DeckBattle
             }
 
             BattleSimulation simulation = BattleSimulation.Create(
-                new HexBoard(battleConfig.BoardWidth, battleConfig.BoardHeight, 1f),
+                new HexBoard(battleConfig.BoardWidth, battleConfig.BoardHeight, battleConfig.HexSize),
                 spawnBuffer,
                 battleConfig.RuntimeTuningConfig.CreateRuntimeTuning());
+            battleView.BoardPresenter.EnsureBuilt(simulation.Board);
             float resolvedTickDuration = battleTimingConfig != null ? battleTimingConfig.CombatTickDuration : tickDuration;
             int resolvedMaxTicks = battleTimingConfig != null ? battleTimingConfig.MaxCombatTicks : maxTicks;
             int resolvedMaxTicksPerFrame = battleTimingConfig != null ? battleTimingConfig.MaxTicksPerFrame : maxTicksPerFrame;

@@ -7,7 +7,6 @@ namespace DeckBattle
     {
         [SerializeField] private HexTileView tilePrefab;
         [SerializeField] private Transform tileRoot;
-        [SerializeField] private float hexSize = 1f;
 
         private readonly List<HexTileView> tiles = new List<HexTileView>(32);
         private readonly Dictionary<HexCoord, HexTileView> tileByCoord = new Dictionary<HexCoord, HexTileView>(32);
@@ -51,7 +50,7 @@ namespace DeckBattle
                     HexTileView tile = Instantiate(tilePrefab, parent);
                     tile.transform.localPosition = board.ToLocalPosition(coord);
                     tile.transform.localRotation = tileRotation;
-                    tile.transform.localScale = Vector3.one * hexSize;
+                    tile.transform.localScale = Vector3.one * board.HexSize;
                     tile.Initialize(coord, GetDeploymentSide(coord));
                     tiles.Add(tile);
                     tileByCoord.Add(coord, tile);
@@ -157,7 +156,10 @@ namespace DeckBattle
 
         private bool HasMatchingTopology(HexBoard sourceBoard)
         {
-            if (board == null || board.Width != sourceBoard.Width || board.Height != sourceBoard.Height)
+            if (board == null
+                || board.Width != sourceBoard.Width
+                || board.Height != sourceBoard.Height
+                || !Mathf.Approximately(board.HexSize, sourceBoard.HexSize))
             {
                 return false;
             }

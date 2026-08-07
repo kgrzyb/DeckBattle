@@ -26,6 +26,7 @@ namespace DeckBattle.Tests
             config.MaxRoundDamageBonus = 0;
             config.BoardWidth = 5;
             config.BoardHeight = 6;
+            config.HexSize = 1f;
             return config;
         }
 

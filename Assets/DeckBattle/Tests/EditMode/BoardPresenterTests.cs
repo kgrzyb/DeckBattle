@@ -64,6 +64,38 @@ namespace DeckBattle.Tests
             }
         }
 
+        [Test]
+        public void EnsureBuilt_WhenHexSizeChanges_RebuildsTilesAtConfiguredScale()
+        {
+            GameObject presenterObject = new GameObject("BoardPresenter", typeof(BoardPresenter));
+            GameObject tilePrefabObject = new GameObject("TilePrefab", typeof(HexTileView));
+            GameObject tileRootObject = new GameObject("TileRoot");
+
+            try
+            {
+                BoardPresenter presenter = presenterObject.GetComponent<BoardPresenter>();
+                SetPrivateField(presenter, "tilePrefab", tilePrefabObject.GetComponent<HexTileView>());
+                SetPrivateField(presenter, "tileRoot", tileRootObject.transform);
+
+                presenter.EnsureBuilt(new HexBoard(3, 2, 1f));
+                HexTileView firstTile = GetTiles(presenter)[0];
+                var resizedBoard = new HexBoard(3, 2, 1.5f);
+
+                presenter.EnsureBuilt(resizedBoard);
+
+                HexTileView resizedTile = presenter.GetTileView(new HexCoord(2, 1));
+                Assert.AreNotSame(firstTile, GetTiles(presenter)[0]);
+                Assert.AreEqual(Vector3.one * resizedBoard.HexSize, resizedTile.transform.localScale);
+                Assert.AreEqual(resizedBoard.ToLocalPosition(new HexCoord(2, 1)), resizedTile.transform.localPosition);
+            }
+            finally
+            {
+                Object.DestroyImmediate(tileRootObject);
+                Object.DestroyImmediate(tilePrefabObject);
+                Object.DestroyImmediate(presenterObject);
+            }
+        }
+
         private static List<HexTileView> GetTiles(BoardPresenter presenter)
         {
             return (List<HexTileView>)typeof(BoardPresenter)

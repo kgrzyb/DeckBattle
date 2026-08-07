@@ -23,8 +23,13 @@ namespace DeckBattle
         public int RoundDamageBonusIncreasePerStep = 0;
         public int RoundDamageBonusIncreaseEveryRounds = 1;
         public int MaxRoundDamageBonus = 0;
+
+        [Header("Board")]
         public int BoardWidth = 5;
         public int BoardHeight = 6;
+        [Min(0.01f)] public float HexSize = 1f;
+
+        [Header("Combat Limits")]
         [Min(1)] public int MaxPendingCombatEffects = 32;
 
         private void OnValidate()
@@ -44,6 +49,7 @@ namespace DeckBattle
             MaxRoundDamageBonus = Mathf.Max(StartingRoundDamageBonus, MaxRoundDamageBonus);
             BoardWidth = Mathf.Max(1, BoardWidth);
             BoardHeight = Mathf.Max(2, BoardHeight);
+            HexSize = Mathf.Max(0.01f, HexSize);
             MaxPendingCombatEffects = Mathf.Max(1, MaxPendingCombatEffects);
         }
     }

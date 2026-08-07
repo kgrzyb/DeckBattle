@@ -46,6 +46,17 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Create_UsesConfiguredHexSize()
+        {
+            BattleConfig config = TestDefinitions.CreateConfig();
+            config.HexSize = 1.25f;
+
+            BattleState state = BattleState.Create(config, CreateDeck(1), CreateDeck(1), 123);
+
+            Assert.AreEqual(1.25f, state.Board.HexSize);
+        }
+
+        [Test]
         public void BeginRoundStartAndPreparationAfterRoundStart_GatesPreparationExplicitly()
         {
             BattleConfig config = TestDefinitions.CreateConfig();
