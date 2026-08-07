@@ -2054,7 +2054,7 @@ MonoBehaviour:
   textPrefab: {fileID: 770000002, guid: 67bf3dad37ac4bcd80e9c4c42ad81e0d, type: 3}
   textRoot: {fileID: 880000002}
   worldCamera: {fileID: 1149497570}
-  worldOffset: {x: 0, y: 0.1, z: 0}
+  worldOffset: {x: 0, y: 0.15, z: 0}
   prewarmCount: 16
   maxActive: 32
 --- !u!1 &911184082

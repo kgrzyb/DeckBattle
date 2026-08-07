@@ -55,41 +55,41 @@ MonoBehaviour:
   - type: 0
     color: {r: 1, g: 1, b: 1, a: 1}
     duration: 0.6
-    risePixels: 50
+    risePixels: 40
     verticalMotionCurve:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
         time: 0
         value: 0
-        inSlope: 4.0580664
-        outSlope: 4.0580664
-        tangentMode: 0
+        inSlope: 2.0000446
+        outSlope: 2.0000446
+        tangentMode: 34
         weightedMode: 0
         inWeight: 0
-        outWeight: 0.07832555
+        outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.47395736
-        value: 0.9976387
-        inSlope: 0.023406314
-        outSlope: 0.023406314
+        time: 0.49879715
+        value: 0.9976166
+        inSlope: 0.010795642
+        outSlope: 0.010795642
         tangentMode: 0
+        weightedMode: 3
+        inWeight: 0.8697563
+        outWeight: 0.8738397
+      - serializedVersion: 3
+        time: 0.9953613
+        value: 0.011772156
+        inSlope: -1.9853313
+        outSlope: -1.9853313
+        tangentMode: 34
         weightedMode: 0
         inWeight: 0.33333334
-        outWeight: 0.22372705
-      - serializedVersion: 3
-        time: 1
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
         outWeight: 0
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    horizontalDriftPixels: 25
+    horizontalDriftPixels: 10
     scaleCurve:
       serializedVersion: 2
       m_Curve:
@@ -136,8 +136,8 @@ MonoBehaviour:
     fadeStartNormalized: 0.3
   - type: 1
     color: {r: 1, g: 0.666343, b: 0.1273585, a: 1}
-    duration: 0.65
-    risePixels: 60
+    duration: 0.8
+    risePixels: 45
     verticalMotionCurve:
       serializedVersion: 2
       m_Curve:
@@ -147,40 +147,40 @@ MonoBehaviour:
         inSlope: 0
         outSlope: 0
         tangentMode: 0
-        weightedMode: 0
+        weightedMode: 2
         inWeight: 0
-        outWeight: 0.07832555
-      - serializedVersion: 3
-        time: 0.097993344
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0.33333334
         outWeight: 0.33333334
       - serializedVersion: 3
-        time: 0.59692794
-        value: 0.9976387
-        inSlope: 0.023406314
-        outSlope: 0.023406314
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.22372705
-      - serializedVersion: 3
-        time: 1
-        value: 0
+        time: 0.26181248
+        value: 0.0047058435
         inSlope: 0
         outSlope: 0
         tangentMode: 0
+        weightedMode: 3
+        inWeight: 0.2646567
+        outWeight: 0.20523751
+      - serializedVersion: 3
+        time: 0.56144977
+        value: 1.0023239
+        inSlope: 0.010795642
+        outSlope: 0.010795642
+        tangentMode: 0
+        weightedMode: 3
+        inWeight: 0.8416017
+        outWeight: 0.8738397
+      - serializedVersion: 3
+        time: 0.9953613
+        value: 0.011772156
+        inSlope: -2.2828424
+        outSlope: -2.2828424
+        tangentMode: 34
         weightedMode: 0
-        inWeight: 0
+        inWeight: 0.33333334
         outWeight: 0
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    horizontalDriftPixels: 25
+    horizontalDriftPixels: 10
     scaleCurve:
       serializedVersion: 2
       m_Curve:
