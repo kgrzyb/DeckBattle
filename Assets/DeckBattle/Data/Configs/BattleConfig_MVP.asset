@@ -28,5 +28,5 @@ MonoBehaviour:
   MaxRoundDamageBonus: 99
   BoardWidth: 5
   BoardHeight: 8
-  HexSize: 1
+  HexSize: 0.8
   MaxPendingCombatEffects: 32

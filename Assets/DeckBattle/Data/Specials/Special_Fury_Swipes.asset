@@ -11,11 +11,11 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4c9d2e7a1b5f43d8a6e0c2f7b9d4a381, type: 3}
   m_Name: Special_Fury_Swipes
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   SpecialId: fury_swipes
   Kind: 2
   WindupDuration: 0
   CastDuration: 1.5
   AppliedStatus: {fileID: 0}
-  StrikeCount: 5
-  AttackDamageMultiplier: 0.7
+  StrikeCount: 10
+  AttackDamageMultiplier: 2
