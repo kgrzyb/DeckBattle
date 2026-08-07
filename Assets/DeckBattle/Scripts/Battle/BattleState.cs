@@ -40,13 +40,11 @@ namespace DeckBattle
                     BattleSide.Player,
                     config.StartingPlayerHp,
                     config.StartingAp,
-                    config.StartingDeploymentSlots,
                     config.StartingRoundDamageBonus),
                 Enemy = new PlayerBattleState(
                     BattleSide.Enemy,
                     config.StartingEnemyHp,
                     config.StartingAp,
-                    config.StartingDeploymentSlots,
                     config.StartingRoundDamageBonus),
                 Phase = BattlePhase.Preparation,
                 InitialPreparationSide = initialPreparationSide,
@@ -136,7 +134,6 @@ namespace DeckBattle
         {
             player.IsReady = false;
             player.Ap = CalculateRoundAp();
-            player.DeploymentSlots = CalculateDeploymentSlots();
             player.RoundDamageBonus = CalculateRoundDamageBonus();
             FormationService.RestoreFormationAndResetRoundHealth(player);
             DeckService.DrawCards(player, Config.DrawPerRound, Config.MaxHandSize);
@@ -144,20 +141,10 @@ namespace DeckBattle
 
         private int CalculateRoundAp()
         {
-            return CalculateProgressionValue(
-                Config.StartingAp,
-                Config.ApIncreasePerStep,
-                Config.ApIncreaseEveryRounds,
-                Config.MaxAp);
-        }
-
-        private int CalculateDeploymentSlots()
-        {
-            return CalculateProgressionValue(
-                Config.StartingDeploymentSlots,
-                Config.DeploymentSlotIncreasePerStep,
-                Config.DeploymentSlotIncreaseEveryRounds,
-                Config.MaxDeploymentSlots);
+            long startingAp = Math.Max(0, Config.StartingAp);
+            long apIncreasePerRound = Math.Max(0, Config.ApIncreasePerRound);
+            long value = startingAp + (RoundNumber - 1L) * apIncreasePerRound;
+            return value >= int.MaxValue ? int.MaxValue : (int)value;
         }
 
         private int CalculateRoundDamageBonus()

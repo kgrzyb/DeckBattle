@@ -34,6 +34,7 @@ namespace DeckBattle.Tests
         public void PlayerCanPlayMultipleUnitsInSinglePreparationPhase()
         {
             BattleState state = CreateState();
+            state.Player.Ap = 2;
 
             PlayUnitResult first = UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
             PlayUnitResult second = UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(1, 0));

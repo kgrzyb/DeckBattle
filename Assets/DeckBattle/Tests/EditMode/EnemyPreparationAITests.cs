@@ -12,6 +12,7 @@ namespace DeckBattle.Tests
                 TestDefinitions.CreateUnit("first", 1),
                 TestDefinitions.CreateUnit("second", 1),
                 TestDefinitions.CreateUnit("third", 1));
+            state.Enemy.Ap = 3;
 
             EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
 
@@ -47,6 +48,7 @@ namespace DeckBattle.Tests
             UnitDefinition guard = TestDefinitions.CreateUnit("guard", 1);
             SpellDefinition spell = TestDefinitions.CreateSpell("warcry", 1, amount: 3);
             BattleState state = CreateStateWithEnemyHand(spell, guard);
+            state.Enemy.Ap = 2;
 
             EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
 
@@ -58,7 +60,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1, state.Enemy.Units.Count);
             Assert.AreEqual(3, state.Enemy.Units[0].AttackBonusNextCombat);
             Assert.AreSame(state.Enemy.Units[0], result.SpellTargetUnit);
-            Assert.AreEqual(1, state.Enemy.Ap);
+            Assert.AreEqual(0, state.Enemy.Ap);
             Assert.IsTrue(state.Enemy.IsReady);
         }
 
@@ -103,6 +105,7 @@ namespace DeckBattle.Tests
                 TestDefinitions.CreateUnit("guard", 1),
                 TestDefinitions.CreateSpell("unsupported", 1, SpellEffectKind.None, SpellTargetingKind.FriendlyUnit),
                 TestDefinitions.CreateSpell("supported", 1, amount: 2));
+            state.Enemy.Ap = 2;
 
             EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
 
@@ -129,17 +132,44 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void PrepareFormation_RespectsDeploymentSlots()
+        public void PrepareFormation_RespectsUnitLimit()
         {
             BattleState state = CreateState();
-            state.Enemy.DeploymentSlots = 0;
+            state.Config.MaxUnitsPerSide = 1;
+            state.Enemy.Units.Add(new RuntimeUnit(
+                99,
+                TestDefinitions.CreateUnit("existing", 1),
+                BattleSide.Enemy,
+                new HexCoord(0, 5)));
 
             EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
 
             Assert.IsFalse(result.PlayedUnit);
             Assert.IsTrue(result.MarkedReady);
             Assert.IsTrue(state.Enemy.IsReady);
-            Assert.AreEqual(0, state.Enemy.Units.Count);
+            Assert.AreEqual(1, state.Enemy.Units.Count);
+        }
+
+        [Test]
+        public void PrepareFormation_PlaysSpellWhenUnitLimitIsReached()
+        {
+            SpellDefinition spell = TestDefinitions.CreateSpell("warcry", 1, amount: 3);
+            BattleState state = CreateStateWithEnemyHand(spell);
+            RuntimeUnit existingUnit = new RuntimeUnit(
+                99,
+                TestDefinitions.CreateUnit("existing", 1),
+                BattleSide.Enemy,
+                new HexCoord(0, 5));
+            state.Config.MaxUnitsPerSide = 1;
+            state.Enemy.Units.Add(existingUnit);
+
+            EnemyPreparationAIResult result = EnemyPreparationAI.PrepareFormation(state);
+
+            Assert.IsFalse(result.PlayedUnit);
+            Assert.IsTrue(result.PlayedSpell);
+            Assert.AreEqual(1, result.PlayedSpellCount);
+            Assert.AreEqual(3, existingUnit.AttackBonusNextCombat);
+            Assert.AreEqual(1, state.Enemy.Units.Count);
         }
 
         [Test]
@@ -191,6 +221,7 @@ namespace DeckBattle.Tests
                 TestDefinitions.CreateUnit("first", 1),
                 TestDefinitions.CreateUnit("second", 1));
             state.Player.IsReady = true;
+            state.Enemy.Ap = 2;
 
             EnemyPreparationAI.PrepareFormation(state);
 

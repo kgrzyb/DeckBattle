@@ -99,15 +99,10 @@ namespace DeckBattle.Tests
         public void ResolveRoundAndStartNext_WhenMatchContinues_ResetsFormationResourcesAndDrawsCards()
         {
             BattleConfig config = TestDefinitions.CreateConfig();
-            config.StartingHandSize = 0;
-            config.StartingAp = 3;
-            config.MaxAp = 4;
-            config.StartingDeploymentSlots = 2;
-            config.MaxDeploymentSlots = 4;
-            config.DeploymentSlotIncreaseEveryRounds = 1;
-            config.DrawPerRound = 2;
+            config.StartingHandSize = 3;
+            config.DrawPerRound = 1;
 
-            BattleState state = BattleState.Create(config, CreateDeck("player", 3), CreateDeck("enemy", 3), 42);
+            BattleState state = BattleState.Create(config, CreateDeck("player", 4), CreateDeck("enemy", 4), 42);
             RuntimeUnit playerUnit = CreateRuntimeUnit(1, BattleSide.Player, new HexCoord(1, 0), 0);
             RuntimeUnit enemyUnit = CreateRuntimeUnit(2, BattleSide.Enemy, new HexCoord(1, 5), 0);
             playerUnit.CurrentHp = 1;
@@ -130,12 +125,10 @@ namespace DeckBattle.Tests
             Assert.AreEqual(2, state.RoundNumber);
             Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
             Assert.AreEqual(BattleSide.Enemy, state.ActivePreparationSide);
-            Assert.AreEqual(4, state.Player.Ap);
-            Assert.AreEqual(4, state.Enemy.Ap);
-            Assert.AreEqual(3, state.Player.DeploymentSlots);
-            Assert.AreEqual(3, state.Enemy.DeploymentSlots);
-            Assert.AreEqual(2, state.Player.Hand.Count);
-            Assert.AreEqual(2, state.Enemy.Hand.Count);
+            Assert.AreEqual(2, state.Player.Ap);
+            Assert.AreEqual(2, state.Enemy.Ap);
+            Assert.AreEqual(4, state.Player.Hand.Count);
+            Assert.AreEqual(4, state.Enemy.Hand.Count);
             Assert.IsFalse(state.Player.IsReady);
             Assert.IsFalse(state.Enemy.IsReady);
             Assert.AreEqual(playerUnit.Definition.MaxHp, playerUnit.CurrentHp);
@@ -152,77 +145,61 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void ResolveRoundAndStartNext_UsesIndependentProgressionCadenceAndCaps()
+        public void ResolveRoundAndStartNext_ReplacesRemainingApWithTheNextRoundValue()
         {
             BattleConfig config = TestDefinitions.CreateConfig();
             config.StartingHandSize = 0;
             config.DrawPerRound = 0;
-            config.StartingAp = 2;
-            config.ApIncreasePerStep = 2;
-            config.ApIncreaseEveryRounds = 2;
-            config.MaxAp = 4;
-            config.StartingDeploymentSlots = 1;
-            config.DeploymentSlotIncreasePerStep = 1;
-            config.DeploymentSlotIncreaseEveryRounds = 1;
-            config.MaxDeploymentSlots = 3;
-            config.StartingRoundDamageBonus = 1;
-            config.RoundDamageBonusIncreasePerStep = 3;
-            config.RoundDamageBonusIncreaseEveryRounds = 3;
-            config.MaxRoundDamageBonus = 4;
 
             BattleState state = BattleState.Create(config, CreateDeck("player", 0), CreateDeck("enemy", 0), 42);
 
-            Assert.AreEqual(2, state.Player.Ap);
-            Assert.AreEqual(1, state.Player.DeploymentSlots);
-            Assert.AreEqual(1, state.Player.RoundDamageBonus);
+            Assert.AreEqual(1, state.Player.Ap);
+            Assert.AreEqual(1, state.Enemy.Ap);
 
+            state.Player.Ap = 0;
+            state.Enemy.Ap = 1;
             AdvanceRound(state);
 
             Assert.AreEqual(2, state.RoundNumber);
             Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
-            state.BeginPreparationAfterRoundStart();
             Assert.AreEqual(2, state.Player.Ap);
-            Assert.AreEqual(2, state.Player.DeploymentSlots);
-            Assert.AreEqual(1, state.Player.RoundDamageBonus);
+            Assert.AreEqual(2, state.Enemy.Ap);
 
+            state.Player.Ap = 1;
+            state.Enemy.Ap = 0;
             AdvanceRound(state);
 
             Assert.AreEqual(3, state.RoundNumber);
             Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
-            state.BeginPreparationAfterRoundStart();
-            Assert.AreEqual(4, state.Player.Ap);
-            Assert.AreEqual(3, state.Player.DeploymentSlots);
-            Assert.AreEqual(1, state.Player.RoundDamageBonus);
-
-            AdvanceRound(state);
-
-            Assert.AreEqual(4, state.RoundNumber);
-            Assert.AreEqual(BattlePhase.RoundStart, state.Phase);
-            Assert.AreEqual(4, state.Player.Ap);
-            Assert.AreEqual(3, state.Player.DeploymentSlots);
-            Assert.AreEqual(4, state.Player.RoundDamageBonus);
+            Assert.AreEqual(3, state.Player.Ap);
+            Assert.AreEqual(3, state.Enemy.Ap);
             Assert.AreEqual(state.Player.Ap, state.Enemy.Ap);
-            Assert.AreEqual(state.Player.DeploymentSlots, state.Enemy.DeploymentSlots);
-            Assert.AreEqual(state.Player.RoundDamageBonus, state.Enemy.RoundDamageBonus);
         }
 
         [Test]
-        public void ResolveRoundAndStartNext_DoesNotDrawPastMaxHandSize()
+        public void ResolveRoundAndStartNext_DoesNotDrawOrRemoveDeckCardWhenHandIsFull()
         {
             BattleConfig config = TestDefinitions.CreateConfig();
-            config.StartingHandSize = 2;
-            config.MaxHandSize = 3;
-            config.DrawPerRound = 5;
+            config.StartingHandSize = 4;
+            config.MaxHandSize = 5;
+            config.DrawPerRound = 1;
 
             BattleState state = BattleState.Create(config, CreateDeck("player", 6), CreateDeck("enemy", 6), 42);
             state.Phase = BattlePhase.RoundResolution;
 
             RoundFlowService.ResolveRoundAndStartNext(state);
 
-            Assert.AreEqual(3, state.Player.Hand.Count);
-            Assert.AreEqual(3, state.Enemy.Hand.Count);
-            Assert.AreEqual(3, state.Player.Deck.Count);
-            Assert.AreEqual(3, state.Enemy.Deck.Count);
+            Assert.AreEqual(5, state.Player.Hand.Count);
+            Assert.AreEqual(5, state.Enemy.Hand.Count);
+            Assert.AreEqual(1, state.Player.Deck.Count);
+            Assert.AreEqual(1, state.Enemy.Deck.Count);
+
+            AdvanceRound(state);
+
+            Assert.AreEqual(5, state.Player.Hand.Count);
+            Assert.AreEqual(5, state.Enemy.Hand.Count);
+            Assert.AreEqual(1, state.Player.Deck.Count);
+            Assert.AreEqual(1, state.Enemy.Deck.Count);
         }
 
         [Test]

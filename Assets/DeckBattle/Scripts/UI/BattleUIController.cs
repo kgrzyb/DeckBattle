@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace DeckBattle
@@ -19,7 +20,8 @@ namespace DeckBattle
         [SerializeField] private TextMeshProUGUI enemyHpText;
         [SerializeField] private TextMeshProUGUI apText;
         [SerializeField] private TextMeshProUGUI roundText;
-        [SerializeField] private TextMeshProUGUI slotsText;
+        [FormerlySerializedAs("slotsText")]
+        [SerializeField] private TextMeshProUGUI unitLimitText;
         [SerializeField] private TextMeshProUGUI phaseText;
         [SerializeField] private Button readyButton;
         [SerializeField] private BattleCombatRunner combatRunner;
@@ -55,7 +57,7 @@ namespace DeckBattle
         private int shownAp = int.MinValue;
         private int shownRound = int.MinValue;
         private int shownUnits = int.MinValue;
-        private int shownSlots = int.MinValue;
+        private int shownMaxUnits = int.MinValue;
         private BattlePhase shownPhase = BattlePhase.None;
         private BattleSide shownActivePreparationSide = (BattleSide)(-1);
         private bool shownPlayerReady;
@@ -232,12 +234,12 @@ namespace DeckBattle
             SetTextIfChanged(roundText, ref shownRound, state.RoundNumber, "Runda ");
 
             int units = player.Units.Count;
-            int slots = player.DeploymentSlots;
-            if (slotsText != null && (shownUnits != units || shownSlots != slots))
+            int maxUnits = state.Config.MaxUnitsPerSide;
+            if (unitLimitText != null && (shownUnits != units || shownMaxUnits != maxUnits))
             {
                 shownUnits = units;
-                shownSlots = slots;
-                slotsText.text = "Sloty " + units + "/" + slots;
+                shownMaxUnits = maxUnits;
+                unitLimitText.text = "Jednostki " + units + "/" + maxUnits;
             }
 
             if (phaseText != null

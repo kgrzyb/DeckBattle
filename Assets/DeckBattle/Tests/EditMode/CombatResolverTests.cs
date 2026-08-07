@@ -97,7 +97,7 @@ namespace DeckBattle.Tests
             ResolveReadySpecial(simulation, events);
 
             Assert.IsTrue(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, simulation.Units[0].UnitId, out int hasteIndex));
-            Assert.That(simulation.Units[0].Statuses[hasteIndex].EndTime, Is.EqualTo(6.5d).Within(0.000001d));
+            Assert.That(simulation.Units[0].Statuses[hasteIndex].EndTime, Is.EqualTo(5.75d).Within(0.000001d));
             Assert.AreEqual(0.5f, simulation.Units[0].StatusSnapshot.Haste);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
             AssertSpecialActivation(events, UnitSpecialKind.HasteBurst);
@@ -136,12 +136,12 @@ namespace DeckBattle.Tests
 
             TestDefinitions.ResolveNextAttack(simulation);
             ResolveReadySpecial(simulation, new BattleEventQueue());
-            AssertHasteEndTime(simulation.Units[0], 6.5d);
+            AssertHasteEndTime(simulation.Units[0], 5.75d);
 
             TestDefinitions.ResolveNextAttack(simulation);
             ResolveReadySpecial(simulation, new BattleEventQueue());
 
-            AssertHasteEndTime(simulation.Units[0], 7.5d);
+            AssertHasteEndTime(simulation.Units[0], 6.75d);
         }
 
         [Test]

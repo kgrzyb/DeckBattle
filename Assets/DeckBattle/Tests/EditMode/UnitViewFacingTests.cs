@@ -154,7 +154,8 @@ namespace DeckBattle.Tests
 
                 InvokePrivateMethod(view, "UpdateMovement", 0.25f);
                 InvokePrivateMethod(view, "UpdateFacing", 1f);
-                Assert.That(Vector3.Dot(modelObject.transform.forward, Vector3.right), Is.GreaterThan(0.999f));
+                Vector3 expectedDirection = new Vector3(3f, 0f, -2f).normalized;
+                Assert.That(Vector3.Dot(modelObject.transform.forward, expectedDirection), Is.GreaterThan(0.999f));
             }
             finally
             {

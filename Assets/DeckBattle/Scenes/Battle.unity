@@ -2314,7 +2314,7 @@ GameObject:
   - component: {fileID: 1069169520}
   - component: {fileID: 1069169521}
   m_Layer: 0
-  m_Name: Slots
+  m_Name: UnitLimit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2367,7 +2367,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Sloty 0/3
+  m_text: Jednostki 0/8
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -3999,7 +3999,7 @@ MonoBehaviour:
   enemyHpText: {fileID: 223162949}
   apText: {fileID: 449296905}
   roundText: {fileID: 408650584}
-  slotsText: {fileID: 1069169521}
+  unitLimitText: {fileID: 1069169521}
   phaseText: {fileID: 2033047069}
   readyButton: {fileID: 1278858477}
   combatRunner: {fileID: 225271488}

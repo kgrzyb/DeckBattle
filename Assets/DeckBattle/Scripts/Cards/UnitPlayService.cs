@@ -77,9 +77,9 @@ namespace DeckBattle
                 return PlayUnitFailReason.NotEnoughAp;
             }
 
-            if (player.Units.Count >= player.DeploymentSlots)
+            if (player.Units.Count >= battleState.Config.MaxUnitsPerSide)
             {
-                return PlayUnitFailReason.NoDeploymentSlot;
+                return PlayUnitFailReason.UnitLimitReached;
             }
 
             if (!battleState.Board.IsDeploymentCoord(player.Side, targetCoord))

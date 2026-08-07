@@ -114,14 +114,36 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void PlayUnit_RejectsWhenDeploymentSlotsAreFull()
+        public void PlayUnit_AllowsTheEighthUnit()
         {
             BattleState state = CreateState();
-            state.Player.DeploymentSlots = 0;
+            state.Config.MaxUnitsPerSide = 8;
+            AddExistingUnits(state.Player, 7);
 
-            PlayUnitFailReason reason = UnitPlayService.ValidatePlay(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
+            PlayUnitResult result = UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(4, 1));
 
-            Assert.AreEqual(PlayUnitFailReason.NoDeploymentSlot, reason);
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(8, state.Player.Units.Count);
+        }
+
+        [Test]
+        public void PlayUnit_RejectsTheNinthUnitWithoutMutatingState()
+        {
+            BattleState state = CreateState();
+            state.Config.MaxUnitsPerSide = 8;
+            AddExistingUnits(state.Player, 8);
+            CardRuntimeState card = state.Player.Hand[0];
+            int apBefore = state.Player.Ap;
+            int handCountBefore = state.Player.Hand.Count;
+
+            PlayUnitResult result = UnitPlayService.PlayUnit(state, state.Player, card, new HexCoord(0, 0));
+
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(PlayUnitFailReason.UnitLimitReached, result.FailReason);
+            Assert.AreEqual(apBefore, state.Player.Ap);
+            Assert.AreEqual(handCountBefore, state.Player.Hand.Count);
+            Assert.AreEqual(CardLocation.Hand, card.Location);
+            Assert.AreEqual(8, state.Player.Units.Count);
         }
 
         [Test]
@@ -139,6 +161,7 @@ namespace DeckBattle.Tests
         {
             BattleState state = CreateState();
             UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
+            state.Player.Ap = 1;
 
             PlayUnitFailReason reason = UnitPlayService.ValidatePlay(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
 
@@ -187,6 +210,18 @@ namespace DeckBattle.Tests
             };
 
             return BattleState.Create(config, playerDeck, enemyDeck, 42);
+        }
+
+        private static void AddExistingUnits(PlayerBattleState player, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                player.Units.Add(new RuntimeUnit(
+                    100 + i,
+                    TestDefinitions.CreateUnit("existing-" + i, 1),
+                    BattleSide.Player,
+                    new HexCoord(i % 5, i / 5)));
+            }
         }
 
     }

@@ -5,7 +5,7 @@ namespace DeckBattle
         None = 0,
         CardNotInHand = 1,
         NotEnoughAp = 2,
-        NoDeploymentSlot = 3,
+        UnitLimitReached = 3,
         InvalidTile = 4,
         TileOccupied = 5,
         UnitAlreadyPlayed = 6,

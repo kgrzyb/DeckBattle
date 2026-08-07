@@ -18,8 +18,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1, state.RoundNumber);
             Assert.AreEqual(30, state.Player.Hp);
             Assert.AreEqual(30, state.Enemy.Hp);
-            Assert.AreEqual(3, state.Player.Ap);
-            Assert.AreEqual(3, state.Player.DeploymentSlots);
+            Assert.AreEqual(1, state.Player.Ap);
             Assert.AreEqual(0, state.Player.RoundDamageBonus);
             Assert.AreEqual(0, state.Enemy.RoundDamageBonus);
             Assert.AreEqual(3, state.Player.Hand.Count);

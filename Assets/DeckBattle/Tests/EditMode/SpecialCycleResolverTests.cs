@@ -116,11 +116,9 @@ namespace DeckBattle.Tests
             UnitRuntimeState attacker = simulation.Units[0];
             attacker.NextAttackTime = 0d;
             attacker.SetTarget(simulation.Units[1]);
-            var loop = new BattleTickLoop(simulation, TickDuration);
             var events = new BattleEventQueue();
 
-            loop.Tick(events);
-            loop.Tick(events);
+            TestDefinitions.ResolveNextAttack(simulation, events, TickDuration);
 
             AssertEvent(events, BattleEventType.AttackFired);
             Assert.AreEqual(attacker.CombatSpec.ManaThreshold, attacker.CurrentMana);

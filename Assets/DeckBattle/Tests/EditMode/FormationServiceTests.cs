@@ -100,6 +100,7 @@ namespace DeckBattle.Tests
                 TestDefinitions.CreateUnit("enemy-scout", 1)
             };
             BattleState state = BattleState.Create(config, playerDeck, enemyDeck, 42);
+            state.Player.Ap = 2;
 
             UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(0, 0));
             UnitPlayService.PlayUnit(state, state.Player, state.Player.Hand[0], new HexCoord(1, 0));

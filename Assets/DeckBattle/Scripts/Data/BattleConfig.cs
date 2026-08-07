@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DeckBattle
 {
@@ -11,17 +12,13 @@ namespace DeckBattle
         [Header("Match Setup")]
         public int StartingPlayerHp = 30;
         public int StartingEnemyHp = 30;
-        public int StartingAp = 3;
-        public int ApIncreasePerStep = 1;
-        public int ApIncreaseEveryRounds = 1;
-        public int MaxAp = 8;
+        public int StartingAp = 1;
+        [FormerlySerializedAs("ApIncreasePerStep")]
+        public int ApIncreasePerRound = 1;
         public int StartingHandSize = 3;
-        public int MaxHandSize = 7;
-        public int DrawPerRound = 2;
-        public int StartingDeploymentSlots = 3;
-        public int DeploymentSlotIncreasePerStep = 1;
-        public int MaxDeploymentSlots = 7;
-        public int DeploymentSlotIncreaseEveryRounds = 2;
+        public int MaxHandSize = 5;
+        public int DrawPerRound = 1;
+        public int MaxUnitsPerSide = 8;
         public int StartingRoundDamageBonus = 0;
         public int RoundDamageBonusIncreasePerStep = 0;
         public int RoundDamageBonusIncreaseEveryRounds = 1;
@@ -35,17 +32,12 @@ namespace DeckBattle
             StartingPlayerHp = Mathf.Max(1, StartingPlayerHp);
             StartingEnemyHp = Mathf.Max(1, StartingEnemyHp);
             StartingAp = Mathf.Max(0, StartingAp);
-            ApIncreasePerStep = Mathf.Max(0, ApIncreasePerStep);
-            ApIncreaseEveryRounds = Mathf.Max(1, ApIncreaseEveryRounds);
-            MaxAp = Mathf.Max(StartingAp, MaxAp);
+            ApIncreasePerRound = Mathf.Max(0, ApIncreasePerRound);
             StartingHandSize = Mathf.Max(0, StartingHandSize);
             MaxHandSize = Mathf.Max(0, MaxHandSize);
             StartingHandSize = Mathf.Min(StartingHandSize, MaxHandSize);
             DrawPerRound = Mathf.Max(0, DrawPerRound);
-            StartingDeploymentSlots = Mathf.Max(0, StartingDeploymentSlots);
-            DeploymentSlotIncreasePerStep = Mathf.Max(0, DeploymentSlotIncreasePerStep);
-            MaxDeploymentSlots = Mathf.Max(StartingDeploymentSlots, MaxDeploymentSlots);
-            DeploymentSlotIncreaseEveryRounds = Mathf.Max(1, DeploymentSlotIncreaseEveryRounds);
+            MaxUnitsPerSide = Mathf.Max(1, MaxUnitsPerSide);
             StartingRoundDamageBonus = Mathf.Max(0, StartingRoundDamageBonus);
             RoundDamageBonusIncreasePerStep = Mathf.Max(0, RoundDamageBonusIncreasePerStep);
             RoundDamageBonusIncreaseEveryRounds = Mathf.Max(1, RoundDamageBonusIncreaseEveryRounds);
