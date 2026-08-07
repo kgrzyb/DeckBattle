@@ -5,7 +5,8 @@ namespace DeckBattle
     public enum UnitSpecialKind
     {
         None = 0,
-        HasteBurst = 1
+        HasteBurst = 1,
+        FurySwipes = 2
     }
 
     [CreateAssetMenu(fileName = "UnitDefinition", menuName = "Deck Battle/Unit Definition")]

@@ -63,7 +63,7 @@ namespace DeckBattle
             ProjectileResolver.ResolveProjectiles(simulation, eventQueue);
 
             RefreshTargets(simulation, eventQueue);
-            SpecialCycleResolver.AdvanceActiveCycles(simulation, eventQueue, TickDuration);
+            SpecialCycleResolver.AdvanceActiveCycles(simulation, eventQueue, specialCycleWorkspace, TickDuration);
             CombatResolutionResult combat = AttackCycleResolver.Resolve(simulation, eventQueue, attackCycleWorkspace, TickDuration);
 
             // Melee deaths and projectile/attack side effects can invalidate targets
@@ -112,6 +112,13 @@ namespace DeckBattle
                 }
 
                 if (unit.AttackPhase == UnitAttackPhase.Windup)
+                {
+                    continue;
+                }
+
+                if (unit.CombatSpec.Special.Kind == UnitSpecialKind.FurySwipes
+                    && (unit.SpecialPhase == UnitSpecialPhase.Windup
+                        || unit.SpecialPhase == UnitSpecialPhase.Casting))
                 {
                     continue;
                 }

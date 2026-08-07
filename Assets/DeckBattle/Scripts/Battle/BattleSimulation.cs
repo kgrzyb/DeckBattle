@@ -192,7 +192,7 @@ namespace DeckBattle
                 throw new ArgumentNullException(nameof(unit));
             }
 
-            if (!UnitActionRules.CanStartMovement(unit))
+            if (!UnitActionRules.CanStartMovement(this, unit))
             {
                 throw new ArgumentException("Unit cannot start movement in its current state.", nameof(unit));
             }

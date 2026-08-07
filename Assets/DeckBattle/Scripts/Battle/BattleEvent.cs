@@ -29,7 +29,9 @@ namespace DeckBattle
         DamageRedirected = 24,
         SpecialWindupStarted = 25,
         SpecialWindupCancelled = 26,
-        UnitTargetChanged = 27
+        UnitTargetChanged = 27,
+        SpecialCastStarted = 28,
+        SpecialStrikeFired = 29
     }
 
     public readonly struct BattleEvent
@@ -53,6 +55,7 @@ namespace DeckBattle
         public readonly int StatusStackDelta;
         public readonly int PresentationId;
         public readonly bool IsCritical;
+        public readonly int StrikeIndex;
 
         private BattleEvent(
             BattleEventType type,
@@ -73,7 +76,8 @@ namespace DeckBattle
             int statusStackCount = 0,
             int statusStackDelta = 0,
             int presentationId = 0,
-            bool isCritical = false)
+            bool isCritical = false,
+            int strikeIndex = 0)
         {
             Type = type;
             UnitId = unitId;
@@ -94,6 +98,7 @@ namespace DeckBattle
             StatusStackDelta = statusStackDelta;
             PresentationId = presentationId;
             IsCritical = isCritical;
+            StrikeIndex = strikeIndex;
         }
 
         public static BattleEvent UnitMoved(int unitId, HexCoord from, HexCoord to, float duration = 0f)
@@ -189,14 +194,71 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.UnitSpecialActivated, unitId, 0, default, default, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false, sequenceId);
         }
 
-        public static BattleEvent SpecialWindupStarted(int unitId, UnitSpecialKind specialKind, int sequenceId, float duration)
+        public static BattleEvent SpecialWindupStarted(
+            int unitId,
+            UnitSpecialKind specialKind,
+            int sequenceId,
+            float duration,
+            int targetUnitId = 0,
+            HexCoord targetHex = default)
         {
-            return new BattleEvent(BattleEventType.SpecialWindupStarted, unitId, 0, default, default, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false, sequenceId);
+            return new BattleEvent(BattleEventType.SpecialWindupStarted, unitId, targetUnitId, default, targetHex, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false, sequenceId);
         }
 
         public static BattleEvent SpecialWindupCancelled(int unitId, UnitSpecialKind specialKind, int sequenceId)
         {
             return new BattleEvent(BattleEventType.SpecialWindupCancelled, unitId, 0, default, default, 0, 0, 0, 0, 0f, specialKind, BattleSide.Player, false, sequenceId);
+        }
+
+        public static BattleEvent SpecialCastStarted(
+            int attackerId,
+            int targetId,
+            UnitSpecialKind specialKind,
+            int sequenceId,
+            float duration,
+            HexCoord targetHex)
+        {
+            return new BattleEvent(
+                BattleEventType.SpecialCastStarted,
+                attackerId,
+                targetId,
+                default,
+                targetHex,
+                0,
+                0,
+                0,
+                0,
+                duration,
+                specialKind,
+                BattleSide.Player,
+                false,
+                sequenceId);
+        }
+
+        public static BattleEvent SpecialStrikeFired(
+            int attackerId,
+            int targetId,
+            UnitSpecialKind specialKind,
+            int sequenceId,
+            int strikeIndex,
+            HexCoord targetHex)
+        {
+            return new BattleEvent(
+                BattleEventType.SpecialStrikeFired,
+                attackerId,
+                targetId,
+                default,
+                targetHex,
+                0,
+                0,
+                0,
+                0,
+                0f,
+                specialKind,
+                BattleSide.Player,
+                false,
+                sequenceId,
+                strikeIndex: strikeIndex);
         }
 
         public static BattleEvent UnitCrit(int attackerId, int targetId)

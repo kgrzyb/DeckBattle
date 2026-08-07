@@ -9,6 +9,7 @@ namespace DeckBattle
         private readonly UnitStatusOverlayController statusOverlayController;
         private readonly UnitStatusVfxController statusVfxController;
         private readonly FloatingDamageTextController floatingDamageTextController;
+        private readonly BattleEffectPresenter effectPresenter;
         private readonly float defaultTickDuration;
 
         public BattleUnitPresenter(
@@ -17,6 +18,7 @@ namespace DeckBattle
             UnitStatusOverlayController statusOverlayController,
             UnitStatusVfxController statusVfxController,
             FloatingDamageTextController floatingDamageTextController,
+            BattleEffectPresenter effectPresenter,
             float defaultTickDuration)
         {
             this.boardPresenter = boardPresenter;
@@ -24,6 +26,7 @@ namespace DeckBattle
             this.statusOverlayController = statusOverlayController;
             this.statusVfxController = statusVfxController;
             this.floatingDamageTextController = floatingDamageTextController;
+            this.effectPresenter = effectPresenter;
             this.defaultTickDuration = defaultTickDuration;
         }
 
@@ -37,6 +40,8 @@ namespace DeckBattle
 
             view.Bind(state, boardPresenter.GetWorldPosition(state.Hex));
             view.FaceWorldPosition(boardPresenter.GetWorldCenter(), true);
+            view.SpecialAttackAnimationEvent -= HandleSpecialAttackAnimationEvent;
+            view.SpecialAttackAnimationEvent += HandleSpecialAttackAnimationEvent;
             statusOverlayController?.BindPresentationUnit(state, view);
             statusVfxController?.BindPresentationUnit(state.UnitId, view);
         }
@@ -137,7 +142,12 @@ namespace DeckBattle
         {
             if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
             {
-                view.BeginSpecialWindup(battleEvent.SequenceId, battleEvent.Duration);
+                if (battleEvent.TargetUnitId > 0)
+                {
+                    view.SetTargetWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To));
+                }
+
+                view.BeginSpecialWindup(battleEvent.SequenceId, battleEvent.SpecialKind, battleEvent.Duration);
             }
         }
 
@@ -155,6 +165,29 @@ namespace DeckBattle
             {
                 view.CompleteSpecialWindup(battleEvent.SequenceId);
             }
+        }
+
+        public void HandleSpecialCastStarted(BattleEvent battleEvent)
+        {
+            if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
+            {
+                view.SetTargetWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To));
+                view.BeginSpecialCast(battleEvent.SequenceId);
+            }
+        }
+
+        public void HandleSpecialStrikeFired(BattleEvent battleEvent)
+        {
+            if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
+            {
+                view.SetTargetWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To));
+                view.PlaySpecialStrike(battleEvent.SequenceId);
+            }
+        }
+
+        private void HandleSpecialAttackAnimationEvent(UnitView view)
+        {
+            effectPresenter?.PlayAttack(view.transform.position);
         }
 
         private void ShowDamageText(Vector3 worldPosition, BattleEvent battleEvent)

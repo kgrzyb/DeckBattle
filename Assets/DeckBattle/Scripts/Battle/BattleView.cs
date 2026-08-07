@@ -193,6 +193,12 @@ namespace DeckBattle
                     case BattleEventType.SpecialWindupCancelled:
                         unitPresenter.HandleSpecialWindupCancelled(battleEvent);
                         break;
+                    case BattleEventType.SpecialCastStarted:
+                        unitPresenter.HandleSpecialCastStarted(battleEvent);
+                        break;
+                    case BattleEventType.SpecialStrikeFired:
+                        unitPresenter.HandleSpecialStrikeFired(battleEvent);
+                        break;
                     case BattleEventType.UnitSpecialActivated:
                         unitPresenter.HandleSpecialActivated(battleEvent);
                         break;
@@ -405,6 +411,15 @@ namespace DeckBattle
         private void EnsurePresenters()
         {
             UnitViewRegistry unitViews = EnsureUnitViewRegistry();
+            if (effectPresenter == null)
+            {
+                effectPresenter = new BattleEffectPresenter(
+                    attackEffectPrefab,
+                    damageEffectPrefab,
+                    effectRoot != null ? effectRoot : transform);
+                effectPresenter.SetCombatSpeed(combatSpeed);
+            }
+
             if (unitPresenter == null)
             {
                 unitPresenter = new BattleUnitPresenter(
@@ -413,6 +428,7 @@ namespace DeckBattle
                     statusOverlayController,
                     statusVfxController,
                     floatingDamageTextController,
+                    effectPresenter,
                     presentationTickDuration);
             }
 
@@ -426,14 +442,6 @@ namespace DeckBattle
                 projectilePresenter.SetCombatSpeed(combatSpeed);
             }
 
-            if (effectPresenter == null)
-            {
-                effectPresenter = new BattleEffectPresenter(
-                    attackEffectPrefab,
-                    damageEffectPrefab,
-                    effectRoot != null ? effectRoot : transform);
-                effectPresenter.SetCombatSpeed(combatSpeed);
-            }
         }
 
     }

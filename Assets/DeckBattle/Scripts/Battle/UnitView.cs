@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace DeckBattle
@@ -43,6 +44,7 @@ namespace DeckBattle
         public RuntimeUnit Unit { get; private set; }
         public UnitRuntimeState RealtimeUnit { get; private set; }
         public Transform StatusVfxPivot { get { return transform; } }
+        public event Action<UnitView> SpecialAttackAnimationEvent;
 
         private MaterialPropertyBlock propertyBlock;
         private Vector3 baseModelScale;
@@ -207,22 +209,49 @@ namespace DeckBattle
             TriggerAnimation(UnitVisualState.Idle);
         }
 
-        public void BeginSpecialWindup(int sequenceId, float duration)
+        public void BeginSpecialWindup(int sequenceId, UnitSpecialKind specialKind, float duration)
         {
             activeSpecialSequenceId = sequenceId;
-            TriggerAnimation(UnitVisualState.Special, true);
+            if (specialKind != UnitSpecialKind.FurySwipes)
+            {
+                TriggerAnimation(UnitVisualState.Special, true);
+            }
         }
 
         public void CompleteSpecialWindup(int sequenceId)
         {
             if (sequenceId != activeSpecialSequenceId) return;
-            visualState = UnitVisualState.Idle;
+            TriggerAnimation(UnitVisualState.Idle);
         }
 
         public void CancelSpecialWindup(int sequenceId)
         {
             if (sequenceId != activeSpecialSequenceId) return;
             TriggerAnimation(UnitVisualState.Idle);
+        }
+
+        public void BeginSpecialCast(int sequenceId)
+        {
+            if (sequenceId != activeSpecialSequenceId) return;
+            FaceLastKnownTarget();
+            TriggerAnimation(UnitVisualState.Special, true);
+        }
+
+        public void PlaySpecialStrike(int sequenceId)
+        {
+            if (sequenceId != activeSpecialSequenceId) return;
+            FaceLastKnownTarget();
+        }
+
+        public void PlaySpecialAttackAnimationEvent()
+        {
+            if (isDying || visualState != UnitVisualState.Special)
+            {
+                return;
+            }
+
+            FaceLastKnownTarget();
+            SpecialAttackAnimationEvent?.Invoke(this);
         }
 
         public void FaceWorldPosition(Vector3 worldPosition, bool immediately = false)

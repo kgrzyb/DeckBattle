@@ -146,7 +146,7 @@ namespace DeckBattle
             for (int i = 0; i < count; i++)
             {
                 UnitRuntimeState unit = units[i];
-                if (!UnitActionRules.CanStartMovement(unit)
+                if (!UnitActionRules.CanStartMovement(simulation, unit)
                     || unit.IsMoving
                     // Once the hit has been committed, the remaining attack cooldown
                     // must not leave a unit standing still after its target dies.

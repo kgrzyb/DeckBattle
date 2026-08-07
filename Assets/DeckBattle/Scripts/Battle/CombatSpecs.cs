@@ -98,29 +98,60 @@ namespace DeckBattle
         public readonly float WindupDuration;
         public readonly float CastDuration;
         public readonly StatusCombatSpec AppliedStatus;
+        public readonly int StrikeCount;
+        public readonly float AttackDamageMultiplier;
 
         public bool IsValid
         {
-            get { return Kind != UnitSpecialKind.None && AppliedStatus.Kind != StatusKind.None; }
+            get
+            {
+                switch (Kind)
+                {
+                    case UnitSpecialKind.HasteBurst:
+                        return AppliedStatus.Kind == StatusKind.Haste;
+                    case UnitSpecialKind.FurySwipes:
+                        return CastDuration > 0f
+                            && StrikeCount > 0
+                            && AttackDamageMultiplier > 0f;
+                    default:
+                        return false;
+                }
+            }
         }
 
-        public UnitSpecialCombatSpec(UnitSpecialKind kind, float windupDuration, float castDuration, StatusCombatSpec appliedStatus)
+        public UnitSpecialCombatSpec(
+            UnitSpecialKind kind,
+            float windupDuration,
+            float castDuration,
+            StatusCombatSpec appliedStatus,
+            int strikeCount,
+            float attackDamageMultiplier)
         {
             Kind = kind;
             WindupDuration = Math.Max(0f, windupDuration);
             CastDuration = Math.Max(0f, castDuration);
             AppliedStatus = appliedStatus;
+            StrikeCount = Math.Max(1, Math.Min(UnitSpecialDefinition.MaxStrikeCount, strikeCount));
+            AttackDamageMultiplier = Math.Max(0f, attackDamageMultiplier);
         }
 
         public static UnitSpecialCombatSpec FromDefinition(UnitSpecialDefinition definition)
         {
-            return definition == null || definition.AppliedStatus == null
-                ? default
-                : new UnitSpecialCombatSpec(
-                    definition.Kind,
-                    definition.WindupDuration,
-                    definition.CastDuration,
-                    StatusCombatSpec.FromDefinition(definition.AppliedStatus));
+            if (definition == null)
+            {
+                return default;
+            }
+
+            StatusCombatSpec appliedStatus = definition.AppliedStatus != null
+                ? StatusCombatSpec.FromDefinition(definition.AppliedStatus)
+                : default;
+            return new UnitSpecialCombatSpec(
+                definition.Kind,
+                definition.WindupDuration,
+                definition.CastDuration,
+                appliedStatus,
+                definition.StrikeCount,
+                definition.AttackDamageMultiplier);
         }
     }
 

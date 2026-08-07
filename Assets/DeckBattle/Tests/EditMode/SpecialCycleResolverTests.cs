@@ -185,6 +185,75 @@ namespace DeckBattle.Tests
             Assert.AreEqual(UnitSpecialPhase.Windup, unit.SpecialPhase);
         }
 
+        [Test]
+        public void FurySwipes_DealsTenSeventyPercentHitsAcrossConfiguredCastDuration()
+        {
+            BattleSimulation simulation = CreateFurySimulation(2000);
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            attacker.SetTarget(target);
+            var loop = new BattleTickLoop(simulation, 0.15f);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.Casting, attacker.SpecialPhase);
+            Assert.AreEqual(0, CountEvents(events, BattleEventType.UnitDamaged));
+            AssertEvent(events, BattleEventType.SpecialCastStarted);
+
+            int totalDamage = 0;
+            int strikeCount = 0;
+            for (int i = 0; i < 10; i++)
+            {
+                loop.Tick(events);
+                strikeCount += CountEvents(events, BattleEventType.SpecialStrikeFired);
+                totalDamage += SumDamageEvents(events);
+            }
+
+            Assert.AreEqual(10, strikeCount);
+            Assert.AreEqual(700, totalDamage);
+            Assert.AreEqual(1300, target.CurrentHp);
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, attacker.SpecialPhase);
+            AssertEvent(events, BattleEventType.UnitSpecialActivated);
+        }
+
+        [Test]
+        public void FurySwipes_ChargedOutsideRangeAllowsMovementButCannotStartWindup()
+        {
+            BattleSimulation simulation = CreateFurySimulation(2000, new HexCoord(4, 1));
+            UnitRuntimeState attacker = simulation.Units[0];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            attacker.SetTarget(simulation.Units[1]);
+
+            Assert.IsFalse(UnitActionRules.CanStartSpecialWindup(simulation, attacker));
+            Assert.IsTrue(UnitActionRules.CanStartMovement(simulation, attacker));
+        }
+
+        [Test]
+        public void FurySwipes_TargetDeathDuringCastEndsRemainingStrikesWithoutManaRefund()
+        {
+            BattleSimulation simulation = CreateFurySimulation(70);
+            UnitRuntimeState attacker = simulation.Units[0];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            attacker.SetTarget(simulation.Units[1]);
+            var loop = new BattleTickLoop(simulation, 0.15f);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            loop.Tick(events);
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.IsFalse(simulation.Units[1].IsAlive);
+            Assert.AreEqual(0, attacker.CurrentMana);
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, attacker.SpecialPhase);
+            Assert.AreEqual(1, CountEvents(events, BattleEventType.SpecialStrikeFired));
+            Assert.AreEqual(70, SumDamageEvents(events));
+        }
+
         private static BattleSimulation CreateSimulation(float windupDuration, float castDuration = 0f)
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
@@ -202,6 +271,26 @@ namespace DeckBattle.Tests
                 });
         }
 
+        private static BattleSimulation CreateFurySimulation(int targetHp, HexCoord? targetHex = null)
+        {
+            UnitDefinition attacker = TestDefinitions.CreateUnit("fury-attacker", 100);
+            attacker.Attack = 100;
+            attacker.AttacksPerSecond = 0.1f;
+            attacker.ManaThreshold = 10;
+            attacker.ManaPerAttack = 0;
+            attacker.Special = CreateFurySwipesSpecial();
+            UnitDefinition target = TestDefinitions.CreateUnit("fury-target", 1);
+            target.MaxHp = targetHp;
+            target.AttacksPerSecond = 1f / 999f;
+            return BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, target, BattleSide.Enemy, targetHex ?? new HexCoord(2, 1))
+                });
+        }
+
         private static UnitSpecialDefinition CreateHasteBurstSpecial(float windupDuration, float castDuration = 0f)
         {
             UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
@@ -209,6 +298,17 @@ namespace DeckBattle.Tests
             special.WindupDuration = windupDuration;
             special.CastDuration = castDuration;
             special.AppliedStatus = CreateHasteStatus(5f, 0.5f);
+            return special;
+        }
+
+        private static UnitSpecialDefinition CreateFurySwipesSpecial()
+        {
+            UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            special.Kind = UnitSpecialKind.FurySwipes;
+            special.WindupDuration = 0.2f;
+            special.CastDuration = 1.5f;
+            special.StrikeCount = 10;
+            special.AttackDamageMultiplier = 0.7f;
             return special;
         }
 
@@ -247,6 +347,34 @@ namespace DeckBattle.Tests
             {
                 Assert.AreNotEqual(type, events[i].Type);
             }
+        }
+
+        private static int CountEvents(BattleEventQueue events, BattleEventType type)
+        {
+            int count = 0;
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == type)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int SumDamageEvents(BattleEventQueue events)
+        {
+            int total = 0;
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == BattleEventType.UnitDamaged)
+                {
+                    total += events[i].Amount;
+                }
+            }
+
+            return total;
         }
     }
 }

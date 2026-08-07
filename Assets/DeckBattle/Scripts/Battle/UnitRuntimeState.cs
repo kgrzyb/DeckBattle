@@ -43,6 +43,10 @@ namespace DeckBattle
         public int SpecialSequenceId;
         public double SpecialWindupEndTime;
         public double SpecialCastEndTime;
+        public int LockedSpecialTargetUnitId;
+        public int SpecialStrikesResolved;
+        public double NextSpecialStrikeTime;
+        public double LastSpecialRecoveryEndTime;
         public double ManaLockEndTime;
         public int CurrentMana;
         public bool IsMoving;
@@ -203,6 +207,10 @@ namespace DeckBattle
             SpecialSequenceId = 0;
             SpecialWindupEndTime = double.PositiveInfinity;
             SpecialCastEndTime = double.PositiveInfinity;
+            LockedSpecialTargetUnitId = NoTargetUnitId;
+            SpecialStrikesResolved = 0;
+            NextSpecialStrikeTime = double.PositiveInfinity;
+            LastSpecialRecoveryEndTime = double.NegativeInfinity;
             ManaLockEndTime = double.PositiveInfinity;
         }
     }

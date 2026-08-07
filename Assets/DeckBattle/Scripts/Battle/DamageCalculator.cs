@@ -6,14 +6,53 @@ namespace DeckBattle
     {
         public static int CalculateDamage(UnitRuntimeState attacker, UnitRuntimeState target, int attackBonus, BattleRuntimeTuning tuning, DeterministicRandom rng, out bool isCritical)
         {
+            return CalculateRuntimeDamage(
+                attacker,
+                target,
+                attackBonus,
+                1f,
+                true,
+                tuning,
+                rng,
+                out isCritical);
+        }
+
+        public static int CalculateSpecialDamage(
+            UnitRuntimeState attacker,
+            UnitRuntimeState target,
+            float attackDamageMultiplier,
+            BattleRuntimeTuning tuning)
+        {
+            return CalculateRuntimeDamage(
+                attacker,
+                target,
+                0,
+                attackDamageMultiplier,
+                false,
+                tuning,
+                null,
+                out _);
+        }
+
+        private static int CalculateRuntimeDamage(
+            UnitRuntimeState attacker,
+            UnitRuntimeState target,
+            int attackBonus,
+            float attackDamageMultiplier,
+            bool canCritical,
+            BattleRuntimeTuning tuning,
+            DeterministicRandom rng,
+            out bool isCritical)
+        {
             if (attacker == null) throw new ArgumentNullException(nameof(attacker));
             if (target == null) throw new ArgumentNullException(nameof(target));
 
-            isCritical = RollCritical(attacker.CombatSpec, rng);
+            isCritical = canCritical && RollCritical(attacker.CombatSpec, rng);
             float armorPenetration = ClampPercentage(attacker.CombatSpec.ArmorPenetration);
             float effectiveArmor = ClampPercentage(target.CombatSpec.Armor) * (1f - armorPenetration / 100f);
             float damage = Math.Max(0, attacker.CombatSpec.Attack)
-                * EffectiveStatsResolver.GetBaseAttackMultiplier(attacker, tuning);
+                * EffectiveStatsResolver.GetBaseAttackMultiplier(attacker, tuning)
+                * Math.Max(0f, attackDamageMultiplier);
             damage += Math.Max(0, attackBonus);
             damage *= EffectiveStatsResolver.GetOutgoingDamageMultiplier(attacker, tuning);
             damage *= 1f - effectiveArmor / 100f;
