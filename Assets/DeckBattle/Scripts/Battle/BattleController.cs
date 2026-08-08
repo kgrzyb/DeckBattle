@@ -941,7 +941,7 @@ namespace DeckBattle
                 return;
             }
 
-            boardPresenter.SetPreparationHexesVisible(state != null && state.Phase == BattlePhase.Preparation);
+            boardPresenter.SetPreparationHexesVisible(PreparationTurnService.CanPlayerPrepare(state));
         }
     }
 }
