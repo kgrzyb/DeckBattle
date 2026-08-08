@@ -47,10 +47,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spriteRenderer: {fileID: 5153632274373473521}
-  defaultColor: {r: 1, g: 1, b: 1, a: 0.3137255}
-  legalHighlightColor: {r: 0, g: 0.8396226, b: 0.19318749, a: 1}
-  blockedHighlightColor: {r: 0.9811321, g: 0.16102704, b: 0.0046279924, a: 1}
-  selectedHighlightColor: {r: 0.9339623, g: 0.7273093, b: 0, a: 1}
+  defaultColor: {r: 1, g: 0.85882354, b: 0.4745098, a: 0.36078432}
+  legalHighlightColor: {r: 0, g: 0.8396226, b: 0.19318749, a: 0.68235296}
+  blockedHighlightColor: {r: 0.9811321, g: 0.16102704, b: 0.0046279924, a: 0.7019608}
+  selectedHighlightColor: {r: 0.9339623, g: 0.7273093, b: 0, a: 0.6745098}
 --- !u!65 &3023205366262120507
 BoxCollider:
   m_ObjectHideFlags: 0

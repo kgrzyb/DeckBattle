@@ -20,9 +20,9 @@ MonoBehaviour:
   cardKind: 0
   UnitType: 1
   MaxHp: 300
-  Attack: 120
+  Attack: 150
   Power: 3
-  AttackRange: 4
+  AttackRange: 5
   CritChance: 0
   CritMultiplier: 2
   AttacksPerSecond: 0.5882353

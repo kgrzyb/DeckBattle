@@ -17,4 +17,4 @@ MonoBehaviour:
   MaxTicksPerFrame: 6
   CombatAccelerationDelay: 12
   AcceleratedCombatSpeed: 1.7
-  RoundResolutionDelay: 0.25
+  RoundResolutionDelay: 1
