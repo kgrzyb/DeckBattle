@@ -9,6 +9,7 @@ namespace DeckBattle
 
         public string SpecialId;
         public UnitSpecialKind Kind;
+        [TextArea] public string DescriptionTemplate;
         [Min(0f)] public float WindupDuration = 0.25f;
         [Min(0f)] public float CastDuration;
         public StatusDefinition AppliedStatus;

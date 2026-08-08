@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DeckBattle
 {
@@ -34,7 +35,8 @@ namespace DeckBattle
     {
         public string EffectId;
         public string DisplayName;
-        [TextArea] public string Description;
+        [FormerlySerializedAs("Description")]
+        [TextArea] public string DescriptionTemplate;
         public UnitEffectStepDefinition[] Steps = Array.Empty<UnitEffectStepDefinition>();
 
         private void OnValidate()

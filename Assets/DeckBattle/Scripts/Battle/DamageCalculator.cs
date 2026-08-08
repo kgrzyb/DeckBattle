@@ -50,14 +50,15 @@ namespace DeckBattle
             isCritical = canCritical && RollCritical(attacker.CombatSpec, rng);
             float armorPenetration = ClampPercentage(attacker.CombatSpec.ArmorPenetration);
             float effectiveArmor = ClampPercentage(target.CombatSpec.Armor) * (1f - armorPenetration / 100f);
-            float damage = Math.Max(0, attacker.CombatSpec.Attack)
-                * EffectiveStatsResolver.GetBaseAttackMultiplier(attacker, tuning)
-                * Math.Max(0f, attackDamageMultiplier);
+            float damage = CalculateBaseDamageBeforeMitigation(
+                attacker.CombatSpec.Attack,
+                EffectiveStatsResolver.GetBaseAttackMultiplier(attacker, tuning),
+                attackDamageMultiplier);
             damage += Math.Max(0, attackBonus);
             damage *= EffectiveStatsResolver.GetOutgoingDamageMultiplier(attacker, tuning);
             damage *= 1f - effectiveArmor / 100f;
             if (isCritical) damage *= EffectiveStatsResolver.GetCriticalMultiplier(attacker);
-            return Math.Max(0, (int)Math.Round(damage, MidpointRounding.AwayFromZero));
+            return RoundDamage(damage);
         }
 
         public static int CalculateDamage(
@@ -95,7 +96,33 @@ namespace DeckBattle
                 damageAfterArmor *= Math.Max(1f, attacker.CritMultiplier);
             }
 
-            return Math.Max(0, (int)Math.Round(damageAfterArmor, MidpointRounding.AwayFromZero));
+            return RoundDamage(damageAfterArmor);
+        }
+
+        public static int CalculateBaseDamagePreview(int attack, float attackDamageMultiplier = 1f)
+        {
+            return RoundDamage(CalculateBaseDamageBeforeMitigation(attack, 1f, attackDamageMultiplier));
+        }
+
+        public static int CalculateBaseAttackBonusPreview(int attack, float bonusPercent)
+        {
+            int attackAfterBonus = CalculateBaseDamagePreview(attack, 1f + Math.Max(0f, bonusPercent));
+            return Math.Max(0, attackAfterBonus - Math.Max(0, attack));
+        }
+
+        private static float CalculateBaseDamageBeforeMitigation(
+            int attack,
+            float baseAttackMultiplier,
+            float attackDamageMultiplier)
+        {
+            return Math.Max(0, attack)
+                * Math.Max(0f, baseAttackMultiplier)
+                * Math.Max(0f, attackDamageMultiplier);
+        }
+
+        private static int RoundDamage(float value)
+        {
+            return Math.Max(0, (int)Math.Round(value, MidpointRounding.AwayFromZero));
         }
 
         private static bool RollCritical(UnitCombatSpec attacker, DeterministicRandom rng)

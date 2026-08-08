@@ -132,10 +132,10 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    fontSize: 22
+    fontSize: 26
     fadeStartNormalized: 0.3
   - type: 1
-    color: {r: 1, g: 0.666343, b: 0.1273585, a: 1}
+    color: {r: 1, g: 0.52968204, b: 0.12549019, a: 1}
     duration: 0.8
     risePixels: 45
     verticalMotionCurve:
@@ -308,8 +308,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25
-  m_fontSizeBase: 25
+  m_fontSize: 27
+  m_fontSizeBase: 27
   m_fontWeight: 700
   m_enableAutoSizing: 0
   m_fontSizeMin: 0
@@ -318,7 +318,7 @@ MonoBehaviour:
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: -5
+  m_characterSpacing: -3
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

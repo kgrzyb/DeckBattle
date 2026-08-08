@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   EffectId: on-play-base-attack-25-next-combat
   DisplayName: Battle Focus
-  Description: 'On Play: This unit gains 25% base Attack for the next combat.'
+  DescriptionTemplate: This unit gains {step1.attackBonus} base Attack for the next
+    combat.
   Steps:
   - Target:
       Kind: 0
