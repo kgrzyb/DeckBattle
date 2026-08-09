@@ -8,70 +8,24 @@ namespace DeckBattle
         private const int StatusKindCapacity = (int)StatusKind.Guard + 1;
 
         [SerializeField] private StatusPresentationCatalog presentationCatalog;
-        [SerializeField] private Transform poolRoot;
-
+        private BattleVfxPool battleVfxPool;
         private readonly Dictionary<int, Transform> pivotsByUnitId = new Dictionary<int, Transform>(16);
-        private readonly Dictionary<StatusVfxView, Stack<StatusVfxView>> poolsByPrefab = new Dictionary<StatusVfxView, Stack<StatusVfxView>>(8);
-        private readonly List<ActiveVfx> activeVfx = new List<ActiveVfx>(32);
-        private readonly List<OneShotVfx> activeOneShots = new List<OneShotVfx>(16);
+        private readonly List<ActivePooledVfx> activePooledVfx = new List<ActivePooledVfx>(16);
         private readonly List<ShadowStatus> shadowStatuses = new List<ShadowStatus>(32);
         private readonly int[] syncVersions = new int[StatusKindCapacity];
         private int syncVersion = 1;
-        private float combatSpeed = 1f;
 
-        public void Initialize(StatusPresentationCatalog catalog)
+        public void Initialize(StatusPresentationCatalog catalog, BattleVfxPool vfxPool)
         {
+            ReleaseAll();
             presentationCatalog = catalog;
+            battleVfxPool = vfxPool;
             Prewarm();
         }
 
         public void SetCombatSpeed(float speed)
         {
-            float safeSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(speed);
-            if (Mathf.Approximately(combatSpeed, safeSpeed))
-            {
-                return;
-            }
-
-            combatSpeed = safeSpeed;
-            for (int i = 0; i < activeVfx.Count; i++)
-            {
-                ActiveVfx active = activeVfx[i];
-                if (active.View != null)
-                {
-                    active.View.SetCombatSpeed(combatSpeed);
-                }
-            }
-
-            for (int i = 0; i < activeOneShots.Count; i++)
-            {
-                OneShotVfx oneShot = activeOneShots[i];
-                if (oneShot.View != null)
-                {
-                    oneShot.View.SetCombatSpeed(combatSpeed);
-                }
-            }
-        }
-
-        private void Update()
-        {
-            float deltaTime = Time.deltaTime * combatSpeed;
-            for (int i = activeOneShots.Count - 1; i >= 0; i--)
-            {
-                OneShotVfx oneShot = activeOneShots[i];
-                if (oneShot.View != null)
-                {
-                    oneShot.View.AdvanceOneShot(deltaTime);
-                }
-
-                if (oneShot.View != null && !oneShot.View.IsOneShotComplete)
-                {
-                    continue;
-                }
-
-                ReturnToPool(oneShot.Prefab, oneShot.View);
-                activeOneShots.RemoveAt(i);
-            }
+            battleVfxPool?.SetCombatSpeed(speed);
         }
 
         public void BindOrSync(UnitRuntimeState unit, UnitView view)
@@ -124,11 +78,11 @@ namespace DeckBattle
             }
             if (delta > 0)
             {
-                PlayOneShots(battleEvent.UnitId, entry.ApplyVfxPrefab, entry, delta);
+                PlayOneShots(battleEvent.UnitId, entry.ApplyVfxDefinition, entry, delta);
             }
             else if (delta < 0)
             {
-                PlayOneShots(battleEvent.UnitId, entry.RemoveVfxPrefab, entry, -delta);
+                PlayOneShots(battleEvent.UnitId, entry.RemoveVfxDefinition, entry, -delta);
             }
 
             SetShadowStacks(battleEvent.UnitId, battleEvent.StatusKind, battleEvent.TargetUnitId, nextStacks);
@@ -146,17 +100,7 @@ namespace DeckBattle
         public void Release(int unitId)
         {
             pivotsByUnitId.Remove(unitId);
-            for (int i = activeVfx.Count - 1; i >= 0; i--)
-            {
-                ActiveVfx active = activeVfx[i];
-                if (active.UnitId != unitId)
-                {
-                    continue;
-                }
-
-                ReturnToPool(active.Prefab, active.View);
-                activeVfx.RemoveAt(i);
-            }
+            ReleasePooledByUnit(unitId);
 
             for (int i = shadowStatuses.Count - 1; i >= 0; i--)
             {
@@ -166,30 +110,11 @@ namespace DeckBattle
                 }
             }
 
-            for (int i = activeOneShots.Count - 1; i >= 0; i--)
-            {
-                OneShotVfx oneShot = activeOneShots[i];
-                if (oneShot.UnitId != unitId) continue;
-                ReturnToPool(oneShot.Prefab, oneShot.View);
-                activeOneShots.RemoveAt(i);
-            }
         }
 
         public void ReleaseAll()
         {
-            for (int i = activeVfx.Count - 1; i >= 0; i--)
-            {
-                ActiveVfx active = activeVfx[i];
-                ReturnToPool(active.Prefab, active.View);
-            }
-
-            activeVfx.Clear();
-            for (int i = activeOneShots.Count - 1; i >= 0; i--)
-            {
-                OneShotVfx oneShot = activeOneShots[i];
-                ReturnToPool(oneShot.Prefab, oneShot.View);
-            }
-            activeOneShots.Clear();
+            ReleaseAllPooled();
             pivotsByUnitId.Clear();
             shadowStatuses.Clear();
         }
@@ -230,59 +155,132 @@ namespace DeckBattle
                 }
             }
 
-            for (int i = activeVfx.Count - 1; i >= 0; i--)
+            for (int i = activePooledVfx.Count - 1; i >= 0; i--)
             {
-                ActiveVfx active = activeVfx[i];
+                ActivePooledVfx active = activePooledVfx[i];
                 if (active.UnitId == unitId && syncVersions[(int)active.Kind] != syncVersion)
                 {
-                    ReturnToPool(active.Prefab, active.View);
-                    activeVfx.RemoveAt(i);
+                    ReleasePooledAt(i);
                 }
             }
         }
 
         private void Reconcile(int unitId, StatusKind kind, int desiredCount, Transform pivot, StatusPresentationEntry entry)
         {
-            int currentCount = 0;
-            for (int i = 0; i < activeVfx.Count; i++)
+            if (entry != null && CanPlayActive(entry.ActiveVfxDefinition) && battleVfxPool != null)
             {
-                if (activeVfx[i].UnitId == unitId && activeVfx[i].Kind == kind) currentCount++;
+                ReconcilePooled(unitId, kind, desiredCount, pivot, entry);
+                return;
+            }
+
+            ReleasePooled(unitId, kind);
+        }
+
+        private void ReconcilePooled(int unitId, StatusKind kind, int desiredCount, Transform pivot, StatusPresentationEntry entry)
+        {
+            int currentCount = 0;
+            for (int i = 0; i < activePooledVfx.Count; i++)
+            {
+                if (activePooledVfx[i].UnitId == unitId && activePooledVfx[i].Kind == kind)
+                {
+                    currentCount++;
+                }
             }
 
             while (currentCount < desiredCount)
             {
-                StatusVfxView view = GetFromPool(entry != null ? entry.ActiveVfxPrefab : null);
-                if (view == null) return;
-                view.SetCombatSpeed(combatSpeed);
-                view.BeginActive(pivot, entry);
-                activeVfx.Add(new ActiveVfx(unitId, kind, entry.ActiveVfxPrefab, view));
+                VfxHandle handle = battleVfxPool.Play(
+                    entry.ActiveVfxDefinition,
+                    new VfxSpawnRequest(
+                        pivot,
+                        entry.LocalPosition,
+                        Quaternion.Euler(entry.LocalEulerAngles),
+                        entry.LocalScale == Vector3.zero ? Vector3.one : entry.LocalScale,
+                        unitId));
+                if (!handle.IsValid)
+                {
+                    return;
+                }
+
+                activePooledVfx.Add(new ActivePooledVfx(unitId, kind, handle));
                 currentCount++;
             }
 
             while (currentCount > desiredCount)
             {
-                for (int i = activeVfx.Count - 1; i >= 0; i--)
+                for (int i = activePooledVfx.Count - 1; i >= 0; i--)
                 {
-                    ActiveVfx active = activeVfx[i];
-                    if (active.UnitId != unitId || active.Kind != kind) continue;
-                    ReturnToPool(active.Prefab, active.View);
-                    activeVfx.RemoveAt(i);
+                    ActivePooledVfx active = activePooledVfx[i];
+                    if (active.UnitId != unitId || active.Kind != kind)
+                    {
+                        continue;
+                    }
+
+                    ReleasePooledAt(i);
                     currentCount--;
                     break;
                 }
             }
         }
 
-        private void PlayOneShots(int unitId, StatusVfxView prefab, StatusPresentationEntry entry, int count)
+        private void ReleasePooled(int unitId, StatusKind kind)
         {
-            if (prefab == null || !pivotsByUnitId.TryGetValue(unitId, out Transform pivot) || pivot == null) return;
+            for (int i = activePooledVfx.Count - 1; i >= 0; i--)
+            {
+                ActivePooledVfx active = activePooledVfx[i];
+                if (active.UnitId == unitId && active.Kind == kind)
+                {
+                    ReleasePooledAt(i);
+                }
+            }
+        }
+
+        private void ReleasePooledByUnit(int unitId)
+        {
+            for (int i = activePooledVfx.Count - 1; i >= 0; i--)
+            {
+                if (activePooledVfx[i].UnitId == unitId)
+                {
+                    ReleasePooledAt(i);
+                }
+            }
+        }
+
+        private void ReleaseAllPooled()
+        {
+            for (int i = activePooledVfx.Count - 1; i >= 0; i--)
+            {
+                ReleasePooledAt(i);
+            }
+        }
+
+        private void ReleasePooledAt(int index)
+        {
+            ActivePooledVfx active = activePooledVfx[index];
+            activePooledVfx.RemoveAt(index);
+            battleVfxPool?.Release(active.Handle);
+        }
+
+        private void PlayOneShots(int unitId, VfxDefinition definition, StatusPresentationEntry entry, int count)
+        {
+            if (!CanPlayOneShot(definition)
+                || battleVfxPool == null
+                || !pivotsByUnitId.TryGetValue(unitId, out Transform pivot)
+                || pivot == null)
+            {
+                return;
+            }
+
             for (int i = 0; i < count; i++)
             {
-                StatusVfxView view = GetFromPool(prefab);
-                if (view == null) return;
-                view.SetCombatSpeed(combatSpeed);
-                view.PlayOneShot(pivot, entry);
-                activeOneShots.Add(new OneShotVfx(unitId, prefab, view));
+                battleVfxPool.Play(
+                    definition,
+                    new VfxSpawnRequest(
+                        pivot,
+                        entry.LocalPosition,
+                        Quaternion.Euler(entry.LocalEulerAngles),
+                        entry.LocalScale == Vector3.zero ? Vector3.one : entry.LocalScale,
+                        unitId));
             }
         }
 
@@ -363,64 +361,47 @@ namespace DeckBattle
             {
                 StatusPresentationEntry entry = entries[i];
                 if (entry == null || entry.Mode != StatusPresentationMode.Vfx) continue;
-                Prewarm(entry.ApplyVfxPrefab, entry.PrewarmCountPerPrefab);
-                Prewarm(entry.ActiveVfxPrefab, entry.PrewarmCountPerPrefab);
-                Prewarm(entry.RemoveVfxPrefab, entry.PrewarmCountPerPrefab);
+                Prewarm(entry.ApplyVfxDefinition);
+                Prewarm(entry.ActiveVfxDefinition);
+                Prewarm(entry.RemoveVfxDefinition);
             }
         }
 
-        private void Prewarm(StatusVfxView prefab, int count)
+        private void Prewarm(VfxDefinition definition)
         {
-            if (prefab == null || count <= 0)
+            if (IsUsable(definition))
             {
-                return;
+                battleVfxPool?.Prewarm(definition);
             }
+        }
 
-            for (int i = 0; i < count; i++)
+        private static bool IsUsable(VfxDefinition definition)
+        {
+            return definition != null && definition.Prefab != null;
+        }
+
+        private static bool CanPlayActive(VfxDefinition definition)
+        {
+            return IsUsable(definition) && definition.LifetimeMode == VfxLifetimeMode.Manual;
+        }
+
+        private static bool CanPlayOneShot(VfxDefinition definition)
+        {
+            return IsUsable(definition) && definition.LifetimeMode != VfxLifetimeMode.Manual;
+        }
+
+        private readonly struct ActivePooledVfx
+        {
+            public readonly int UnitId;
+            public readonly StatusKind Kind;
+            public readonly VfxHandle Handle;
+
+            public ActivePooledVfx(int unitId, StatusKind kind, VfxHandle handle)
             {
-                StatusVfxView view = Instantiate(prefab, ResolvePoolRoot());
-                view.gameObject.SetActive(false);
-                GetPool(prefab).Push(view);
+                UnitId = unitId;
+                Kind = kind;
+                Handle = handle;
             }
-        }
-
-        private StatusVfxView GetFromPool(StatusVfxView prefab)
-        {
-            if (prefab == null) return null;
-            Stack<StatusVfxView> pool = GetPool(prefab);
-            return pool.Count > 0 ? pool.Pop() : Instantiate(prefab, ResolvePoolRoot());
-        }
-
-        private void ReturnToPool(StatusVfxView prefab, StatusVfxView view)
-        {
-            if (view == null) return;
-            view.Release();
-            view.transform.SetParent(ResolvePoolRoot(), false);
-            GetPool(prefab).Push(view);
-        }
-
-        private Stack<StatusVfxView> GetPool(StatusVfxView prefab)
-        {
-            if (!poolsByPrefab.TryGetValue(prefab, out Stack<StatusVfxView> pool))
-            {
-                pool = new Stack<StatusVfxView>(8);
-                poolsByPrefab.Add(prefab, pool);
-            }
-            return pool;
-        }
-
-        private Transform ResolvePoolRoot() { return poolRoot != null ? poolRoot : transform; }
-
-        private readonly struct ActiveVfx
-        {
-            public readonly int UnitId; public readonly StatusKind Kind; public readonly StatusVfxView Prefab; public readonly StatusVfxView View;
-            public ActiveVfx(int unitId, StatusKind kind, StatusVfxView prefab, StatusVfxView view) { UnitId = unitId; Kind = kind; Prefab = prefab; View = view; }
-        }
-
-        private readonly struct OneShotVfx
-        {
-            public readonly int UnitId; public readonly StatusVfxView Prefab; public readonly StatusVfxView View;
-            public OneShotVfx(int unitId, StatusVfxView prefab, StatusVfxView view) { UnitId = unitId; Prefab = prefab; View = view; }
         }
 
         private readonly struct ShadowStatus

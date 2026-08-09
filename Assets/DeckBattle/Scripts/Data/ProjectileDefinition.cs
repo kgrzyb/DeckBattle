@@ -10,6 +10,8 @@ namespace DeckBattle
         public ProjectileView ProjectilePrefab;
         public float SpawnHeight = 0.5f;
         public float HitHeight = 0.5f;
+        public VfxDefinition LaunchVfx;
+        public VfxDefinition ImpactVfx;
 
         private void OnValidate()
         {

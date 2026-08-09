@@ -30,6 +30,7 @@ namespace DeckBattle
 
         [SerializeField] private Transform modelRoot;
         [SerializeField] private Animator animator;
+        [SerializeField] private UnitVfxAnchors vfxAnchors;
         [SerializeField] private float groundOffset = 0.65f;
         [SerializeField] private float deathDuration = 0.25f;
         [SerializeField] private float attackWindupAnimationDuration = 0.25f;
@@ -39,7 +40,7 @@ namespace DeckBattle
         public RuntimeUnit Unit { get; private set; }
         public UnitRuntimeState RealtimeUnit { get; private set; }
         public Transform StatusVfxPivot { get { return transform; } }
-        public event Action<UnitView> SpecialAttackAnimationEvent;
+        public event Action<UnitView, UnitAnimationVfxSignal> AnimationVfxSignal;
 
         private Vector3 baseModelScale;
         private Quaternion baseModelRotation;
@@ -59,6 +60,7 @@ namespace DeckBattle
         private bool isDying;
         private bool isTurning;
         private bool hasKnownTargetWorldPosition;
+        private bool hasResolvedVfxAnchors;
         private int activeAttackSequenceId;
         private int activeSpecialSequenceId;
         private UnitVisualState visualState;
@@ -75,6 +77,8 @@ namespace DeckBattle
                 animator.applyRootMotion = false;
                 animator.speed = combatSpeed;
             }
+
+            CacheVfxAnchors();
 
             baseModelScale = modelRoot.localScale;
             baseModelRotation = modelRoot.localRotation;
@@ -129,6 +133,23 @@ namespace DeckBattle
                 name = state.Side + "_Unit_" + state.UnitId;
             }
 
+        }
+
+        public Transform ResolveVfxAnchor(UnitVfxAnchor anchor)
+        {
+            if (anchor == UnitVfxAnchor.Root)
+            {
+                return transform;
+            }
+
+            CacheVfxAnchors();
+            if (vfxAnchors == null)
+            {
+                return transform;
+            }
+
+            Transform resolved = vfxAnchors.Resolve(anchor);
+            return resolved != null ? resolved : transform;
         }
 
         public void SetWorldPosition(Vector3 worldPosition)
@@ -230,7 +251,29 @@ namespace DeckBattle
             }
 
             FaceLastKnownTarget();
-            SpecialAttackAnimationEvent?.Invoke(this);
+            AnimationVfxSignal?.Invoke(this, UnitAnimationVfxSignal.SpecialContact);
+        }
+
+        public void PlayAttackContactAnimationEvent()
+        {
+            if (isDying || visualState != UnitVisualState.Attack)
+            {
+                return;
+            }
+
+            FaceLastKnownTarget();
+            AnimationVfxSignal?.Invoke(this, UnitAnimationVfxSignal.AttackContact);
+        }
+
+        public void PlayProjectileReleaseAnimationEvent()
+        {
+            if (isDying || visualState != UnitVisualState.Attack)
+            {
+                return;
+            }
+
+            FaceLastKnownTarget();
+            AnimationVfxSignal?.Invoke(this, UnitAnimationVfxSignal.ProjectileRelease);
         }
 
         public void FaceWorldPosition(Vector3 worldPosition, bool immediately = false)
@@ -290,6 +333,19 @@ namespace DeckBattle
             queuedMoveHead = 0;
             queuedMoveCount = 0;
             TriggerAnimation(UnitVisualState.Dead, true);
+        }
+
+        private void CacheVfxAnchors()
+        {
+            if (hasResolvedVfxAnchors)
+            {
+                return;
+            }
+
+            vfxAnchors = vfxAnchors != null
+                ? vfxAnchors
+                : GetComponentInChildren<UnitVfxAnchors>(true);
+            hasResolvedVfxAnchors = true;
         }
 
         private void ResetTransientState(Vector3 worldPosition)

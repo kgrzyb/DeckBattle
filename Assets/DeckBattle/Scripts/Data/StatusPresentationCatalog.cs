@@ -69,12 +69,11 @@ namespace DeckBattle
         public StatusPresentationMode Mode;
         [Range(0, 100)] public int Priority = 50;
         public Sprite Icon;
-        public StatusVfxView ApplyVfxPrefab;
-        public StatusVfxView ActiveVfxPrefab;
-        public StatusVfxView RemoveVfxPrefab;
+        public VfxDefinition ApplyVfxDefinition;
+        public VfxDefinition ActiveVfxDefinition;
+        public VfxDefinition RemoveVfxDefinition;
         public Vector3 LocalPosition;
         public Vector3 LocalEulerAngles;
         public Vector3 LocalScale = Vector3.one;
-        [Min(0)] public int PrewarmCountPerPrefab;
     }
 }

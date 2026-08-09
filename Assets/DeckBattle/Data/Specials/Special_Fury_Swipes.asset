@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SpecialId: fury_swipes
   Kind: 2
-  DescriptionTemplate: 'Perform {strikeCount} rapid strikes that deal {damagePerHit} damage each ({totalDamage} total before armor).'
+  DescriptionTemplate: Perform {strikeCount} rapid strikes that deal {damagePerHit}
+    damage each ({totalDamage} total before armor).
   WindupDuration: 0
   CastDuration: 1.5
   AppliedStatus: {fileID: 0}
   StrikeCount: 10
   AttackDamageMultiplier: 2
+  VfxProfile: {fileID: 11400000, guid: 567893037331f5a46adc1a2cff59841a, type: 2}

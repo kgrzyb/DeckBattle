@@ -8,15 +8,19 @@ namespace DeckBattle
     public sealed class BattlePresentationLookup
     {
         private readonly Dictionary<int, UnitView> unitPrefabsById = new Dictionary<int, UnitView>(16);
+        private readonly Dictionary<int, UnitVfxPresentationData> unitVfxDataById = new Dictionary<int, UnitVfxPresentationData>(16);
         private readonly Dictionary<int, ProjectilePresentationData> projectileDataById = new Dictionary<int, ProjectilePresentationData>(8);
         private readonly HashSet<int> ambiguousUnitIds = new HashSet<int>();
+        private readonly HashSet<int> ambiguousUnitVfxIds = new HashSet<int>();
         private readonly HashSet<int> ambiguousProjectileIds = new HashSet<int>();
 
         public void Rebuild(IReadOnlyList<UnitDefinition> definitions, Object context)
         {
             unitPrefabsById.Clear();
+            unitVfxDataById.Clear();
             projectileDataById.Clear();
             ambiguousUnitIds.Clear();
+            ambiguousUnitVfxIds.Clear();
             ambiguousProjectileIds.Clear();
 
             if (definitions == null)
@@ -35,6 +39,23 @@ namespace DeckBattle
             return unitPrefabsById.TryGetValue(presentationId, out prefab);
         }
 
+        public bool TryGetUnitVfxProfiles(
+            int presentationId,
+            out BattleVfxProfile unitProfile,
+            out BattleVfxProfile specialProfile)
+        {
+            if (unitVfxDataById.TryGetValue(presentationId, out UnitVfxPresentationData data))
+            {
+                unitProfile = data.UnitProfile;
+                specialProfile = data.SpecialProfile;
+                return unitProfile != null || specialProfile != null;
+            }
+
+            unitProfile = null;
+            specialProfile = null;
+            return false;
+        }
+
         public bool TryGetProjectile(int presentationId, out ProjectileView prefab, out float spawnHeight, out float hitHeight)
         {
             if (projectileDataById.TryGetValue(presentationId, out ProjectilePresentationData data))
@@ -51,6 +72,50 @@ namespace DeckBattle
             return false;
         }
 
+        public bool TryGetProjectileVfx(int presentationId, out VfxDefinition launchVfx, out VfxDefinition impactVfx)
+        {
+            if (projectileDataById.TryGetValue(presentationId, out ProjectilePresentationData data))
+            {
+                launchVfx = data.LaunchVfx;
+                impactVfx = data.ImpactVfx;
+                return launchVfx != null || impactVfx != null;
+            }
+
+            launchVfx = null;
+            impactVfx = null;
+            return false;
+        }
+
+        // Called at battle setup, never from the simulation or frame hot path.
+        public void CollectVfxDefinitions(List<VfxDefinition> definitions)
+        {
+            if (definitions == null)
+            {
+                return;
+            }
+
+            definitions.Clear();
+            foreach (KeyValuePair<int, UnitVfxPresentationData> pair in unitVfxDataById)
+            {
+                AddProfileDefinitions(pair.Value.UnitProfile, definitions);
+                AddProfileDefinitions(pair.Value.SpecialProfile, definitions);
+            }
+
+            foreach (KeyValuePair<int, ProjectilePresentationData> pair in projectileDataById)
+            {
+                ProjectilePresentationData data = pair.Value;
+                if (data.LaunchVfx != null)
+                {
+                    definitions.Add(data.LaunchVfx);
+                }
+
+                if (data.ImpactVfx != null)
+                {
+                    definitions.Add(data.ImpactVfx);
+                }
+            }
+        }
+
         private void AddDefinition(UnitDefinition definition, Object context)
         {
             if (definition == null)
@@ -58,8 +123,28 @@ namespace DeckBattle
                 return;
             }
 
-            AddUnitPrefab(BattlePresentationId.ForUnit(definition), definition.UnitPrefab, definition, context);
+            int unitPresentationId = BattlePresentationId.ForUnit(definition);
+            AddUnitPrefab(unitPresentationId, definition.UnitPrefab, definition, context);
+            AddUnitVfxProfiles(unitPresentationId, definition.VfxProfile, definition.Special != null ? definition.Special.VfxProfile : null, definition, context);
             AddProjectile(definition.Projectile, context);
+        }
+
+        private static void AddProfileDefinitions(BattleVfxProfile profile, List<VfxDefinition> definitions)
+        {
+            if (profile == null)
+            {
+                return;
+            }
+
+            BattleVfxBinding[] bindings = profile.Bindings;
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                VfxDefinition effect = bindings[i].Effect;
+                if (effect != null)
+                {
+                    definitions.Add(effect);
+                }
+            }
         }
 
         private void AddUnitPrefab(int presentationId, UnitView prefab, UnitDefinition definition, Object context)
@@ -87,6 +172,39 @@ namespace DeckBattle
                 context);
         }
 
+        private void AddUnitVfxProfiles(
+            int presentationId,
+            BattleVfxProfile unitProfile,
+            BattleVfxProfile specialProfile,
+            UnitDefinition definition,
+            Object context)
+        {
+            if (presentationId == 0
+                || (unitProfile == null && specialProfile == null)
+                || ambiguousUnitVfxIds.Contains(presentationId))
+            {
+                return;
+            }
+
+            var data = new UnitVfxPresentationData(unitProfile, specialProfile);
+            if (!unitVfxDataById.TryGetValue(presentationId, out UnitVfxPresentationData existing))
+            {
+                unitVfxDataById.Add(presentationId, data);
+                return;
+            }
+
+            if (existing.Matches(data))
+            {
+                return;
+            }
+
+            unitVfxDataById.Remove(presentationId);
+            ambiguousUnitVfxIds.Add(presentationId);
+            Debug.LogError(
+                "Unit presentation id " + presentationId + " maps to multiple VFX profiles. Check UnitId values, including " + definition.name + ".",
+                context);
+        }
+
         private void AddProjectile(ProjectileDefinition definition, Object context)
         {
             if (definition == null || definition.ProjectilePrefab == null)
@@ -103,7 +221,9 @@ namespace DeckBattle
             var data = new ProjectilePresentationData(
                 definition.ProjectilePrefab,
                 definition.SpawnHeight,
-                definition.HitHeight);
+                definition.HitHeight,
+                definition.LaunchVfx,
+                definition.ImpactVfx);
             if (!projectileDataById.TryGetValue(presentationId, out ProjectilePresentationData existing))
             {
                 projectileDataById.Add(presentationId, data);
@@ -118,8 +238,25 @@ namespace DeckBattle
             projectileDataById.Remove(presentationId);
             ambiguousProjectileIds.Add(presentationId);
             Debug.LogError(
-                "Projectile presentation id " + presentationId + " maps to multiple prefabs or launch heights. Check ProjectileId values, including " + definition.name + ".",
+                "Projectile presentation id " + presentationId + " maps to multiple prefabs, launch settings, or VFX. Check ProjectileId values, including " + definition.name + ".",
                 context);
+        }
+
+        private readonly struct UnitVfxPresentationData
+        {
+            public readonly BattleVfxProfile UnitProfile;
+            public readonly BattleVfxProfile SpecialProfile;
+
+            public UnitVfxPresentationData(BattleVfxProfile unitProfile, BattleVfxProfile specialProfile)
+            {
+                UnitProfile = unitProfile;
+                SpecialProfile = specialProfile;
+            }
+
+            public bool Matches(UnitVfxPresentationData other)
+            {
+                return UnitProfile == other.UnitProfile && SpecialProfile == other.SpecialProfile;
+            }
         }
 
         private readonly struct ProjectilePresentationData
@@ -127,19 +264,30 @@ namespace DeckBattle
             public readonly ProjectileView Prefab;
             public readonly float SpawnHeight;
             public readonly float HitHeight;
+            public readonly VfxDefinition LaunchVfx;
+            public readonly VfxDefinition ImpactVfx;
 
-            public ProjectilePresentationData(ProjectileView prefab, float spawnHeight, float hitHeight)
+            public ProjectilePresentationData(
+                ProjectileView prefab,
+                float spawnHeight,
+                float hitHeight,
+                VfxDefinition launchVfx,
+                VfxDefinition impactVfx)
             {
                 Prefab = prefab;
                 SpawnHeight = spawnHeight;
                 HitHeight = hitHeight;
+                LaunchVfx = launchVfx;
+                ImpactVfx = impactVfx;
             }
 
             public bool Matches(ProjectilePresentationData other)
             {
                 return Prefab == other.Prefab
                     && Mathf.Approximately(SpawnHeight, other.SpawnHeight)
-                    && Mathf.Approximately(HitHeight, other.HitHeight);
+                    && Mathf.Approximately(HitHeight, other.HitHeight)
+                    && LaunchVfx == other.LaunchVfx
+                    && ImpactVfx == other.ImpactVfx;
             }
         }
     }

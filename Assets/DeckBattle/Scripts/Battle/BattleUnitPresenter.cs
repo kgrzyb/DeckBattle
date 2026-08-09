@@ -9,7 +9,6 @@ namespace DeckBattle
         private readonly UnitStatusOverlayController statusOverlayController;
         private readonly UnitStatusVfxController statusVfxController;
         private readonly FloatingDamageTextController floatingDamageTextController;
-        private readonly BattleEffectPresenter effectPresenter;
         private readonly float defaultTickDuration;
 
         public BattleUnitPresenter(
@@ -18,7 +17,6 @@ namespace DeckBattle
             UnitStatusOverlayController statusOverlayController,
             UnitStatusVfxController statusVfxController,
             FloatingDamageTextController floatingDamageTextController,
-            BattleEffectPresenter effectPresenter,
             float defaultTickDuration)
         {
             this.boardPresenter = boardPresenter;
@@ -26,7 +24,6 @@ namespace DeckBattle
             this.statusOverlayController = statusOverlayController;
             this.statusVfxController = statusVfxController;
             this.floatingDamageTextController = floatingDamageTextController;
-            this.effectPresenter = effectPresenter;
             this.defaultTickDuration = defaultTickDuration;
         }
 
@@ -40,8 +37,6 @@ namespace DeckBattle
 
             view.Bind(state, boardPresenter.GetWorldPosition(state.Hex));
             view.FaceWorldPosition(boardPresenter.GetWorldCenter(), true);
-            view.SpecialAttackAnimationEvent -= HandleSpecialAttackAnimationEvent;
-            view.SpecialAttackAnimationEvent += HandleSpecialAttackAnimationEvent;
             statusOverlayController?.BindPresentationUnit(state, view);
             statusVfxController?.BindPresentationUnit(state.UnitId, view);
         }
@@ -183,11 +178,6 @@ namespace DeckBattle
                 view.SetTargetWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To));
                 view.PlaySpecialStrike(battleEvent.SequenceId);
             }
-        }
-
-        private void HandleSpecialAttackAnimationEvent(UnitView view)
-        {
-            effectPresenter?.PlayAttack(view.transform.position);
         }
 
         private void ShowDamageText(Vector3 worldPosition, BattleEvent battleEvent)

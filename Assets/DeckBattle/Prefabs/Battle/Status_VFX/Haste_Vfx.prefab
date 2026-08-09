@@ -4848,7 +4848,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1472431475630752839}
-  - component: {fileID: 4934089389219929977}
+  - component: {fileID: 7814567550221851597}
   m_Layer: 0
   m_Name: Haste_Vfx
   m_TagString: Untagged
@@ -4872,7 +4872,7 @@ Transform:
   - {fileID: 4809798559121743789}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4934089389219929977
+--- !u!114 &7814567550221851597
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -4881,9 +4881,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6198647593628354962}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6817f83f3ae60fb4ea522b04746a82f3, type: 3}
+  m_Script: {fileID: 11500000, guid: 2fa5982703ebb0f46a906ea14a831d36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  particleSystems:
-  - {fileID: 5819855180880717902}
-  oneShotLifetime: 0.5
+  particleSystems: []
+  trailRenderers: []
+  animators: []

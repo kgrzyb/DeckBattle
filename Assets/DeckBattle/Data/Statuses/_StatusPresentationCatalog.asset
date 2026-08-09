@@ -17,11 +17,10 @@ MonoBehaviour:
     Mode: 2
     Priority: 0
     Icon: {fileID: 0}
-    ApplyVfxPrefab: {fileID: 0}
-    ActiveVfxPrefab: {fileID: 4934089389219929977, guid: bb21df1e909c05047b7bc52431d6de4c,
-      type: 3}
-    RemoveVfxPrefab: {fileID: 0}
+    ApplyVfxDefinition: {fileID: 0}
+    ActiveVfxDefinition: {fileID: 11400000, guid: 5f752518952a96a40babf9666ac36dd7,
+      type: 2}
+    RemoveVfxDefinition: {fileID: 0}
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEulerAngles: {x: 0, y: 0, z: 0}
     LocalScale: {x: 1, y: 1, z: 1}
-    PrewarmCountPerPrefab: 5

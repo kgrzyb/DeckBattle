@@ -15,6 +15,7 @@ namespace DeckBattle
         public StatusDefinition AppliedStatus;
         [Range(1, MaxStrikeCount)] public int StrikeCount = 1;
         [Min(0f)] public float AttackDamageMultiplier = 1f;
+        public BattleVfxProfile VfxProfile;
 
         private void OnValidate()
         {

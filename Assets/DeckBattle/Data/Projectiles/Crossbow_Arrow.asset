@@ -18,3 +18,5 @@ MonoBehaviour:
     type: 3}
   SpawnHeight: 1
   HitHeight: 1
+  LaunchVfx: {fileID: 11400000, guid: 8e8fd9d4c8afed44a80058d8614edc4a, type: 2}
+  ImpactVfx: {fileID: 11400000, guid: bb1f529c6703da9429e66199ce0058d2, type: 2}

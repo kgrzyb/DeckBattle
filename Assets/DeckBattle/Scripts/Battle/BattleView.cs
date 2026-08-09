@@ -13,14 +13,14 @@ namespace DeckBattle
         [SerializeField] private StatusPresentationCatalog statusPresentationCatalog;
         [SerializeField] private UnitStatusVfxController statusVfxController;
         [SerializeField] private FloatingDamageTextController floatingDamageTextController;
-        [SerializeField] private PooledBattleEffect attackEffectPrefab;
-        [SerializeField] private PooledBattleEffect damageEffectPrefab;
         [SerializeField] private Transform effectRoot;
+        [SerializeField] private BattleVfxPool vfxPool;
+        [SerializeField] private BattleVfxProfile defaultVfxProfile;
 
         private UnitViewRegistry unitViewRegistry;
         private BattleUnitPresenter unitPresenter;
         private BattleProjectilePresenter projectilePresenter;
-        private BattleEffectPresenter effectPresenter;
+        private BattleVfxPresenter vfxPresenter;
         private readonly BattlePresentationLookup presentationLookup = new BattlePresentationLookup();
 
         private readonly Dictionary<int, UnitPresentationState> presentationStateByUnitId = new Dictionary<int, UnitPresentationState>(16);
@@ -54,6 +54,7 @@ namespace DeckBattle
         public void SetPresentationDefinitions(IReadOnlyList<UnitDefinition> definitions)
         {
             presentationLookup.Rebuild(definitions, this);
+            vfxPresenter?.PrewarmConfiguredEffects();
         }
 
         public void SetCombatSpeed(float speed)
@@ -67,7 +68,7 @@ namespace DeckBattle
             combatSpeed = safeSpeed;
             unitViewRegistry?.SetCombatSpeed(combatSpeed);
             projectilePresenter?.SetCombatSpeed(combatSpeed);
-            effectPresenter?.SetCombatSpeed(combatSpeed);
+            vfxPresenter?.SetCombatSpeed(combatSpeed);
             statusOverlayController?.SetCombatSpeed(combatSpeed);
             statusVfxController?.SetCombatSpeed(combatSpeed);
             floatingDamageTextController?.SetCombatSpeed(combatSpeed);
@@ -82,14 +83,13 @@ namespace DeckBattle
 
             if (statusVfxController != null)
             {
-                statusVfxController.Initialize(statusPresentationCatalog);
+                statusVfxController.Initialize(statusPresentationCatalog, vfxPool);
             }
         }
 
         private void Update()
         {
             EnsurePresenters();
-            effectPresenter.Tick();
             projectilePresenter.Tick();
         }
 
@@ -121,6 +121,7 @@ namespace DeckBattle
             shieldByUnitId.Clear();
             floatingDamageTextController?.ReleaseAll();
             EnsurePresenters();
+            vfxPool?.ResetDiagnostics();
             for (int i = 0; i < snapshot.Units.Count; i++)
             {
                 UnitPresentationState state = snapshot.Units[i];
@@ -159,8 +160,8 @@ namespace DeckBattle
             }
 
             EnsurePresenters();
-            effectPresenter.Clear();
             projectilePresenter.Clear();
+            vfxPresenter?.ReleaseAll();
         }
 
         public void ProcessCombatTick(BattleTickResult tickResult, IReadOnlyList<BattleEvent> events)
@@ -184,28 +185,35 @@ namespace DeckBattle
                         break;
                     case BattleEventType.AttackWindupStarted:
                         unitPresenter.HandleAttackWindupStarted(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.AttackWindupCancelled:
                         unitPresenter.HandleAttackWindupCancelled(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.AttackFired:
                         unitPresenter.HandleAttackFired(battleEvent);
-                        effectPresenter.PlayAttack(boardPresenter.GetWorldPosition(battleEvent.From));
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.SpecialWindupStarted:
                         unitPresenter.HandleSpecialWindupStarted(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.SpecialWindupCancelled:
                         unitPresenter.HandleSpecialWindupCancelled(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.SpecialCastStarted:
                         unitPresenter.HandleSpecialCastStarted(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.SpecialStrikeFired:
                         unitPresenter.HandleSpecialStrikeFired(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.UnitSpecialActivated:
                         unitPresenter.HandleSpecialActivated(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.UnitDamaged:
                         HandleUnitDamaged(battleEvent);
@@ -240,9 +248,11 @@ namespace DeckBattle
                         break;
                     case BattleEventType.ProjectileLaunched:
                         projectilePresenter.HandleLaunched(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.ProjectileResolved:
                         projectilePresenter.HandleResolved(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
                         break;
                 }
             }
@@ -255,8 +265,9 @@ namespace DeckBattle
             if (presentationStateByUnitId.TryGetValue(battleEvent.UnitId, out UnitPresentationState state))
             {
                 statusOverlayController?.SetHealth(state.UnitId, battleEvent.RemainingHp, state.MaxHp);
-                effectPresenter.PlayDamage(boardPresenter.GetWorldPosition(battleEvent.To));
             }
+
+            vfxPresenter?.Handle(battleEvent);
         }
 
         private void BindInitialStatuses(BattlePresentationSnapshot snapshot, UnitPresentationState state)
@@ -285,7 +296,10 @@ namespace DeckBattle
 
         private void HandleUnitDied(BattleEvent battleEvent)
         {
+            statusVfxController?.Release(battleEvent.UnitId);
+            vfxPresenter?.ReleaseOwnedByUnit(battleEvent.UnitId);
             unitPresenter.HandleDied(battleEvent);
+            vfxPresenter?.Handle(battleEvent);
             statusOverlayController?.ReleaseAfterDamageAnimation(battleEvent.UnitId);
 
             statusStatesByUnitId.Remove(battleEvent.UnitId);
@@ -304,6 +318,7 @@ namespace DeckBattle
 
         private void HandleBattleEnded()
         {
+            vfxPresenter?.ReleaseAll();
             if (statusVfxController != null)
             {
                 statusVfxController.ReleaseAll();
@@ -416,15 +431,6 @@ namespace DeckBattle
         private void EnsurePresenters()
         {
             UnitViewRegistry unitViews = EnsureUnitViewRegistry();
-            if (effectPresenter == null)
-            {
-                effectPresenter = new BattleEffectPresenter(
-                    attackEffectPrefab,
-                    damageEffectPrefab,
-                    effectRoot != null ? effectRoot : transform);
-                effectPresenter.SetCombatSpeed(combatSpeed);
-            }
-
             if (unitPresenter == null)
             {
                 unitPresenter = new BattleUnitPresenter(
@@ -433,7 +439,6 @@ namespace DeckBattle
                     statusOverlayController,
                     statusVfxController,
                     floatingDamageTextController,
-                    effectPresenter,
                     presentationTickDuration);
             }
 
@@ -445,6 +450,18 @@ namespace DeckBattle
                     unitViews,
                     effectRoot != null ? effectRoot : transform);
                 projectilePresenter.SetCombatSpeed(combatSpeed);
+            }
+
+            if (vfxPresenter == null)
+            {
+                vfxPresenter = new BattleVfxPresenter(
+                    boardPresenter,
+                    presentationLookup,
+                    unitViews,
+                    presentationStateByUnitId,
+                    vfxPool,
+                    defaultVfxProfile);
+                vfxPresenter.SetCombatSpeed(combatSpeed);
             }
 
         }

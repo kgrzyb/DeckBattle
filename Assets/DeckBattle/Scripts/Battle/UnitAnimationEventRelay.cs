@@ -14,6 +14,21 @@ namespace DeckBattle
 
         public void Attack()
         {
+            SpecialContact();
+        }
+
+        public void AttackContact()
+        {
+            unitView?.PlayAttackContactAnimationEvent();
+        }
+
+        public void ProjectileRelease()
+        {
+            unitView?.PlayProjectileReleaseAnimationEvent();
+        }
+
+        public void SpecialContact()
+        {
             unitView?.PlaySpecialAttackAnimationEvent();
         }
     }
