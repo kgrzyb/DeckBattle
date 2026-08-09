@@ -17,6 +17,7 @@ namespace DeckBattle
         [SerializeField] private List<SpawnEntry> initialUnits = new List<SpawnEntry>(8);
 
         private readonly List<UnitSpawnData> spawnBuffer = new List<UnitSpawnData>(16);
+        private readonly List<UnitDefinition> presentationDefinitions = new List<UnitDefinition>(16);
 
         private void Awake()
         {
@@ -66,6 +67,7 @@ namespace DeckBattle
             }
 
             spawnBuffer.Clear();
+            presentationDefinitions.Clear();
             int nextGeneratedUnitId = 1;
             for (int i = 0; i < initialUnits.Count; i++)
             {
@@ -77,6 +79,7 @@ namespace DeckBattle
 
                 int unitId = entry.UnitId > 0 ? entry.UnitId : nextGeneratedUnitId;
                 spawnBuffer.Add(new UnitSpawnData(unitId, entry.Definition, entry.Side, entry.ToHexCoord()));
+                presentationDefinitions.Add(entry.Definition);
                 nextGeneratedUnitId = Mathf.Max(nextGeneratedUnitId, unitId) + 1;
             }
 
@@ -96,6 +99,7 @@ namespace DeckBattle
                 spawnBuffer,
                 battleConfig.RuntimeTuningConfig.CreateRuntimeTuning());
             battleView.BoardPresenter.EnsureBuilt(simulation.Board);
+            battleView.SetPresentationDefinitions(presentationDefinitions);
             float resolvedTickDuration = battleTimingConfig != null ? battleTimingConfig.CombatTickDuration : tickDuration;
             int resolvedMaxTicks = battleTimingConfig != null ? battleTimingConfig.MaxCombatTicks : maxTicks;
             int resolvedMaxTicksPerFrame = battleTimingConfig != null ? battleTimingConfig.MaxTicksPerFrame : maxTicksPerFrame;

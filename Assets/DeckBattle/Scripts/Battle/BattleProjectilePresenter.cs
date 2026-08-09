@@ -6,7 +6,7 @@ namespace DeckBattle
     public sealed class BattleProjectilePresenter
     {
         private readonly BoardPresenter boardPresenter;
-        private readonly BattlePresentationCatalog presentationCatalog;
+        private readonly BattlePresentationLookup presentationLookup;
         private readonly UnitViewRegistry unitViews;
         private readonly Transform effectRoot;
         private readonly List<ProjectileView> activeProjectileViews = new List<ProjectileView>(8);
@@ -16,12 +16,12 @@ namespace DeckBattle
 
         public BattleProjectilePresenter(
             BoardPresenter boardPresenter,
-            BattlePresentationCatalog presentationCatalog,
+            BattlePresentationLookup presentationLookup,
             UnitViewRegistry unitViews,
             Transform effectRoot)
         {
             this.boardPresenter = boardPresenter;
-            this.presentationCatalog = presentationCatalog;
+            this.presentationLookup = presentationLookup;
             this.unitViews = unitViews;
             this.effectRoot = effectRoot;
         }
@@ -67,8 +67,8 @@ namespace DeckBattle
 
         public void HandleLaunched(BattleEvent battleEvent)
         {
-            if (presentationCatalog == null
-                || !presentationCatalog.TryGetProjectile(
+            if (presentationLookup == null
+                || !presentationLookup.TryGetProjectile(
                     battleEvent.PresentationId,
                     out ProjectileView projectilePrefab,
                     out float spawnHeight,

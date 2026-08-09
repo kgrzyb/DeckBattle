@@ -38,6 +38,7 @@ namespace DeckBattle
         [SerializeField, HideInInspector] private float roundResolutionDelay = BattleTiming.DefaultRoundResolutionDelay;
 
         private UnitViewRegistry unitViewRegistry;
+        private readonly List<UnitDefinition> presentationDefinitions = new List<UnitDefinition>(16);
         private BattleState state;
         private BattleSimulation activeSimulation;
         private BattleCombatRunner activeCombatRunner;
@@ -133,6 +134,8 @@ namespace DeckBattle
                 state = BattleState.Create(battleConfig, playerDeck, enemyDeck, activeSeed);
             }
 
+            ConfigureBattlePresentation();
+
             state.BeginRoundStart();
             lastCombatResult = null;
             lastRoundResolutionResult = null;
@@ -150,6 +153,48 @@ namespace DeckBattle
                 && startData.PlayerDeck.Count > 0
                 && startData.EnemyDeck != null
                 && startData.EnemyDeck.Count > 0;
+        }
+
+        private void ConfigureBattlePresentation()
+        {
+            presentationDefinitions.Clear();
+            AppendUnitDefinitions(state != null ? state.Player : null);
+            AppendUnitDefinitions(state != null ? state.Enemy : null);
+
+            BattleView resolvedBattleView = ResolveBattleView();
+            if (resolvedBattleView != null)
+            {
+                resolvedBattleView.SetPresentationDefinitions(presentationDefinitions);
+            }
+        }
+
+        private void AppendUnitDefinitions(PlayerBattleState player)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            AppendUnitDefinitions(player.Deck);
+            AppendUnitDefinitions(player.Hand);
+            AppendUnitDefinitions(player.PlayedCards);
+        }
+
+        private void AppendUnitDefinitions(IReadOnlyList<CardRuntimeState> cards)
+        {
+            if (cards == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < cards.Count; i++)
+            {
+                UnitDefinition definition = cards[i] != null ? cards[i].UnitDefinition : null;
+                if (definition != null)
+                {
+                    presentationDefinitions.Add(definition);
+                }
+            }
         }
 
         private int ResolveBattleSeed()
@@ -584,7 +629,7 @@ namespace DeckBattle
                 }
 
                 lastRoundResolutionResult = RoundFlowService.ResolveRoundAndStartNext(state);
-                RefreshUnits();
+                RefreshUnits(true);
                 RaiseStateChanged();
 
                 if (roundAnnouncementView != null)
@@ -770,7 +815,7 @@ namespace DeckBattle
             return Mathf.Max(0f, configuredDelay);
         }
 
-        private void RefreshUnits()
+        private void RefreshUnits(bool resetExistingViews = false)
         {
             if (state == null)
             {
@@ -778,23 +823,31 @@ namespace DeckBattle
                 return;
             }
 
-            SyncUnitViews(state.Player.Units);
-            SyncUnitViews(state.Enemy.Units);
+            SyncUnitViews(state.Player.Units, resetExistingViews);
+            SyncUnitViews(state.Enemy.Units, resetExistingViews);
         }
 
-        private void SyncUnitViews(List<RuntimeUnit> units)
+        private void SyncUnitViews(List<RuntimeUnit> units, bool resetExistingViews = false)
         {
             for (int i = 0; i < units.Count; i++)
             {
-                CreateOrUpdateUnitView(units[i]);
+                CreateOrUpdateUnitView(units[i], resetExistingViews);
             }
         }
 
-        private void CreateOrUpdateUnitView(RuntimeUnit unit)
+        private void CreateOrUpdateUnitView(RuntimeUnit unit, bool resetExistingView = false)
         {
             UnitViewRegistry registry = ResolveUnitViewRegistry();
             if (registry == null || unit == null)
             {
+                return;
+            }
+
+            if (!resetExistingView && registry.TryGet(unit.RuntimeId, out UnitView existingView))
+            {
+                existingView.SetWorldPosition(boardPresenter.GetWorldPosition(unit.BattleCoord));
+                existingView.FaceWorldPosition(boardPresenter.GetWorldCenter(), true);
+                BindStatusOverlay(unit, existingView);
                 return;
             }
 

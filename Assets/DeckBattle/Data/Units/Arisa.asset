@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
-  m_Name: Archer
+  m_Name: Arisa
   m_EditorClassIdentifier: 
   CardId: archer
-  DisplayName: Archer
+  DisplayName: Arisa
   Rarity: 0
   ApCost: 2
-  CardArt: {fileID: 0}
+  CardArt: {fileID: 21300000, guid: a52dcf906cb42474db433df23f5350bc, type: 3}
   cardKind: 0
   UnitType: 1
   MaxHp: 400
@@ -33,7 +33,7 @@ MonoBehaviour:
   Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
   Armor: 0
   ArmorPenetration: 0
-  Projectile: {fileID: 11400000, guid: ee570de75d9ef454c9bf51a76c1ddb96, type: 2}
+  Projectile: {fileID: 11400000, guid: 187976520e7ddc248aa9fdb8d0a9387e, type: 2}
   UnitPrefab: {fileID: 7506552908754966910, guid: 9f55c116b0c85a444999106aad1cbd6b,
     type: 3}
   OnPlayEffect: {fileID: 11400000, guid: cfa0e0516847469aab6f34e5e6e45263, type: 2}

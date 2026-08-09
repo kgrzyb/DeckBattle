@@ -13,7 +13,6 @@ namespace DeckBattle
         [SerializeField] private StatusPresentationCatalog statusPresentationCatalog;
         [SerializeField] private UnitStatusVfxController statusVfxController;
         [SerializeField] private FloatingDamageTextController floatingDamageTextController;
-        [SerializeField] private BattlePresentationCatalog presentationCatalog;
         [SerializeField] private PooledBattleEffect attackEffectPrefab;
         [SerializeField] private PooledBattleEffect damageEffectPrefab;
         [SerializeField] private Transform effectRoot;
@@ -22,6 +21,7 @@ namespace DeckBattle
         private BattleUnitPresenter unitPresenter;
         private BattleProjectilePresenter projectilePresenter;
         private BattleEffectPresenter effectPresenter;
+        private readonly BattlePresentationLookup presentationLookup = new BattlePresentationLookup();
 
         private readonly Dictionary<int, UnitPresentationState> presentationStateByUnitId = new Dictionary<int, UnitPresentationState>(16);
         private readonly Dictionary<int, List<StatusPresentationState>> statusStatesByUnitId = new Dictionary<int, List<StatusPresentationState>>(16);
@@ -49,6 +49,11 @@ namespace DeckBattle
 
             presentationTickDuration = safeDuration;
             unitPresenter = null;
+        }
+
+        public void SetPresentationDefinitions(IReadOnlyList<UnitDefinition> definitions)
+        {
+            presentationLookup.Rebuild(definitions, this);
         }
 
         public void SetCombatSpeed(float speed)
@@ -399,7 +404,7 @@ namespace DeckBattle
             if (unitViewRegistry == null)
             {
                 unitViewRegistry = new UnitViewRegistry(
-                    presentationCatalog,
+                    presentationLookup,
                     unitRoot != null ? unitRoot : transform,
                     this);
                 unitViewRegistry.SetCombatSpeed(combatSpeed);
@@ -436,7 +441,7 @@ namespace DeckBattle
             {
                 projectilePresenter = new BattleProjectilePresenter(
                     boardPresenter,
-                    presentationCatalog,
+                    presentationLookup,
                     unitViews,
                     effectRoot != null ? effectRoot : transform);
                 projectilePresenter.SetCombatSpeed(combatSpeed);

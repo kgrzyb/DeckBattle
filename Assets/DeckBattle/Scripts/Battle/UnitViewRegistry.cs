@@ -6,15 +6,15 @@ namespace DeckBattle
 {
     public sealed class UnitViewRegistry
     {
-        private readonly BattlePresentationCatalog presentationCatalog;
+        private readonly BattlePresentationLookup presentationLookup;
         private readonly Transform parent;
         private readonly UnityEngine.Object context;
         private readonly Dictionary<int, UnitView> viewsByUnitId = new Dictionary<int, UnitView>(16);
         private float combatSpeed = 1f;
 
-        public UnitViewRegistry(BattlePresentationCatalog presentationCatalog, Transform parent, UnityEngine.Object context)
+        public UnitViewRegistry(BattlePresentationLookup presentationLookup, Transform parent, UnityEngine.Object context)
         {
-            this.presentationCatalog = presentationCatalog;
+            this.presentationLookup = presentationLookup;
             this.parent = parent;
             this.context = context;
         }
@@ -26,9 +26,9 @@ namespace DeckBattle
                 return view;
             }
 
-            if (presentationCatalog == null || !presentationCatalog.TryGetUnitPrefab(state.PresentationId, out UnitView prefab))
+            if (presentationLookup == null || !presentationLookup.TryGetUnitPrefab(state.PresentationId, out UnitView prefab))
             {
-                Debug.LogError("Battle presentation catalog is missing UnitView prefab for id " + state.PresentationId + ".", context);
+                Debug.LogError("Battle presentation lookup is missing UnitView prefab for id " + state.PresentationId + ".", context);
                 return null;
             }
 

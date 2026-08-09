@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -49,18 +50,24 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void PresentationCatalog_MapsEveryConfiguredUnitAndProjectile()
+        public void PresentationLookup_MapsEveryConfiguredUnitAndProjectile()
         {
-            BattlePresentationCatalog catalog = AssetDatabase.LoadAssetAtPath<BattlePresentationCatalog>(
-                "Assets/DeckBattle/Data/Presentation/BattlePresentationCatalog.asset");
-            Assert.IsNotNull(catalog);
-
             string[] unitGuids = AssetDatabase.FindAssets("t:UnitDefinition", new[] { "Assets/DeckBattle/Data/Units" });
             Assert.Greater(unitGuids.Length, 0);
+            var definitions = new List<UnitDefinition>(unitGuids.Length);
             for (int i = 0; i < unitGuids.Length; i++)
             {
                 UnitDefinition definition = AssetDatabase.LoadAssetAtPath<UnitDefinition>(AssetDatabase.GUIDToAssetPath(unitGuids[i]));
-                Assert.IsTrue(catalog.TryGetUnitPrefab(BattlePresentationId.ForUnit(definition), out UnitView prefab), definition.name);
+                definitions.Add(definition);
+            }
+
+            var lookup = new BattlePresentationLookup();
+            lookup.Rebuild(definitions, null);
+
+            for (int i = 0; i < definitions.Count; i++)
+            {
+                UnitDefinition definition = definitions[i];
+                Assert.IsTrue(lookup.TryGetUnitPrefab(BattlePresentationId.ForUnit(definition), out UnitView prefab), definition.name);
                 Assert.IsNotNull(prefab, definition.name);
             }
 
@@ -70,7 +77,7 @@ namespace DeckBattle.Tests
             {
                 ProjectileDefinition definition = AssetDatabase.LoadAssetAtPath<ProjectileDefinition>(AssetDatabase.GUIDToAssetPath(projectileGuids[i]));
                 Assert.IsTrue(
-                    catalog.TryGetProjectile(BattlePresentationId.ForProjectile(definition), out ProjectileView prefab, out float spawnHeight, out float hitHeight),
+                    lookup.TryGetProjectile(BattlePresentationId.ForProjectile(definition), out ProjectileView prefab, out float spawnHeight, out float hitHeight),
                     definition.name);
                 Assert.IsNotNull(prefab, definition.name);
                 Assert.AreEqual(definition.SpawnHeight, spawnHeight, definition.name);

@@ -16,14 +16,14 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Registry_GetOrCreate_UsesCatalogPrefabAndPreventsDuplicates()
+        public void Registry_GetOrCreate_UsesDefinitionLookupAndPreventsDuplicates()
         {
             GameObject parentObject = new GameObject("UnitRoot");
             GameObject prefabObject = new GameObject("UnitPrefab", typeof(UnitView));
             UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
             definition.UnitPrefab = prefabObject.GetComponent<UnitView>();
-            BattlePresentationCatalog catalog = CreateCatalog(BattlePresentationId.ForUnit(definition), definition.UnitPrefab);
-            var registry = new UnitViewRegistry(catalog, parentObject.transform, parentObject);
+            BattlePresentationLookup lookup = CreateLookup(definition);
+            var registry = new UnitViewRegistry(lookup, parentObject.transform, parentObject);
             var state = new UnitPresentationState(1, BattlePresentationId.ForUnit(definition), BattleSide.Player, default, 10, 10, 0, 100);
 
             try
@@ -40,7 +40,6 @@ namespace DeckBattle.Tests
             {
                 registry.ReleaseAll();
                 Object.DestroyImmediate(definition);
-                Object.DestroyImmediate(catalog);
                 Object.DestroyImmediate(parentObject);
                 Object.DestroyImmediate(prefabObject);
             }
@@ -54,8 +53,8 @@ namespace DeckBattle.Tests
             UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
             definition.UnitPrefab = prefabObject.GetComponent<UnitView>();
             int presentationId = BattlePresentationId.ForUnit(definition);
-            BattlePresentationCatalog catalog = CreateCatalog(presentationId, definition.UnitPrefab);
-            var registry = new UnitViewRegistry(catalog, parentObject.transform, parentObject);
+            BattlePresentationLookup lookup = CreateLookup(definition);
+            var registry = new UnitViewRegistry(lookup, parentObject.transform, parentObject);
             var state = new UnitPresentationState(1, presentationId, BattleSide.Player, default, 10, 10, 0, 100);
 
             try
@@ -69,36 +68,25 @@ namespace DeckBattle.Tests
             {
                 registry.ReleaseAll();
                 Object.DestroyImmediate(definition);
-                Object.DestroyImmediate(catalog);
                 Object.DestroyImmediate(parentObject);
                 Object.DestroyImmediate(prefabObject);
             }
         }
 
         [Test]
-        public void Catalog_MissingUnitEntry_ReturnsFalse()
+        public void Lookup_MissingUnitDefinition_ReturnsFalse()
         {
-            BattlePresentationCatalog catalog = ScriptableObject.CreateInstance<BattlePresentationCatalog>();
+            var lookup = new BattlePresentationLookup();
 
-            try
-            {
-                Assert.IsFalse(catalog.TryGetUnitPrefab(17, out UnitView prefab));
-                Assert.IsNull(prefab);
-            }
-            finally
-            {
-                Object.DestroyImmediate(catalog);
-            }
+            Assert.IsFalse(lookup.TryGetUnitPrefab(17, out UnitView prefab));
+            Assert.IsNull(prefab);
         }
 
-        private static BattlePresentationCatalog CreateCatalog(int presentationId, UnitView prefab)
+        private static BattlePresentationLookup CreateLookup(UnitDefinition definition)
         {
-            BattlePresentationCatalog catalog = ScriptableObject.CreateInstance<BattlePresentationCatalog>();
-            FieldInfo field = typeof(BattlePresentationCatalog).GetField("units", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field);
-            field.SetValue(catalog, new[] { new UnitPresentationEntry { PresentationId = presentationId, Prefab = prefab } });
-            typeof(BattlePresentationCatalog).GetMethod("OnValidate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(catalog, null);
-            return catalog;
+            var lookup = new BattlePresentationLookup();
+            lookup.Rebuild(new[] { definition }, null);
+            return lookup;
         }
     }
 }
