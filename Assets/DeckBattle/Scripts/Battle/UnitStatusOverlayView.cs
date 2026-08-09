@@ -17,7 +17,6 @@ namespace DeckBattle
         [SerializeField] private Image manaFillImage;
         [SerializeField] private RectTransform manaFillTransform;
         [SerializeField] private Image shieldBarImage;
-        [SerializeField] private TMP_Text unitNameText;
         [SerializeField] private TMP_Text hpText;
         [SerializeField] private TMP_Text manaText;
         [SerializeField] private RectTransform statusIconRoot;
@@ -39,6 +38,8 @@ namespace DeckBattle
         private float damageFillDelayRemaining;
         private float damageFillElapsed;
         private bool damageFillAnimating;
+        private Color shownHpFillColor;
+        private bool hasShownHpFillColor;
 
         public int UnitId
         {
@@ -80,7 +81,6 @@ namespace DeckBattle
             shownMaxMana = -1;
             ResetDamageFill();
 
-            SetUnitName(displayName);
             SetHealth(currentHp, maxHp);
             SetMana(currentMana, maxMana);
             SetStatuses(null, 0);
@@ -362,6 +362,18 @@ namespace DeckBattle
             }
 
             SetText(hpText, clampedHp, maxHp);
+        }
+
+        public void SetHpFillColor(Color color)
+        {
+            if (hpFillImage == null || (hasShownHpFillColor && shownHpFillColor == color))
+            {
+                return;
+            }
+
+            hpFillImage.color = color;
+            shownHpFillColor = color;
+            hasShownHpFillColor = true;
         }
 
         public void SetMana(int currentMana, int maximumMana)
@@ -682,14 +694,5 @@ namespace DeckBattle
             text.SetText("{0}/{1}", current, maximum);
         }
 
-        private void SetUnitName(string displayName)
-        {
-            if (unitNameText == null)
-            {
-                return;
-            }
-
-            unitNameText.SetText(string.IsNullOrEmpty(displayName) ? "Unit" : displayName);
-        }
     }
 }

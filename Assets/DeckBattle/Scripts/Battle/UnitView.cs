@@ -28,17 +28,12 @@ namespace DeckBattle
         private static readonly int SpecialState = Animator.StringToHash("Base Layer.Special");
         private static readonly int DeadState = Animator.StringToHash("Base Layer.Dead");
 
-        [SerializeField] private MeshRenderer meshRenderer;
         [SerializeField] private Transform modelRoot;
         [SerializeField] private Animator animator;
         [SerializeField] private float groundOffset = 0.65f;
-        [SerializeField] private float damageFlashDuration = 0.12f;
         [SerializeField] private float deathDuration = 0.25f;
         [SerializeField] private float attackWindupAnimationDuration = 0.25f;
         [SerializeField, Min(1f)] private float rotationSpeedDegreesPerSecond = 540f;
-        [SerializeField] private Color playerColor = new Color(0.18f, 0.62f, 0.95f, 1f);
-        [SerializeField] private Color enemyColor = new Color(0.95f, 0.35f, 0.25f, 1f);
-        [SerializeField] private Color damageFlashColor = Color.white;
 
         public int RuntimeId { get; private set; }
         public RuntimeUnit Unit { get; private set; }
@@ -46,7 +41,6 @@ namespace DeckBattle
         public Transform StatusVfxPivot { get { return transform; } }
         public event Action<UnitView> SpecialAttackAnimationEvent;
 
-        private MaterialPropertyBlock propertyBlock;
         private Vector3 baseModelScale;
         private Quaternion baseModelRotation;
         private Quaternion facingTargetRotation;
@@ -55,10 +49,8 @@ namespace DeckBattle
         private Vector3 lastKnownTargetWorldPosition;
         private readonly Vector3[] queuedMoveTargets = new Vector3[MaxQueuedMoves];
         private readonly float[] queuedMoveDurations = new float[MaxQueuedMoves];
-        private Color sideColor;
         private float moveElapsed;
         private float moveDuration;
-        private float damageTimer;
         private float deathTimer;
         private float combatSpeed = 1f;
         private int queuedMoveHead;
@@ -78,15 +70,6 @@ namespace DeckBattle
                 modelRoot = transform.childCount > 0 ? transform.GetChild(0) : transform;
             }
 
-            if (meshRenderer == null || meshRenderer.sharedMaterial == null)
-            {
-                meshRenderer = modelRoot.GetComponentInChildren<MeshRenderer>();
-                if (meshRenderer == null)
-                {
-                    meshRenderer = GetComponentInChildren<MeshRenderer>();
-                }
-            }
-
             if (animator != null)
             {
                 animator.applyRootMotion = false;
@@ -95,7 +78,6 @@ namespace DeckBattle
 
             baseModelScale = modelRoot.localScale;
             baseModelRotation = modelRoot.localRotation;
-            propertyBlock = new MaterialPropertyBlock();
         }
 
         private void Update()
@@ -108,12 +90,12 @@ namespace DeckBattle
             float deltaTime = Time.deltaTime * combatSpeed;
             UpdateMovement(deltaTime);
             UpdateFacing(deltaTime);
-            UpdateVisualTimers(deltaTime);
+            UpdateDeathTimer(deltaTime);
         }
 
         private bool HasActiveFrameWork
         {
-            get { return isMoving || isTurning || damageTimer > 0f || isDying; }
+            get { return isMoving || isTurning || isDying; }
         }
 
         public void Bind(RuntimeUnit unit, Vector3 worldPosition)
@@ -123,7 +105,6 @@ namespace DeckBattle
             RuntimeId = unit.RuntimeId;
             ResetTransientState(worldPosition);
             name = FormatUnitName(unit.Side, unit.RuntimeId, unit.Definition);
-            ApplySideColor(unit.Side);
         }
 
         public void Bind(UnitRuntimeState unit, Vector3 worldPosition)
@@ -133,7 +114,6 @@ namespace DeckBattle
             RuntimeId = unit.UnitId;
             ResetTransientState(worldPosition);
             name = unit.Side + "_Unit_" + unit.UnitId;
-            ApplySideColor(unit.Side);
         }
 
         public void Bind(UnitPresentationState state, Vector3 worldPosition)
@@ -149,7 +129,6 @@ namespace DeckBattle
                 name = state.Side + "_Unit_" + state.UnitId;
             }
 
-            ApplySideColor(state.Side);
         }
 
         public void SetWorldPosition(Vector3 worldPosition)
@@ -296,8 +275,6 @@ namespace DeckBattle
 
         public void PlayDamage(int remainingHp)
         {
-            damageTimer = Mathf.Max(damageFlashDuration, 0.01f);
-            ApplyColor(damageFlashColor);
         }
 
         public void PlayDeath()
@@ -315,29 +292,10 @@ namespace DeckBattle
             TriggerAnimation(UnitVisualState.Dead, true);
         }
 
-        private void ApplySideColor(BattleSide side)
-        {
-            sideColor = side == BattleSide.Player ? playerColor : enemyColor;
-            ApplyColor(sideColor);
-        }
-
-        private void ApplyColor(Color color)
-        {
-            if (meshRenderer == null)
-            {
-                return;
-            }
-
-            meshRenderer.GetPropertyBlock(propertyBlock);
-            propertyBlock.SetColor("_BaseColor", color);
-            meshRenderer.SetPropertyBlock(propertyBlock);
-        }
-
         private void ResetTransientState(Vector3 worldPosition)
         {
             gameObject.SetActive(true);
             isDying = false;
-            damageTimer = 0f;
             deathTimer = 0f;
             activeAttackSequenceId = 0;
             activeSpecialSequenceId = 0;
@@ -437,7 +395,7 @@ namespace DeckBattle
             return true;
         }
 
-        private void UpdateVisualTimers(float deltaTime)
+        private void UpdateDeathTimer(float deltaTime)
         {
             if (isDying)
             {
@@ -447,15 +405,6 @@ namespace DeckBattle
                 {
                     gameObject.SetActive(false);
                     return;
-                }
-            }
-
-            if (damageTimer > 0f)
-            {
-                damageTimer = Mathf.Max(0f, damageTimer - deltaTime);
-                if (damageTimer <= 0f)
-                {
-                    ApplyColor(sideColor);
                 }
             }
         }

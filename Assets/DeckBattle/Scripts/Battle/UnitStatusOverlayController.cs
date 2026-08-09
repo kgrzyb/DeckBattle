@@ -10,6 +10,8 @@ namespace DeckBattle
         [SerializeField] private Camera worldCamera;
         [SerializeField] private Vector3 worldOffset = new Vector3(0f, 1.55f, 0f);
         [SerializeField] private StatusPresentationCatalog presentationCatalog;
+        [SerializeField] private Color playerHpFillColor = new Color(0.2f, 0.86f, 0.32f, 0.96f);
+        [SerializeField] private Color enemyHpFillColor = new Color(0.88f, 0.22f, 0.24f, 0.96f);
 
         private readonly Dictionary<int, TrackedOverlay> activeOverlays = new Dictionary<int, TrackedOverlay>(16);
         private readonly Stack<UnitStatusOverlayView> pooledOverlays = new Stack<UnitStatusOverlayView>(16);
@@ -92,7 +94,7 @@ namespace DeckBattle
             int maxHp = definition != null ? definition.MaxHp : 1;
             int maxMana = definition != null ? definition.ManaThreshold : 0;
             string displayName = definition != null ? definition.DisplayName : null;
-            Bind(unit.RuntimeId, view.transform, displayName, unit.CurrentHp, maxHp, 0, maxMana);
+            Bind(unit.RuntimeId, view.transform, unit.Side, displayName, unit.CurrentHp, maxHp, 0, maxMana);
         }
 
         public void BindRealtimeUnit(UnitRuntimeState unit, UnitView view)
@@ -105,6 +107,7 @@ namespace DeckBattle
             Bind(
                 unit.UnitId,
                 view.transform,
+                unit.Side,
                 unit.DisplayName,
                 unit.CurrentHp,
                 unit.CombatSpec.MaxHp,
@@ -123,6 +126,7 @@ namespace DeckBattle
             Bind(
                 state.UnitId,
                 view.transform,
+                state.Side,
                 state.DisplayName,
                 state.CurrentHp,
                 state.MaxHp,
@@ -212,7 +216,7 @@ namespace DeckBattle
             activeOverlays.Clear();
         }
 
-        private void Bind(int unitId, Transform target, string displayName, int currentHp, int maxHp, int currentMana, int maxMana)
+        private void Bind(int unitId, Transform target, BattleSide side, string displayName, int currentHp, int maxHp, int currentMana, int maxMana)
         {
             TrackedOverlay tracked;
             if (!activeOverlays.TryGetValue(unitId, out tracked) || tracked.View == null)
@@ -226,6 +230,7 @@ namespace DeckBattle
             tracked.MaxMana = Mathf.Max(1, maxMana);
             tracked.ResetPositionCache();
             tracked.View.Bind(unitId, target, displayName, currentHp, tracked.MaxHp, currentMana, tracked.MaxMana);
+            tracked.View.SetHpFillColor(side == BattleSide.Enemy ? enemyHpFillColor : playerHpFillColor);
             tracked.View.SetStatuses(null, 0);
         }
 

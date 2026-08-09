@@ -96,6 +96,30 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void SetHpFillColor_UpdatesHealthBarFillOnly()
+        {
+            GameObject root = new GameObject("Overlay", typeof(RectTransform), typeof(UnitStatusOverlayView));
+            GameObject hpFillObject = new GameObject("HpFill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            hpFillObject.transform.SetParent(root.transform, false);
+
+            try
+            {
+                UnitStatusOverlayView view = root.GetComponent<UnitStatusOverlayView>();
+                Image hpImage = hpFillObject.GetComponent<Image>();
+                SetPrivateField(view, "hpFillImage", hpImage);
+
+                Color enemyColor = new Color(0.88f, 0.22f, 0.24f, 0.96f);
+                view.SetHpFillColor(enemyColor);
+
+                Assert.AreEqual(enemyColor, hpImage.color);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void SetHealth_HealingLethalDamageAndRebind_AnimatesDamageFill()
         {
             GameObject root = new GameObject("Overlay", typeof(RectTransform), typeof(UnitStatusOverlayView));
