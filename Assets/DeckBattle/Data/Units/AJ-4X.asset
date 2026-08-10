@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
-  m_Name: Brute
+  m_Name: AJ-4X
   m_EditorClassIdentifier: 
-  CardId: brute
-  DisplayName: Brute
+  CardId: aj4x
+  DisplayName: AJ-4X
   Rarity: 1
-  ApCost: 4
-  CardArt: {fileID: 0}
+  ApCost: 1
+  CardArt: {fileID: 21300000, guid: 7f7999e563896bf4ea7ff3224d2d4e06, type: 3}
   cardKind: 0
   UnitType: 0
   MaxHp: 1000
@@ -30,12 +30,12 @@ MonoBehaviour:
   ManaThreshold: 100
   ManaPerAttack: 10
   ManaPerDamageTaken: 10
-  Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
+  Special: {fileID: 11400000, guid: 07f29cd4746ab7448b9194ddb7ace7e1, type: 2}
   Armor: 50
   ArmorPenetration: 0
   Projectile: {fileID: 0}
   UnitPrefab: {fileID: 7506552908754966910, guid: 2450455a188ee904c8b0e83b91ac7496,
     type: 3}
-  RunAnimationSpeedMultiplier: 1
+  RunAnimationSpeedMultiplier: 1.8
   VfxProfile: {fileID: 0}
   OnPlayEffect: {fileID: 11400000, guid: cfa0e0516847469aab6f34e5e6e45263, type: 2}

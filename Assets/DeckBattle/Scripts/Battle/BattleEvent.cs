@@ -31,7 +31,8 @@ namespace DeckBattle
         SpecialWindupCancelled = 26,
         UnitTargetChanged = 27,
         SpecialCastStarted = 28,
-        SpecialStrikeFired = 29
+        SpecialStrikeFired = 29,
+        SpecialAreaImpact = 30
     }
 
     public readonly struct BattleEvent
@@ -259,6 +260,30 @@ namespace DeckBattle
                 false,
                 sequenceId,
                 strikeIndex: strikeIndex);
+        }
+
+        public static BattleEvent SpecialAreaImpact(
+            int unitId,
+            UnitSpecialKind specialKind,
+            int sequenceId,
+            HexCoord centerHex,
+            int radius)
+        {
+            return new BattleEvent(
+                BattleEventType.SpecialAreaImpact,
+                unitId,
+                0,
+                centerHex,
+                centerHex,
+                radius,
+                0,
+                0,
+                0,
+                0f,
+                specialKind,
+                BattleSide.Player,
+                false,
+                sequenceId);
         }
 
         public static BattleEvent UnitCrit(int attackerId, int targetId)

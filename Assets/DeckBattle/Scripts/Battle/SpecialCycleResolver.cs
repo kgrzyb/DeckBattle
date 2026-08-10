@@ -90,7 +90,7 @@ namespace DeckBattle
 
                         if (simulation.ElapsedTime >= unit.SpecialWindupEndTime)
                         {
-                            BeginCast(simulation, unit, eventQueue, tickDuration);
+                            BeginCast(simulation, unit, eventQueue, workspace, tickDuration);
                         }
                         break;
                     case UnitSpecialPhase.Casting:
@@ -119,6 +119,7 @@ namespace DeckBattle
                     }
             }
 
+            ResolveSlamImpacts(simulation, eventQueue, workspace);
             ResolveFuryStrikes(simulation, eventQueue, workspace);
             CompleteResolvedFuryCasts(simulation, eventQueue);
         }
@@ -127,6 +128,7 @@ namespace DeckBattle
             BattleSimulation simulation,
             UnitRuntimeState unit,
             BattleEventQueue eventQueue,
+            Workspace workspace,
             float tickDuration)
         {
             UnitSpecialCombatSpec special = unit.CombatSpec.Special;
@@ -159,6 +161,13 @@ namespace DeckBattle
                 return;
             }
 
+            if (special.Kind == UnitSpecialKind.Slam)
+            {
+                unit.SpecialCastEndTime = simulation.ElapsedTime + Math.Max(tickDuration, special.CastDuration);
+                workspace.AddSlamImpact(unit, unit.SpecialSequenceId, unit.CurrentHex);
+                return;
+            }
+
             if (special.CastDuration <= 0f)
             {
                 CompleteCast(simulation, unit, eventQueue);
@@ -176,6 +185,17 @@ namespace DeckBattle
             UnitSpecialCombatSpec special = unit.CombatSpec.Special;
             int sequenceId = unit.SpecialSequenceId;
             EnterRecoveryLock(unit, simulation.ElapsedTime);
+
+            if (special.Kind == UnitSpecialKind.Slam)
+            {
+                eventQueue?.Enqueue(BattleEvent.UnitSpecialActivated(
+                    unit.UnitId,
+                    special.Kind,
+                    special.CastDuration,
+                    sequenceId));
+                AttackCycleResolver.RestartCooldownAfterSpecial(simulation, unit, eventQueue);
+                return;
+            }
 
             if (TryApplySpecial(simulation, unit, special, eventQueue))
             {
@@ -271,6 +291,58 @@ namespace DeckBattle
                 unit.SpecialStrikesResolved = strikeIndex;
                 unit.NextSpecialStrikeTime = castStartTime
                     + special.CastDuration * (unit.SpecialStrikesResolved + 1) / special.StrikeCount;
+            }
+        }
+
+        private static void ResolveSlamImpacts(
+            BattleSimulation simulation,
+            BattleEventQueue eventQueue,
+            Workspace workspace)
+        {
+            for (int impactIndex = 0; impactIndex < workspace.SlamImpactCount; impactIndex++)
+            {
+                UnitRuntimeState attacker = workspace.SlamImpactAttackers[impactIndex];
+                if (attacker == null)
+                {
+                    continue;
+                }
+
+                UnitSpecialCombatSpec special = attacker.CombatSpec.Special;
+                if (special.Kind != UnitSpecialKind.Slam)
+                {
+                    continue;
+                }
+
+                HexCoord centerHex = workspace.SlamImpactCenters[impactIndex];
+                eventQueue?.Enqueue(BattleEvent.SpecialAreaImpact(
+                    attacker.UnitId,
+                    special.Kind,
+                    workspace.SlamImpactSequenceIds[impactIndex],
+                    centerHex,
+                    special.EffectRadius));
+
+                for (int unitIndex = 0; unitIndex < simulation.Units.Count; unitIndex++)
+                {
+                    UnitRuntimeState target = simulation.Units[unitIndex];
+                    if (target == null
+                        || !target.IsAlive
+                        || target.Side == attacker.Side
+                        || simulation.Board.Distance(centerHex, target.CurrentHex) > special.EffectRadius)
+                    {
+                        continue;
+                    }
+
+                    int damage = DamageCalculator.CalculateSpecialDamage(
+                        attacker,
+                        target,
+                        special.AttackDamageMultiplier,
+                        simulation.Tuning);
+                    DamageResolver.Resolve(
+                        simulation,
+                        target,
+                        new DamageRequest(attacker, damage, DamageKind.Special, false),
+                        eventQueue);
+                }
             }
         }
 
@@ -391,6 +463,10 @@ namespace DeckBattle
             internal readonly int[] FuryStrikeSequenceIds;
             internal readonly int[] FuryStrikeIndices;
             internal int FuryStrikeIntentCount;
+            internal readonly UnitRuntimeState[] SlamImpactAttackers;
+            internal readonly int[] SlamImpactSequenceIds;
+            internal readonly HexCoord[] SlamImpactCenters;
+            internal int SlamImpactCount;
 
             public Workspace(int unitCapacity)
             {
@@ -399,6 +475,10 @@ namespace DeckBattle
                 FuryStrikeTargets = new UnitRuntimeState[capacity];
                 FuryStrikeSequenceIds = new int[capacity];
                 FuryStrikeIndices = new int[capacity];
+                int slamCapacity = Math.Max(1, unitCapacity);
+                SlamImpactAttackers = new UnitRuntimeState[slamCapacity];
+                SlamImpactSequenceIds = new int[slamCapacity];
+                SlamImpactCenters = new HexCoord[slamCapacity];
             }
 
             internal void AddFuryStrike(
@@ -414,9 +494,18 @@ namespace DeckBattle
                 FuryStrikeIntentCount++;
             }
 
+            internal void AddSlamImpact(UnitRuntimeState attacker, int sequenceId, HexCoord centerHex)
+            {
+                SlamImpactAttackers[SlamImpactCount] = attacker;
+                SlamImpactSequenceIds[SlamImpactCount] = sequenceId;
+                SlamImpactCenters[SlamImpactCount] = centerHex;
+                SlamImpactCount++;
+            }
+
             internal void Clear()
             {
                 FuryStrikeIntentCount = 0;
+                SlamImpactCount = 0;
             }
         }
     }

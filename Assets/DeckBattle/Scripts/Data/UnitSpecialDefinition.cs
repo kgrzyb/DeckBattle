@@ -15,6 +15,7 @@ namespace DeckBattle
         public StatusDefinition AppliedStatus;
         [Range(1, MaxStrikeCount)] public int StrikeCount = 1;
         [Min(0f)] public float AttackDamageMultiplier = 1f;
+        [Min(0)] public int EffectRadius;
         public BattleVfxProfile VfxProfile;
 
         private void OnValidate()
@@ -23,6 +24,7 @@ namespace DeckBattle
             CastDuration = Mathf.Max(0f, CastDuration);
             StrikeCount = Mathf.Clamp(StrikeCount, 1, MaxStrikeCount);
             AttackDamageMultiplier = Mathf.Max(0f, AttackDamageMultiplier);
+            EffectRadius = Mathf.Max(0, EffectRadius);
         }
     }
 }

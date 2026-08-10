@@ -48,6 +48,22 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void FormatSpecial_UsesAttackDamagePercentAndEffectRadius()
+        {
+            UnitDefinition unit = TestDefinitions.CreateUnit("slam-unit", 1);
+            UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            special.AttackDamageMultiplier = 1f;
+            special.EffectRadius = 1;
+            special.DescriptionTemplate = "Deals {attackDamagePercent} within {effectRadius}.";
+            unit.Special = special;
+
+            string description = CardDescriptionTemplateFormatter.FormatSpecial(unit);
+
+            Assert.AreEqual("Deals 100% within 1.", description);
+            Assert.IsTrue(CardDescriptionTemplateFormatter.IsSpecialTemplateValid(special));
+        }
+
+        [Test]
         public void FormatOnPlay_UsesCalculatedBaseAttackValues()
         {
             UnitDefinition unit = TestDefinitions.CreateUnit("focused", 1);
@@ -109,6 +125,19 @@ namespace DeckBattle.Tests
                 UnitOnPlayEffectDefinition onPlay = AssetDatabase.LoadAssetAtPath<UnitOnPlayEffectDefinition>(AssetDatabase.GUIDToAssetPath(onPlayGuids[i]));
                 Assert.IsTrue(CardDescriptionTemplateFormatter.IsOnPlayTemplateValid(onPlay), onPlay.name);
             }
+        }
+
+        [Test]
+        public void Content_AJ4XUsesConfiguredSlam()
+        {
+            UnitDefinition aj4X = AssetDatabase.LoadAssetAtPath<UnitDefinition>("Assets/DeckBattle/Data/Units/AJ-4X.asset");
+
+            Assert.IsNotNull(aj4X);
+            Assert.IsNotNull(aj4X.Special);
+            Assert.AreEqual(UnitSpecialKind.Slam, aj4X.Special.Kind);
+            Assert.AreEqual(1f, aj4X.Special.AttackDamageMultiplier);
+            Assert.AreEqual(1, aj4X.Special.EffectRadius);
+            Assert.IsTrue(CardDescriptionTemplateFormatter.IsSpecialTemplateValid(aj4X.Special));
         }
     }
 }

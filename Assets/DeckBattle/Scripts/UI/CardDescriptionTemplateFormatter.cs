@@ -126,6 +126,10 @@ namespace DeckBattle
             {
                 case "damagePerHit":
                     return TokenResolution.Known(DamageCalculator.CalculateBaseDamagePreview(unitDefinition.Attack, special.AttackDamageMultiplier).ToString());
+                case "attackDamagePercent":
+                    return TokenResolution.Known(FormatPercent(special.AttackDamageMultiplier));
+                case "effectRadius":
+                    return TokenResolution.Known(Math.Max(0, special.EffectRadius).ToString());
                 case "totalDamage":
                     return TokenResolution.Known(CalculateTotalDamage(unitDefinition, special).ToString());
                 case "strikeCount":
@@ -181,6 +185,8 @@ namespace DeckBattle
         private static bool IsSpecialToken(string token)
         {
             return token == "damagePerHit"
+                || token == "attackDamagePercent"
+                || token == "effectRadius"
                 || token == "totalDamage"
                 || token == "strikeCount"
                 || token == "castDuration"

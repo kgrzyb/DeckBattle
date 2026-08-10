@@ -14,6 +14,7 @@ namespace DeckBattle
         SpecialStrike = 8,
         ProjectileLaunch = 9,
         ProjectileImpact = 10,
-        Death = 11
+        Death = 11,
+        SpecialAreaImpact = 12
     }
 }

@@ -211,6 +211,9 @@ namespace DeckBattle
                         unitPresenter.HandleSpecialStrikeFired(battleEvent);
                         vfxPresenter?.Handle(battleEvent);
                         break;
+                    case BattleEventType.SpecialAreaImpact:
+                        vfxPresenter?.Handle(battleEvent);
+                        break;
                     case BattleEventType.UnitSpecialActivated:
                         unitPresenter.HandleSpecialActivated(battleEvent);
                         vfxPresenter?.Handle(battleEvent);

@@ -171,6 +171,9 @@ namespace DeckBattle
                 case BattleEventType.SpecialStrikeFired:
                     cue = BattleVfxCue.SpecialStrike;
                     return true;
+                case BattleEventType.SpecialAreaImpact:
+                    cue = BattleVfxCue.SpecialAreaImpact;
+                    return true;
                 default:
                     cue = BattleVfxCue.None;
                     return false;
@@ -183,7 +186,8 @@ namespace DeckBattle
             int targetUnitId = GetTargetUnitId(battleEvent);
             bool isSpecialCue = cue == BattleVfxCue.SpecialWindup
                 || cue == BattleVfxCue.SpecialCast
-                || cue == BattleVfxCue.SpecialStrike;
+                || cue == BattleVfxCue.SpecialStrike
+                || cue == BattleVfxCue.SpecialAreaImpact;
             int profileUnitId = cue == BattleVfxCue.Damaged || cue == BattleVfxCue.CriticalImpact || cue == BattleVfxCue.Death
                 ? targetUnitId
                 : sourceUnitId;

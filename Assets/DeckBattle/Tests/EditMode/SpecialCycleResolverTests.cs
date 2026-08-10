@@ -254,6 +254,61 @@ namespace DeckBattle.Tests
             Assert.AreEqual(70, SumDamageEvents(events));
         }
 
+        [Test]
+        public void Slam_AtImpactDamagesAllAndOnlyEnemiesWithinRadius()
+        {
+            BattleSimulation simulation = CreateSlamSimulation();
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState nearbyEnemyA = simulation.Units[1];
+            UnitRuntimeState nearbyEnemyB = simulation.Units[2];
+            UnitRuntimeState distantEnemy = simulation.Units[3];
+            UnitRuntimeState friendly = simulation.Units[4];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.Windup, attacker.SpecialPhase);
+            Assert.AreEqual(10, attacker.CurrentMana);
+            Assert.AreEqual(0, CountEvents(events, BattleEventType.UnitDamaged));
+
+            loop.Tick(events);
+
+            Assert.AreEqual(0, attacker.CurrentMana);
+            Assert.AreEqual(1, CountEvents(events, BattleEventType.SpecialAreaImpact));
+            Assert.AreEqual(2, CountEvents(events, BattleEventType.UnitDamaged));
+            Assert.AreEqual(900, nearbyEnemyA.CurrentHp);
+            Assert.AreEqual(900, nearbyEnemyB.CurrentHp);
+            Assert.AreEqual(1000, distantEnemy.CurrentHp);
+            Assert.AreEqual(1000, friendly.CurrentHp);
+        }
+
+        [Test]
+        public void Slam_SimultaneousOpposingImpactsBothResolve()
+        {
+            UnitDefinition player = CreateSlamUnit("player-slam");
+            UnitDefinition enemy = CreateSlamUnit("enemy-slam");
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(2, 1))
+                });
+            simulation.Units[0].CurrentMana = 10;
+            simulation.Units[1].CurrentMana = 10;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.AreEqual(2, CountEvents(events, BattleEventType.SpecialAreaImpact));
+            Assert.AreEqual(900, simulation.Units[0].CurrentHp);
+            Assert.AreEqual(900, simulation.Units[1].CurrentHp);
+        }
+
         private static BattleSimulation CreateSimulation(float windupDuration, float castDuration = 0f)
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
@@ -291,6 +346,46 @@ namespace DeckBattle.Tests
                 });
         }
 
+        private static BattleSimulation CreateSlamSimulation()
+        {
+            UnitDefinition attacker = CreateSlamUnit("slam-attacker");
+            UnitDefinition nearbyEnemyA = CreatePassiveUnit("nearby-enemy-a");
+            UnitDefinition nearbyEnemyB = CreatePassiveUnit("nearby-enemy-b");
+            UnitDefinition distantEnemy = CreatePassiveUnit("distant-enemy");
+            UnitDefinition friendly = CreatePassiveUnit("friendly");
+            return BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(2, 2)),
+                    new UnitSpawnData(2, nearbyEnemyA, BattleSide.Enemy, new HexCoord(3, 2)),
+                    new UnitSpawnData(3, nearbyEnemyB, BattleSide.Enemy, new HexCoord(2, 3)),
+                    new UnitSpawnData(4, distantEnemy, BattleSide.Enemy, new HexCoord(4, 2)),
+                    new UnitSpawnData(5, friendly, BattleSide.Player, new HexCoord(1, 2))
+                });
+        }
+
+        private static UnitDefinition CreateSlamUnit(string unitId)
+        {
+            UnitDefinition unit = TestDefinitions.CreateUnit(unitId, 1);
+            unit.MaxHp = 1000;
+            unit.Attack = 100;
+            unit.AttacksPerSecond = 0.001f;
+            unit.ManaThreshold = 10;
+            unit.ManaPerAttack = 0;
+            unit.Special = CreateSlamSpecial();
+            return unit;
+        }
+
+        private static UnitDefinition CreatePassiveUnit(string unitId)
+        {
+            UnitDefinition unit = TestDefinitions.CreateUnit(unitId, 1);
+            unit.MaxHp = 1000;
+            unit.AttacksPerSecond = 0.001f;
+            unit.ManaPerAttack = 0;
+            return unit;
+        }
+
         private static UnitSpecialDefinition CreateHasteBurstSpecial(float windupDuration, float castDuration = 0f)
         {
             UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
@@ -309,6 +404,17 @@ namespace DeckBattle.Tests
             special.CastDuration = 1.5f;
             special.StrikeCount = 10;
             special.AttackDamageMultiplier = 0.7f;
+            return special;
+        }
+
+        private static UnitSpecialDefinition CreateSlamSpecial()
+        {
+            UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            special.Kind = UnitSpecialKind.Slam;
+            special.WindupDuration = TickDuration;
+            special.CastDuration = TickDuration;
+            special.AttackDamageMultiplier = 1f;
+            special.EffectRadius = 1;
             return special;
         }
 
