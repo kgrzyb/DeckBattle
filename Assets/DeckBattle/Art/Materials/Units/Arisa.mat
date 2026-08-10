@@ -109,7 +109,7 @@ Material:
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendOp: 0
-    - _Brightness: 1.48
+    - _Brightness: 1.4
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
@@ -126,20 +126,20 @@ Material:
     - _Glossiness: 0
     - _GlossinessSource: 0
     - _GlossyReflections: 0
-    - _LightThreshold: 0.756
+    - _LightThreshold: 0.55
     - _Metallic: 0
     - _MetallicStrength: 0.5
     - _OcclusionStrength: 1
     - _OutlineEnabled: 1
     - _OutlineSmoothNormals: 0
-    - _OutlineWidth: 0.017
+    - _OutlineWidth: 0.016
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _RampSmoothness: 0.001
     - _ReceiveShadows: 0
     - _RoughnessStrength: 0.55
     - _SampleGI: 0
-    - _ShadowThreshold: 0.231
+    - _ShadowThreshold: 0.18
     - _Shininess: 0
     - _Smoothness: 0.826
     - _SmoothnessSource: 0
@@ -158,8 +158,8 @@ Material:
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _LightColor: {r: 1, g: 1, b: 1, a: 1}
     - _MetallicAmbientColor: {r: 0.6320754, g: 0.4894533, b: 0, a: 1}
-    - _MidColor: {r: 0.9150943, g: 0.9150943, b: 0.9150943, a: 1}
+    - _MidColor: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
     - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
-    - _ShadowColor: {r: 0.6509434, g: 0.6060026, b: 0.5803222, a: 1}
+    - _ShadowColor: {r: 0.58431375, g: 0.53333336, b: 0.46666667, a: 1}
     - _SpecColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
