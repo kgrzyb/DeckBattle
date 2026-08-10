@@ -9,7 +9,7 @@ namespace DeckBattle
 
         [SerializeField] private StatusPresentationCatalog presentationCatalog;
         private BattleVfxPool battleVfxPool;
-        private readonly Dictionary<int, Transform> pivotsByUnitId = new Dictionary<int, Transform>(16);
+        private readonly Dictionary<int, UnitView> unitViewsById = new Dictionary<int, UnitView>(16);
         private readonly List<ActivePooledVfx> activePooledVfx = new List<ActivePooledVfx>(16);
         private readonly List<ShadowStatus> shadowStatuses = new List<ShadowStatus>(32);
         private readonly int[] syncVersions = new int[StatusKindCapacity];
@@ -35,7 +35,7 @@ namespace DeckBattle
                 return;
             }
 
-            pivotsByUnitId[unit.UnitId] = view.StatusVfxPivot;
+            unitViewsById[unit.UnitId] = view;
             RebuildShadow(unit.UnitId, unit.Statuses);
             Sync(unit.UnitId, unit.Statuses);
         }
@@ -44,7 +44,7 @@ namespace DeckBattle
         {
             if (view != null)
             {
-                pivotsByUnitId[unitId] = view.StatusVfxPivot;
+                unitViewsById[unitId] = view;
             }
         }
 
@@ -78,11 +78,11 @@ namespace DeckBattle
             }
             if (delta > 0)
             {
-                PlayOneShots(battleEvent.UnitId, entry.ApplyVfxDefinition, entry, delta);
+                PlayOneShots(battleEvent.UnitId, entry.ApplyVfxDefinition, entry.ApplyAnchor, entry, delta);
             }
             else if (delta < 0)
             {
-                PlayOneShots(battleEvent.UnitId, entry.RemoveVfxDefinition, entry, -delta);
+                PlayOneShots(battleEvent.UnitId, entry.RemoveVfxDefinition, entry.RemoveAnchor, entry, -delta);
             }
 
             SetShadowStacks(battleEvent.UnitId, battleEvent.StatusKind, battleEvent.TargetUnitId, nextStacks);
@@ -99,7 +99,7 @@ namespace DeckBattle
 
         public void Release(int unitId)
         {
-            pivotsByUnitId.Remove(unitId);
+            unitViewsById.Remove(unitId);
             ReleasePooledByUnit(unitId);
 
             for (int i = shadowStatuses.Count - 1; i >= 0; i--)
@@ -115,13 +115,13 @@ namespace DeckBattle
         public void ReleaseAll()
         {
             ReleaseAllPooled();
-            pivotsByUnitId.Clear();
+            unitViewsById.Clear();
             shadowStatuses.Clear();
         }
 
         private void Sync(int unitId, UnitStatusCollection statuses)
         {
-            if (presentationCatalog == null || !pivotsByUnitId.TryGetValue(unitId, out Transform pivot) || pivot == null)
+            if (presentationCatalog == null || !unitViewsById.TryGetValue(unitId, out UnitView unitView) || unitView == null)
             {
                 return;
             }
@@ -147,11 +147,11 @@ namespace DeckBattle
                 int desired = GetTotalStacks(statuses, kind);
                 if (presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) && entry.Mode == StatusPresentationMode.Vfx)
                 {
-                    Reconcile(unitId, kind, desired, pivot, entry);
+                    Reconcile(unitId, kind, desired, unitView, entry);
                 }
                 else
                 {
-                    Reconcile(unitId, kind, 0, pivot, null);
+                    Reconcile(unitId, kind, 0, unitView, null);
                 }
             }
 
@@ -165,18 +165,18 @@ namespace DeckBattle
             }
         }
 
-        private void Reconcile(int unitId, StatusKind kind, int desiredCount, Transform pivot, StatusPresentationEntry entry)
+        private void Reconcile(int unitId, StatusKind kind, int desiredCount, UnitView unitView, StatusPresentationEntry entry)
         {
             if (entry != null && CanPlayActive(entry.ActiveVfxDefinition) && battleVfxPool != null)
             {
-                ReconcilePooled(unitId, kind, desiredCount, pivot, entry);
+                ReconcilePooled(unitId, kind, desiredCount, unitView, entry);
                 return;
             }
 
             ReleasePooled(unitId, kind);
         }
 
-        private void ReconcilePooled(int unitId, StatusKind kind, int desiredCount, Transform pivot, StatusPresentationEntry entry)
+        private void ReconcilePooled(int unitId, StatusKind kind, int desiredCount, UnitView unitView, StatusPresentationEntry entry)
         {
             int currentCount = 0;
             for (int i = 0; i < activePooledVfx.Count; i++)
@@ -187,12 +187,13 @@ namespace DeckBattle
                 }
             }
 
+            Transform anchor = ResolveAnchor(unitView, entry.ActiveAnchor);
             while (currentCount < desiredCount)
             {
                 VfxHandle handle = battleVfxPool.Play(
                     entry.ActiveVfxDefinition,
                     new VfxSpawnRequest(
-                        pivot,
+                        anchor,
                         entry.LocalPosition,
                         Quaternion.Euler(entry.LocalEulerAngles),
                         entry.LocalScale == Vector3.zero ? Vector3.one : entry.LocalScale,
@@ -261,22 +262,28 @@ namespace DeckBattle
             battleVfxPool?.Release(active.Handle);
         }
 
-        private void PlayOneShots(int unitId, VfxDefinition definition, StatusPresentationEntry entry, int count)
+        private void PlayOneShots(
+            int unitId,
+            VfxDefinition definition,
+            UnitVfxAnchor anchorKind,
+            StatusPresentationEntry entry,
+            int count)
         {
             if (!CanPlayOneShot(definition)
                 || battleVfxPool == null
-                || !pivotsByUnitId.TryGetValue(unitId, out Transform pivot)
-                || pivot == null)
+                || !unitViewsById.TryGetValue(unitId, out UnitView unitView)
+                || unitView == null)
             {
                 return;
             }
 
+            Transform anchor = ResolveAnchor(unitView, anchorKind);
             for (int i = 0; i < count; i++)
             {
                 battleVfxPool.Play(
                     definition,
                     new VfxSpawnRequest(
-                        pivot,
+                        anchor,
                         entry.LocalPosition,
                         Quaternion.Euler(entry.LocalEulerAngles),
                         entry.LocalScale == Vector3.zero ? Vector3.one : entry.LocalScale,
@@ -335,7 +342,7 @@ namespace DeckBattle
 
         private void ReconcileShadowStatusVfx(int unitId, StatusKind kind, StatusPresentationEntry entry)
         {
-            if (!pivotsByUnitId.TryGetValue(unitId, out Transform pivot) || pivot == null)
+            if (!unitViewsById.TryGetValue(unitId, out UnitView unitView) || unitView == null)
             {
                 return;
             }
@@ -350,7 +357,7 @@ namespace DeckBattle
                 }
             }
 
-            Reconcile(unitId, kind, totalStacks, pivot, entry);
+            Reconcile(unitId, kind, totalStacks, unitView, entry);
         }
 
         private void Prewarm()
@@ -388,6 +395,11 @@ namespace DeckBattle
         private static bool CanPlayOneShot(VfxDefinition definition)
         {
             return IsUsable(definition) && definition.LifetimeMode != VfxLifetimeMode.Manual;
+        }
+
+        private static Transform ResolveAnchor(UnitView unitView, UnitVfxAnchor anchor)
+        {
+            return unitView != null ? unitView.ResolveVfxAnchor(anchor) : null;
         }
 
         private readonly struct ActivePooledVfx

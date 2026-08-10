@@ -70,8 +70,11 @@ namespace DeckBattle
         [Range(0, 100)] public int Priority = 50;
         public Sprite Icon;
         public VfxDefinition ApplyVfxDefinition;
+        public UnitVfxAnchor ApplyAnchor = UnitVfxAnchor.Body;
         public VfxDefinition ActiveVfxDefinition;
+        public UnitVfxAnchor ActiveAnchor = UnitVfxAnchor.Body;
         public VfxDefinition RemoveVfxDefinition;
+        public UnitVfxAnchor RemoveAnchor = UnitVfxAnchor.Body;
         public Vector3 LocalPosition;
         public Vector3 LocalEulerAngles;
         public Vector3 LocalScale = Vector3.one;

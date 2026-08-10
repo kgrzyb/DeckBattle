@@ -110,7 +110,7 @@ namespace DeckBattle.Tests
                         Cue = cue,
                         Effect = Definition,
                         Subject = VfxSpawnSubject.World,
-                        Anchor = UnitVfxAnchor.Root,
+                        Anchor = UnitVfxAnchor.Body,
                         LocalScale = Vector3.one
                     }
                 });

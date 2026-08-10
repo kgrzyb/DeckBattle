@@ -21,14 +21,14 @@ namespace DeckBattle.Tests
                         Cue = BattleVfxCue.AttackFired,
                         Effect = effect,
                         Subject = VfxSpawnSubject.Source,
-                        Anchor = UnitVfxAnchor.Weapon,
+                        Anchor = UnitVfxAnchor.Overhead,
                         LocalScale = Vector3.zero
                     }
                 });
 
                 Assert.IsTrue(profile.TryGet(BattleVfxCue.AttackFired, out BattleVfxBinding binding));
                 Assert.AreSame(effect, binding.Effect);
-                Assert.AreEqual(UnitVfxAnchor.Weapon, binding.Anchor);
+                Assert.AreEqual(UnitVfxAnchor.Overhead, binding.Anchor);
                 Assert.AreEqual(Vector3.one, binding.ResolvedLocalScale);
                 Assert.IsFalse(profile.TryGet(BattleVfxCue.Death, out _));
             }
@@ -121,18 +121,24 @@ namespace DeckBattle.Tests
         {
             GameObject unitObject = new GameObject("Unit");
             unitObject.SetActive(false);
-            GameObject weaponObject = new GameObject("Weapon");
-            weaponObject.transform.SetParent(unitObject.transform, false);
+            GameObject groundObject = new GameObject("Ground");
+            groundObject.transform.SetParent(unitObject.transform, false);
+            GameObject bodyObject = new GameObject("Body");
+            bodyObject.transform.SetParent(unitObject.transform, false);
+            GameObject overheadObject = new GameObject("Overhead");
+            overheadObject.transform.SetParent(unitObject.transform, false);
             UnitVfxAnchors anchors = unitObject.AddComponent<UnitVfxAnchors>();
-            SetPrivateField(anchors, "weapon", weaponObject.transform);
+            SetPrivateField(anchors, "ground", groundObject.transform);
+            SetPrivateField(anchors, "body", bodyObject.transform);
+            SetPrivateField(anchors, "overhead", overheadObject.transform);
             UnitView unitView = unitObject.AddComponent<UnitView>();
             try
             {
                 unitObject.SetActive(true);
 
-                Assert.AreSame(weaponObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Weapon));
-                Assert.AreSame(unitObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Head));
-                Assert.AreSame(unitObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Root));
+                Assert.AreSame(groundObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Ground));
+                Assert.AreSame(bodyObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Body));
+                Assert.AreSame(overheadObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Overhead));
             }
             finally
             {

@@ -18,9 +18,12 @@ MonoBehaviour:
     Priority: 0
     Icon: {fileID: 0}
     ApplyVfxDefinition: {fileID: 0}
+    ApplyAnchor: 1
     ActiveVfxDefinition: {fileID: 11400000, guid: 5f752518952a96a40babf9666ac36dd7,
       type: 2}
+    ActiveAnchor: 0
     RemoveVfxDefinition: {fileID: 0}
+    RemoveAnchor: 1
     LocalPosition: {x: 0, y: 0, z: 0}
     LocalEulerAngles: {x: 0, y: 0, z: 0}
     LocalScale: {x: 1, y: 1, z: 1}

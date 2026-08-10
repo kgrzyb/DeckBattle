@@ -17,6 +17,6 @@ MonoBehaviour:
   ProjectilePrefab: {fileID: 4748203947065325603, guid: 315443f9a78e6b3459ac45235b7640b7,
     type: 3}
   SpawnHeight: 1
-  HitHeight: 1
+  HitHeight: 0.6
   LaunchVfx: {fileID: 11400000, guid: 8e8fd9d4c8afed44a80058d8614edc4a, type: 2}
   ImpactVfx: {fileID: 11400000, guid: bb1f529c6703da9429e66199ce0058d2, type: 2}

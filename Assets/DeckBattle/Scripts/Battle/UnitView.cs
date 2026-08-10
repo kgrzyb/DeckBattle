@@ -39,7 +39,6 @@ namespace DeckBattle
         public int RuntimeId { get; private set; }
         public RuntimeUnit Unit { get; private set; }
         public UnitRuntimeState RealtimeUnit { get; private set; }
-        public Transform StatusVfxPivot { get { return transform; } }
         public event Action<UnitView, UnitAnimationVfxSignal> AnimationVfxSignal;
 
         private Vector3 baseModelScale;
@@ -137,11 +136,6 @@ namespace DeckBattle
 
         public Transform ResolveVfxAnchor(UnitVfxAnchor anchor)
         {
-            if (anchor == UnitVfxAnchor.Root)
-            {
-                return transform;
-            }
-
             CacheVfxAnchors();
             if (vfxAnchors == null)
             {

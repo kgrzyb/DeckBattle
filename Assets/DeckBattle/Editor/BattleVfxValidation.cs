@@ -118,6 +118,13 @@ namespace DeckBattle.Editor
                         continue;
                     }
 
+                    if ((binding.Subject == VfxSpawnSubject.Source || binding.Subject == VfxSpawnSubject.Target)
+                        && !IsUnitAnchor(binding.Anchor))
+                    {
+                        LogError("A unit-attached VFX binding has an invalid anchor.", profile);
+                        errors++;
+                    }
+
                     if (binding.Effect.LifetimeMode == VfxLifetimeMode.Manual
                         && binding.Cue != BattleVfxCue.AttackWindup
                         && binding.Cue != BattleVfxCue.SpecialWindup)
@@ -152,17 +159,18 @@ namespace DeckBattle.Editor
                         continue;
                     }
 
-                    errors += ValidateStatusDefinition(entry.ApplyVfxDefinition, "Apply Vfx Definition", false, catalog);
-                    errors += ValidateStatusDefinition(entry.ActiveVfxDefinition, "Active Vfx Definition", true, catalog);
-                    errors += ValidateStatusDefinition(entry.RemoveVfxDefinition, "Remove Vfx Definition", false, catalog);
+                    errors += ValidateStatusDefinition(entry.ApplyVfxDefinition, entry.ApplyAnchor, "Apply Vfx Definition", false, catalog);
+                    errors += ValidateStatusDefinition(entry.ActiveVfxDefinition, entry.ActiveAnchor, "Active Vfx Definition", true, catalog);
+                    errors += ValidateStatusDefinition(entry.RemoveVfxDefinition, entry.RemoveAnchor, "Remove Vfx Definition", false, catalog);
                 }
             }
 
-            return errors;
+            return errors + ValidateUnitAnchors();
         }
 
         private static int ValidateStatusDefinition(
             VfxDefinition definition,
+            UnitVfxAnchor anchor,
             string fieldName,
             bool requiresManualLifetime,
             Object context)
@@ -170,6 +178,12 @@ namespace DeckBattle.Editor
             if (definition == null)
             {
                 return 0;
+            }
+
+            if (!IsUnitAnchor(anchor))
+            {
+                LogError(fieldName + " has an invalid unit VFX anchor.", context);
+                return 1;
             }
 
             if (definition.Prefab == null)
@@ -187,6 +201,55 @@ namespace DeckBattle.Editor
             string requiredLifetime = requiresManualLifetime ? "Manual" : "Duration or ParticleSystemAlive";
             LogError(fieldName + " must use " + requiredLifetime + ".", context);
             return 1;
+        }
+
+        private static int ValidateUnitAnchors()
+        {
+            int errors = 0;
+            string[] guids = AssetDatabase.FindAssets("t:Prefab");
+            for (int i = 0; i < guids.Length; i++)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guids[i]));
+                if (prefab == null || prefab.GetComponent<UnitView>() == null)
+                {
+                    continue;
+                }
+
+                UnitVfxAnchors anchors = prefab.GetComponentInChildren<UnitVfxAnchors>(true);
+                if (anchors == null)
+                {
+                    LogError("A UnitView prefab is missing UnitVfxAnchors.", prefab);
+                    errors++;
+                    continue;
+                }
+
+                if (!anchors.HasAnchor(UnitVfxAnchor.Ground))
+                {
+                    LogError("A UnitView prefab is missing its Ground VFX anchor.", prefab);
+                    errors++;
+                }
+
+                if (!anchors.HasAnchor(UnitVfxAnchor.Body))
+                {
+                    LogError("A UnitView prefab is missing its Body VFX anchor.", prefab);
+                    errors++;
+                }
+
+                if (!anchors.HasAnchor(UnitVfxAnchor.Overhead))
+                {
+                    LogError("A UnitView prefab is missing its Overhead VFX anchor.", prefab);
+                    errors++;
+                }
+            }
+
+            return errors;
+        }
+
+        private static bool IsUnitAnchor(UnitVfxAnchor anchor)
+        {
+            return anchor == UnitVfxAnchor.Ground
+                || anchor == UnitVfxAnchor.Body
+                || anchor == UnitVfxAnchor.Overhead;
         }
 
         private static void LogError(string message, Object context)
