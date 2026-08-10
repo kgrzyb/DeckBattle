@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
+  m_Name: Kitsuro
+  m_EditorClassIdentifier: 
+  CardId: kitsuro
+  DisplayName: Kitsuro
+  Rarity: 0
+  ApCost: 2
+  CardArt: {fileID: 21300000, guid: 5f43a81083db84c4d9da85b9576e68da, type: 3}
+  cardKind: 0
+  UnitType: 0
+  MaxHp: 700
+  Attack: 90
+  Power: 3
+  AttackRange: 1
+  CritChance: 0
+  CritMultiplier: 2
+  AttacksPerSecond: 1
+  AttackWindupPercent: 0.5
+  ManaThreshold: 100
+  ManaPerAttack: 10
+  ManaPerDamageTaken: 10
+  Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
+  Armor: 25
+  ArmorPenetration: 0
+  Projectile: {fileID: 0}
+  UnitPrefab: {fileID: 7506552908754966910, guid: 5c357a38d548e254c85649593359c4c8,
+    type: 3}
+  VfxProfile: {fileID: 0}
+  OnPlayEffect: {fileID: 11400000, guid: cfa0e0516847469aab6f34e5e6e45263, type: 2}

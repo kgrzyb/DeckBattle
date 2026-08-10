@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: -3741768105971112145, guid: f655d222f360b114e9859a05f207762a,
     type: 2}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - UNDERLAY_ON
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -25,6 +26,10 @@ Material:
     serializedVersion: 3
     m_TexEnvs: []
     m_Ints: []
-    m_Floats: []
-    m_Colors: []
+    m_Floats:
+    - _OutlineWidth: 0.1
+    - _UnderlayOffsetX: 0.694
+    - _UnderlayOffsetY: -1
+    m_Colors:
+    - _UnderlayColor: {r: 0, g: 0, b: 0, a: 0.65882355}
   m_BuildTextureStacks: []

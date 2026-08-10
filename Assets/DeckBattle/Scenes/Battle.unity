@@ -2185,15 +2185,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4566ca8ead7f6ae4a870ebfe98ad57b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  overlayPrefab: {fileID: 5052440811877413568, guid: ebe12c259e075654b85410cfb1945fb4,
+  overlayPrefab: {fileID: 1278177416017828145, guid: f12b7da7a45d2c3469172bb64230fa17,
     type: 3}
   overlayRoot: {fileID: 641749121}
   worldCamera: {fileID: 1149497570}
   worldOffset: {x: 0, y: 2, z: 0}
   presentationCatalog: {fileID: 11400000, guid: 12381e2df6b472d44a5f35e37d417a6b,
     type: 2}
-  playerHpFillColor: {r: 0.2, g: 0.86, b: 0.32, a: 0.96}
-  enemyHpFillColor: {r: 0.88, g: 0.22, b: 0.24, a: 0.96}
+  playerHpFillColor: {r: 0.1033731, g: 0.9528302, b: 0.2578199, a: 1}
+  enemyHpFillColor: {r: 0.8584906, g: 0.09313814, b: 0.11591641, a: 1}
 --- !u!224 &641749121
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4011,8 +4011,7 @@ MonoBehaviour:
   m_text: Round 1
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: f655d222f360b114e9859a05f207762a, type: 2}
-  m_sharedMaterial: {fileID: -3741768105971112145, guid: f655d222f360b114e9859a05f207762a,
-    type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: 07a50a6261ae1f743b5d8ecb58a8de7d, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
