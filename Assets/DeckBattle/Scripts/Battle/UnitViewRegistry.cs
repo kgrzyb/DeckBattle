@@ -26,13 +26,18 @@ namespace DeckBattle
                 return view;
             }
 
-            if (presentationLookup == null || !presentationLookup.TryGetUnitPrefab(state.PresentationId, out UnitView prefab))
+            if (presentationLookup == null
+                || !presentationLookup.TryGetUnitViewData(
+                    state.PresentationId,
+                    out UnitView prefab,
+                    out float runAnimationSpeedMultiplier))
             {
                 Debug.LogError("Battle presentation lookup is missing UnitView prefab for id " + state.PresentationId + ".", context);
                 return null;
             }
 
             view = UnityEngine.Object.Instantiate(prefab, parent);
+            view.SetRunAnimationSpeedMultiplier(runAnimationSpeedMultiplier);
             view.SetCombatSpeed(combatSpeed);
             viewsByUnitId.Add(state.UnitId, view);
             return view;

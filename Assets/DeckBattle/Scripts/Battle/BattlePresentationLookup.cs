@@ -7,7 +7,7 @@ namespace DeckBattle
     // Simulation continues to communicate through stable integer presentation IDs.
     public sealed class BattlePresentationLookup
     {
-        private readonly Dictionary<int, UnitView> unitPrefabsById = new Dictionary<int, UnitView>(16);
+        private readonly Dictionary<int, UnitViewPresentationData> unitViewDataById = new Dictionary<int, UnitViewPresentationData>(16);
         private readonly Dictionary<int, UnitVfxPresentationData> unitVfxDataById = new Dictionary<int, UnitVfxPresentationData>(16);
         private readonly Dictionary<int, ProjectilePresentationData> projectileDataById = new Dictionary<int, ProjectilePresentationData>(8);
         private readonly HashSet<int> ambiguousUnitIds = new HashSet<int>();
@@ -16,7 +16,7 @@ namespace DeckBattle
 
         public void Rebuild(IReadOnlyList<UnitDefinition> definitions, Object context)
         {
-            unitPrefabsById.Clear();
+            unitViewDataById.Clear();
             unitVfxDataById.Clear();
             projectileDataById.Clear();
             ambiguousUnitIds.Clear();
@@ -36,7 +36,28 @@ namespace DeckBattle
 
         public bool TryGetUnitPrefab(int presentationId, out UnitView prefab)
         {
-            return unitPrefabsById.TryGetValue(presentationId, out prefab);
+            if (unitViewDataById.TryGetValue(presentationId, out UnitViewPresentationData data))
+            {
+                prefab = data.Prefab;
+                return prefab != null;
+            }
+
+            prefab = null;
+            return false;
+        }
+
+        public bool TryGetUnitViewData(int presentationId, out UnitView prefab, out float runAnimationSpeedMultiplier)
+        {
+            if (unitViewDataById.TryGetValue(presentationId, out UnitViewPresentationData data))
+            {
+                prefab = data.Prefab;
+                runAnimationSpeedMultiplier = data.RunAnimationSpeedMultiplier;
+                return prefab != null;
+            }
+
+            prefab = null;
+            runAnimationSpeedMultiplier = 1f;
+            return false;
         }
 
         public bool TryGetUnitVfxProfiles(
@@ -124,7 +145,7 @@ namespace DeckBattle
             }
 
             int unitPresentationId = BattlePresentationId.ForUnit(definition);
-            AddUnitPrefab(unitPresentationId, definition.UnitPrefab, definition, context);
+            AddUnitViewData(unitPresentationId, definition.UnitPrefab, definition.RunAnimationSpeedMultiplier, definition, context);
             AddUnitVfxProfiles(unitPresentationId, definition.VfxProfile, definition.Special != null ? definition.Special.VfxProfile : null, definition, context);
             AddProjectile(definition.Projectile, context);
         }
@@ -147,28 +168,34 @@ namespace DeckBattle
             }
         }
 
-        private void AddUnitPrefab(int presentationId, UnitView prefab, UnitDefinition definition, Object context)
+        private void AddUnitViewData(
+            int presentationId,
+            UnitView prefab,
+            float runAnimationSpeedMultiplier,
+            UnitDefinition definition,
+            Object context)
         {
             if (presentationId == 0 || prefab == null || ambiguousUnitIds.Contains(presentationId))
             {
                 return;
             }
 
-            if (!unitPrefabsById.TryGetValue(presentationId, out UnitView existing))
+            var data = new UnitViewPresentationData(prefab, runAnimationSpeedMultiplier);
+            if (!unitViewDataById.TryGetValue(presentationId, out UnitViewPresentationData existing))
             {
-                unitPrefabsById.Add(presentationId, prefab);
+                unitViewDataById.Add(presentationId, data);
                 return;
             }
 
-            if (existing == prefab)
+            if (existing.Matches(data))
             {
                 return;
             }
 
-            unitPrefabsById.Remove(presentationId);
+            unitViewDataById.Remove(presentationId);
             ambiguousUnitIds.Add(presentationId);
             Debug.LogError(
-                "Unit presentation id " + presentationId + " maps to multiple prefabs. Check UnitId values, including " + definition.name + ".",
+                "Unit presentation id " + presentationId + " maps to multiple prefabs or run animation speed multipliers. Check UnitId values, including " + definition.name + ".",
                 context);
         }
 
@@ -256,6 +283,24 @@ namespace DeckBattle
             public bool Matches(UnitVfxPresentationData other)
             {
                 return UnitProfile == other.UnitProfile && SpecialProfile == other.SpecialProfile;
+            }
+        }
+
+        private readonly struct UnitViewPresentationData
+        {
+            public readonly UnitView Prefab;
+            public readonly float RunAnimationSpeedMultiplier;
+
+            public UnitViewPresentationData(UnitView prefab, float runAnimationSpeedMultiplier)
+            {
+                Prefab = prefab;
+                RunAnimationSpeedMultiplier = UnitView.ResolveRunAnimationSpeedMultiplier(runAnimationSpeedMultiplier);
+            }
+
+            public bool Matches(UnitViewPresentationData other)
+            {
+                return Prefab == other.Prefab
+                    && Mathf.Approximately(RunAnimationSpeedMultiplier, other.RunAnimationSpeedMultiplier);
             }
         }
 

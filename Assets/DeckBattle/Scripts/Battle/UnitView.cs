@@ -25,6 +25,7 @@ namespace DeckBattle
         private static readonly int RunState = Animator.StringToHash("Base Layer.Run");
         private static readonly int AttackState = Animator.StringToHash("Base Layer.Attack");
         private static readonly int AttackSpeedParameter = Animator.StringToHash("attackSpeed");
+        private static readonly int RunSpeedParameter = Animator.StringToHash("runSpeed");
         private static readonly int SpecialState = Animator.StringToHash("Base Layer.Special");
         private static readonly int DeadState = Animator.StringToHash("Base Layer.Dead");
 
@@ -39,6 +40,7 @@ namespace DeckBattle
         public int RuntimeId { get; private set; }
         public RuntimeUnit Unit { get; private set; }
         public UnitRuntimeState RealtimeUnit { get; private set; }
+        internal float RunAnimationSpeedMultiplier { get { return runAnimationSpeedMultiplier; } }
         public event Action<UnitView, UnitAnimationVfxSignal> AnimationVfxSignal;
 
         private Vector3 baseModelScale;
@@ -53,6 +55,7 @@ namespace DeckBattle
         private float moveDuration;
         private float deathTimer;
         private float combatSpeed = 1f;
+        private float runAnimationSpeedMultiplier = 1f;
         private int queuedMoveHead;
         private int queuedMoveCount;
         private bool isMoving;
@@ -164,6 +167,15 @@ namespace DeckBattle
             if (animator != null)
             {
                 animator.speed = combatSpeed;
+            }
+        }
+
+        public void SetRunAnimationSpeedMultiplier(float multiplier)
+        {
+            runAnimationSpeedMultiplier = ResolveRunAnimationSpeedMultiplier(multiplier);
+            if (animator != null)
+            {
+                animator.SetFloat(RunSpeedParameter, runAnimationSpeedMultiplier);
             }
         }
 
@@ -501,7 +513,15 @@ namespace DeckBattle
             animator.Update(0f);
             animator.speed = combatSpeed;
             animator.SetFloat(AttackSpeedParameter, 1f);
+            animator.SetFloat(RunSpeedParameter, runAnimationSpeedMultiplier);
             animator.Play(IdleState, AnimatorLayerIndex, 0f);
+        }
+
+        internal static float ResolveRunAnimationSpeedMultiplier(float multiplier)
+        {
+            return multiplier > 0f && !float.IsNaN(multiplier) && !float.IsInfinity(multiplier)
+                ? multiplier
+                : 1f;
         }
 
         private float CalculateAttackAnimationSpeed(float actualDuration)

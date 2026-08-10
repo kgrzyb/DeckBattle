@@ -40,6 +40,7 @@ namespace DeckBattle
         public float ArmorPenetration = 0f;
         public ProjectileDefinition Projectile;
         public UnitView UnitPrefab;
+        [Min(0.01f)] public float RunAnimationSpeedMultiplier = 1f;
         public BattleVfxProfile VfxProfile;
         public UnitOnPlayEffectDefinition OnPlayEffect;
 
@@ -60,6 +61,12 @@ namespace DeckBattle
             ManaPerDamageTaken = Mathf.Max(0, ManaPerDamageTaken);
             Armor = Mathf.Clamp(Armor, 0f, 100f);
             ArmorPenetration = Mathf.Clamp(ArmorPenetration, 0f, 100f);
+            if (RunAnimationSpeedMultiplier <= 0f
+                || float.IsNaN(RunAnimationSpeedMultiplier)
+                || float.IsInfinity(RunAnimationSpeedMultiplier))
+            {
+                RunAnimationSpeedMultiplier = 1f;
+            }
         }
     }
 }

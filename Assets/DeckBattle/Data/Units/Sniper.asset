@@ -36,4 +36,6 @@ MonoBehaviour:
   Projectile: {fileID: 11400000, guid: dc1b0f2c5ac6f7847943c4d589e96d82, type: 2}
   UnitPrefab: {fileID: 7506552908754966910, guid: 3fb0cc0f17ecd4a4b91f11868b5814d2,
     type: 3}
+  RunAnimationSpeedMultiplier: 1
+  VfxProfile: {fileID: 0}
   OnPlayEffect: {fileID: 11400000, guid: cfa0e0516847469aab6f34e5e6e45263, type: 2}
