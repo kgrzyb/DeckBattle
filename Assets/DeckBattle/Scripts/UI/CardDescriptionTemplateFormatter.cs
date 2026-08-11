@@ -139,7 +139,7 @@ namespace DeckBattle
                 case "status":
                     return TokenResolution.Known(StatusReferenceFormatter.Format(special.AppliedStatus));
                 case "statusDuration":
-                    return TokenResolution.Known(special.AppliedStatus != null ? FormatDuration(special.AppliedStatus.DefaultDuration) : string.Empty);
+                    return TokenResolution.Known(FormatSpecialStatusDuration(special));
                 case "statusMagnitude":
                     return TokenResolution.Known(special.AppliedStatus != null ? FormatNumber(special.AppliedStatus.DefaultMagnitude) : string.Empty);
                 case "statusMagnitudePercent":
@@ -246,6 +246,24 @@ namespace DeckBattle
             int damagePerHit = DamageCalculator.CalculateBaseDamagePreview(unitDefinition.Attack, special.AttackDamageMultiplier);
             long total = (long)damagePerHit * Math.Max(1, special.StrikeCount);
             return total >= int.MaxValue ? int.MaxValue : (int)total;
+        }
+
+        private static string FormatSpecialStatusDuration(UnitSpecialDefinition special)
+        {
+            if (special == null || special.AppliedStatus == null)
+            {
+                return string.Empty;
+            }
+
+            if (special.AppliedStatusLifetimeMode == StatusLifetimeMode.UntilCombatEnds)
+            {
+                return "do koĹ„ca walki";
+            }
+
+            float duration = special.AppliedStatusLifetimeMode == StatusLifetimeMode.OverrideSeconds
+                ? special.AppliedStatusDurationOverride
+                : special.AppliedStatus.DefaultDuration;
+            return FormatDuration(duration);
         }
 
         private static string FormatStatusDuration(StatusApplicationDefinition application)

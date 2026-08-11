@@ -4,8 +4,6 @@ namespace DeckBattle
 {
     public static class SpecialCycleResolver
     {
-        private const float RecoveryLockDuration = 0.5f;
-
         public static void Resolve(
             BattleSimulation simulation,
             BattleEventQueue eventQueue,
@@ -41,12 +39,13 @@ namespace DeckBattle
             else
             {
                 // Mana is committed when casting begins. A fizzle keeps the
-                // recovery lock and starts the ordinary attack cooldown here.
-                EnterRecoveryLock(unit, simulation != null ? simulation.ElapsedTime : 0d);
-                if (simulation != null)
-                {
-                    AttackCycleResolver.RestartCooldownAfterSpecial(simulation, unit, eventQueue);
-                }
+                // recovery lock while the ordinary attack cooldown continues.
+                EnterRecoveryLock(
+                    unit,
+                    simulation != null ? simulation.ElapsedTime : 0d,
+                    simulation != null
+                        ? simulation.Tuning.SpecialRecoveryLockDuration
+                        : BattleRuntimeTuning.Default.SpecialRecoveryLockDuration);
             }
 
             return true;
@@ -81,7 +80,7 @@ namespace DeckBattle
                 switch (unit.SpecialPhase)
                 {
                     case UnitSpecialPhase.Windup:
-                        if (unit.CombatSpec.Special.Kind == UnitSpecialKind.FurySwipes
+                        if (UnitActionRules.SpecialRequiresTarget(unit.CombatSpec.Special.Kind)
                             && !TryGetLockedLiveTarget(simulation, unit, out _))
                         {
                             CancelWindup(unit, eventQueue, simulation);
@@ -132,18 +131,21 @@ namespace DeckBattle
             float tickDuration)
         {
             UnitSpecialCombatSpec special = unit.CombatSpec.Special;
-            UnitRuntimeState furyTarget = null;
-            if (special.Kind == UnitSpecialKind.FurySwipes
-                && !TryGetLockedLiveTarget(simulation, unit, out furyTarget))
+            UnitRuntimeState target = null;
+            if (UnitActionRules.SpecialRequiresTarget(special.Kind)
+                && !TryGetLockedLiveTarget(simulation, unit, out target))
             {
                 CancelWindup(unit, eventQueue, simulation);
                 return;
             }
 
+            double windupEndTime = unit.SpecialWindupEndTime;
             unit.SpecialPhase = UnitSpecialPhase.Casting;
             unit.SpecialWindupEndTime = double.PositiveInfinity;
             unit.CurrentMana = 0;
+            unit.SpecialCastStartTime = simulation.ElapsedTime;
             eventQueue?.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
+            AttackCycleResolver.StartCooldownForSpecialCast(simulation, unit, eventQueue);
 
             if (special.Kind == UnitSpecialKind.FurySwipes)
             {
@@ -153,11 +155,26 @@ namespace DeckBattle
                 unit.SpecialCastEndTime = simulation.ElapsedTime + special.CastDuration;
                 eventQueue?.Enqueue(BattleEvent.SpecialCastStarted(
                     unit.UnitId,
-                    furyTarget.UnitId,
+                    target.UnitId,
                     special.Kind,
                     unit.SpecialSequenceId,
                     special.CastDuration,
-                    furyTarget.CurrentHex));
+                    target.CurrentHex));
+                return;
+            }
+
+            if (special.Kind == UnitSpecialKind.MegaArrow)
+            {
+                float resolvedWindupDuration = Math.Max(tickDuration, special.WindupDuration);
+                unit.SpecialCastEndTime = windupEndTime - resolvedWindupDuration + special.CastDuration;
+                eventQueue?.Enqueue(BattleEvent.SpecialCastStarted(
+                    unit.UnitId,
+                    target.UnitId,
+                    special.Kind,
+                    unit.SpecialSequenceId,
+                    special.CastDuration,
+                    target.CurrentHex));
+                LaunchMegaArrow(simulation, unit, target, special, eventQueue);
                 return;
             }
 
@@ -184,16 +201,16 @@ namespace DeckBattle
         {
             UnitSpecialCombatSpec special = unit.CombatSpec.Special;
             int sequenceId = unit.SpecialSequenceId;
-            EnterRecoveryLock(unit, simulation.ElapsedTime);
 
-            if (special.Kind == UnitSpecialKind.Slam)
+            if (special.Kind == UnitSpecialKind.Slam
+                || special.Kind == UnitSpecialKind.MegaArrow)
             {
+                EnterRecoveryLock(unit, simulation.ElapsedTime, simulation.Tuning.SpecialRecoveryLockDuration);
                 eventQueue?.Enqueue(BattleEvent.UnitSpecialActivated(
                     unit.UnitId,
                     special.Kind,
                     special.CastDuration,
                     sequenceId));
-                AttackCycleResolver.RestartCooldownAfterSpecial(simulation, unit, eventQueue);
                 return;
             }
 
@@ -204,22 +221,64 @@ namespace DeckBattle
                     special.Kind,
                     special.AppliedStatus.DefaultDuration,
                     sequenceId));
+                AttackCycleResolver.RefreshCooldownForSpecialCast(simulation, unit);
             }
 
-            // The special's own status (for example haste) affects the next
-            // attack cycle because that cycle begins only after the cast ends.
-            AttackCycleResolver.RestartCooldownAfterSpecial(simulation, unit, eventQueue);
+            EnterRecoveryLock(unit, simulation.ElapsedTime, simulation.Tuning.SpecialRecoveryLockDuration);
         }
 
-        private static void EnterRecoveryLock(UnitRuntimeState unit, double startTime)
+        private static void LaunchMegaArrow(
+            BattleSimulation simulation,
+            UnitRuntimeState attacker,
+            UnitRuntimeState target,
+            UnitSpecialCombatSpec special,
+            BattleEventQueue eventQueue)
+        {
+            int damage = DamageCalculator.CalculateSpecialDamage(
+                attacker,
+                target,
+                special.AttackDamageMultiplier,
+                simulation.Tuning);
+            var impact = new ProjectileImpactCombatSpec(
+                DamageKind.Special,
+                special.AppliedStatus,
+                special.AppliedStatusLifetimeMode,
+                special.AppliedStatusDuration);
+            ProjectileRuntimeState projectile = simulation.SpawnProjectile(
+                attacker,
+                target,
+                special.Projectile,
+                damage,
+                false,
+                impact);
+            int sequenceId = attacker.SpecialSequenceId;
+            eventQueue?.Enqueue(BattleEvent.SpecialStrikeFired(
+                attacker.UnitId,
+                target.UnitId,
+                special.Kind,
+                sequenceId,
+                1,
+                target.CurrentHex));
+            eventQueue?.Enqueue(BattleEvent.ProjectileLaunched(
+                projectile.ProjectileId,
+                attacker.UnitId,
+                target.UnitId,
+                projectile.FromHex,
+                projectile.LastKnownTargetHex,
+                projectile.TravelDuration,
+                special.Projectile.PresentationId));
+        }
+
+        private static void EnterRecoveryLock(UnitRuntimeState unit, double startTime, float duration)
         {
             unit.SpecialPhase = UnitSpecialPhase.RecoveryLock;
             unit.SpecialWindupEndTime = double.PositiveInfinity;
             unit.SpecialCastEndTime = double.PositiveInfinity;
+            unit.SpecialCastStartTime = double.PositiveInfinity;
             unit.LockedSpecialTargetUnitId = UnitRuntimeState.NoTargetUnitId;
             unit.SpecialStrikesResolved = 0;
             unit.NextSpecialStrikeTime = double.PositiveInfinity;
-            unit.ManaLockEndTime = startTime + RecoveryLockDuration;
+            unit.ManaLockEndTime = startTime + duration;
         }
 
         private static void ResetToIdle(UnitRuntimeState unit)
@@ -227,6 +286,7 @@ namespace DeckBattle
             unit.SpecialPhase = UnitSpecialPhase.Idle;
             unit.SpecialWindupEndTime = double.PositiveInfinity;
             unit.SpecialCastEndTime = double.PositiveInfinity;
+            unit.SpecialCastStartTime = double.PositiveInfinity;
             unit.LockedSpecialTargetUnitId = UnitRuntimeState.NoTargetUnitId;
             unit.SpecialStrikesResolved = 0;
             unit.NextSpecialStrikeTime = double.PositiveInfinity;
@@ -248,8 +308,8 @@ namespace DeckBattle
 
                 UnitSpecialCombatSpec special = unit.CombatSpec.Special;
                 UnitRuntimeState target = null;
-                if (special.Kind == UnitSpecialKind.FurySwipes
-                    && !UnitActionRules.TryGetFuryTarget(simulation, unit, out target))
+                if (UnitActionRules.SpecialRequiresTarget(special.Kind)
+                    && !UnitActionRules.TryGetTargetedSpecialTarget(simulation, unit, out target))
                 {
                     continue;
                 }
@@ -259,6 +319,7 @@ namespace DeckBattle
                 unit.SpecialSequenceId++;
                 unit.SpecialWindupEndTime = simulation.ElapsedTime + duration;
                 unit.SpecialCastEndTime = double.PositiveInfinity;
+                unit.SpecialCastStartTime = double.PositiveInfinity;
                 unit.LockedSpecialTargetUnitId = target != null
                     ? target.UnitId
                     : UnitRuntimeState.NoTargetUnitId;
@@ -411,13 +472,12 @@ namespace DeckBattle
         {
             UnitSpecialCombatSpec special = unit.CombatSpec.Special;
             int sequenceId = unit.SpecialSequenceId;
-            EnterRecoveryLock(unit, simulation.ElapsedTime);
+            EnterRecoveryLock(unit, simulation.ElapsedTime, simulation.Tuning.SpecialRecoveryLockDuration);
             eventQueue?.Enqueue(BattleEvent.UnitSpecialActivated(
                 unit.UnitId,
                 special.Kind,
                 special.CastDuration,
                 sequenceId));
-            AttackCycleResolver.RestartCooldownAfterSpecial(simulation, unit, eventQueue);
         }
 
         private static bool TryGetLockedLiveTarget(
@@ -450,7 +510,11 @@ namespace DeckBattle
             StatusApplicationResult result = StatusResolver.TryApply(
                 simulation,
                 unit,
-                new StatusApplicationRequest(special.AppliedStatus, unit.UnitId),
+                new StatusApplicationRequest(
+                    special.AppliedStatus,
+                    unit.UnitId,
+                    special.AppliedStatusDuration,
+                    lifetimeMode: special.AppliedStatusLifetimeMode),
                 eventQueue);
             return result == StatusApplicationResult.Applied
                 || result == StatusApplicationResult.Refreshed;

@@ -116,7 +116,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (unit.CombatSpec.Special.Kind == UnitSpecialKind.FurySwipes
+                if (UnitActionRules.SpecialRequiresTarget(unit.CombatSpec.Special.Kind)
                     && (unit.SpecialPhase == UnitSpecialPhase.Windup
                         || unit.SpecialPhase == UnitSpecialPhase.Casting))
                 {

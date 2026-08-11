@@ -36,7 +36,8 @@ namespace DeckBattle
             return unit != null
                 && unit.IsAlive
                 && !unit.StatusSnapshot.BlocksAttack
-                && !IsSpecialActive(unit)
+                && unit.SpecialPhase != UnitSpecialPhase.Windup
+                && unit.SpecialPhase != UnitSpecialPhase.Casting
                 && !HasChargedSpecial(unit);
         }
 
@@ -63,11 +64,25 @@ namespace DeckBattle
             }
 
             UnitSpecialCombatSpec special = unit.CombatSpec.Special;
-            return special.Kind != UnitSpecialKind.FurySwipes
-                || TryGetFuryTarget(simulation, unit, out _);
+            return !SpecialRequiresTarget(special.Kind)
+                || TryGetTargetedSpecialTarget(simulation, unit, out _);
+        }
+
+        public static bool SpecialRequiresTarget(UnitSpecialKind specialKind)
+        {
+            return specialKind == UnitSpecialKind.FurySwipes
+                || specialKind == UnitSpecialKind.MegaArrow;
         }
 
         public static bool TryGetFuryTarget(
+            BattleSimulation simulation,
+            UnitRuntimeState unit,
+            out UnitRuntimeState target)
+        {
+            return TryGetTargetedSpecialTarget(simulation, unit, out target);
+        }
+
+        public static bool TryGetTargetedSpecialTarget(
             BattleSimulation simulation,
             UnitRuntimeState unit,
             out UnitRuntimeState target)

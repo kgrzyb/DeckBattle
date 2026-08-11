@@ -67,6 +67,7 @@ namespace DeckBattle.Tests
 
             Assert.AreEqual(UnitSpecialPhase.Casting, unit.SpecialPhase);
             Assert.AreEqual(0, unit.CurrentMana);
+            Assert.That(unit.NextAttackTime, Is.EqualTo(10.5d).Within(0.000001d));
             CombatResolver.AddMana(simulation, unit, 10, events);
             Assert.AreEqual(0, unit.CurrentMana);
 
@@ -74,7 +75,7 @@ namespace DeckBattle.Tests
             loop.Tick(events);
 
             Assert.AreEqual(UnitSpecialPhase.RecoveryLock, unit.SpecialPhase);
-            Assert.That(unit.NextAttackTime, Is.EqualTo(6d).Within(0.000001d));
+            Assert.That(unit.NextAttackTime, Is.EqualTo(5.5d).Within(0.000001d));
             CombatResolver.AddMana(simulation, unit, 10, events);
             Assert.AreEqual(0, unit.CurrentMana);
 
@@ -84,6 +85,61 @@ namespace DeckBattle.Tests
             Assert.AreEqual(UnitSpecialPhase.Idle, unit.SpecialPhase);
             CombatResolver.AddMana(simulation, unit, 10, events);
             Assert.AreEqual(10, unit.CurrentMana);
+        }
+
+        [Test]
+        public void Tick_SpecialAttackCooldownWaitsForCastToEndWhenItCompletesEarly()
+        {
+            BattleSimulation simulation = CreateSimulation(0.25f, 1f, attacksPerSecond: 4f);
+            UnitRuntimeState unit = simulation.Units[0];
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
+            unit.SetTarget(simulation.Units[1]);
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.Casting, unit.SpecialPhase);
+            Assert.That(unit.NextAttackTime, Is.EqualTo(0.75d).Within(0.000001d));
+
+            loop.Tick(events);
+            AssertNoEvent(events, BattleEventType.AttackWindupStarted);
+            loop.Tick(events);
+            AssertNoEvent(events, BattleEventType.AttackWindupStarted);
+            loop.Tick(events);
+            AssertNoEvent(events, BattleEventType.AttackWindupStarted);
+
+            loop.Tick(events);
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, unit.SpecialPhase);
+            Assert.AreEqual(UnitAttackPhase.Windup, unit.AttackPhase);
+            AssertEvent(events, BattleEventType.AttackWindupStarted);
+        }
+
+        [Test]
+        public void Tick_RecoveryLockUsesRuntimeTuningDuration()
+        {
+            BattleRuntimeTuning tuning = new BattleRuntimeTuning(
+                1f,
+                0,
+                specialRecoveryLockDuration: 0.75f);
+            BattleSimulation simulation = CreateSimulation(0.25f, tuning: tuning);
+            UnitRuntimeState unit = simulation.Units[0];
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+
+            loop.Tick(new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
+
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, unit.SpecialPhase);
+            Assert.That(unit.ManaLockEndTime, Is.EqualTo(1.25d).Within(0.000001d));
+
+            loop.Tick(new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, unit.SpecialPhase);
+
+            loop.Tick(new BattleEventQueue());
+            Assert.AreEqual(UnitSpecialPhase.Idle, unit.SpecialPhase);
         }
 
         [Test]
@@ -255,6 +311,94 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void MegaArrow_LaunchesProjectileThenDealsOneHundredFiftyPercentDamageAndStunsAtImpact()
+        {
+            BattleSimulation simulation = CreateMegaArrowSimulation(500);
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            attacker.SetTarget(target);
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.AreEqual(0, attacker.CurrentMana);
+            Assert.AreEqual(UnitSpecialPhase.Casting, attacker.SpecialPhase);
+            Assert.AreEqual(1, simulation.Projectiles.Count);
+            Assert.AreEqual(500, target.CurrentHp);
+            Assert.IsFalse(target.Statuses.TryFind(StatusKind.Stun, attacker.UnitId, out _));
+            AssertEvent(events, BattleEventType.SpecialCastStarted);
+            AssertEvent(events, BattleEventType.SpecialStrikeFired);
+            AssertEvent(events, BattleEventType.ProjectileLaunched);
+
+            events.Clear();
+            ProjectileResolutionResult result = ProjectileResolver.ResolveProjectiles(simulation, 1f, events);
+
+            Assert.AreEqual(1, result.Hits);
+            Assert.AreEqual(150, result.TotalDamage);
+            Assert.AreEqual(350, target.CurrentHp);
+            Assert.IsTrue(target.Statuses.TryFind(StatusKind.Stun, attacker.UnitId, out int stunIndex));
+            Assert.That(target.Statuses[stunIndex].EndTime, Is.EqualTo(simulation.ElapsedTime + 1d).Within(0.000001d));
+            AssertEvent(events, BattleEventType.StatusApplied);
+        }
+
+        [Test]
+        public void MegaArrow_CastDurationMeasuresTheWholeSpecialFromWindupStart()
+        {
+            BattleSimulation simulation = CreateMegaArrowSimulation(500);
+            UnitRuntimeState attacker = simulation.Units[0];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            attacker.SetTarget(simulation.Units[1]);
+            var loop = new BattleTickLoop(simulation, TickDuration);
+
+            loop.Tick(new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
+
+            Assert.AreEqual(UnitSpecialPhase.Casting, attacker.SpecialPhase);
+
+            var events = new BattleEventQueue();
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, attacker.SpecialPhase);
+            AssertEvent(events, BattleEventType.UnitSpecialActivated);
+        }
+
+        [Test]
+        public void MegaArrow_OutsideRangeDoesNotStartWindupAndAllowsMovement()
+        {
+            BattleSimulation simulation = CreateMegaArrowSimulation(500, new HexCoord(4, 1));
+            UnitRuntimeState attacker = simulation.Units[0];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            attacker.SetTarget(simulation.Units[1]);
+
+            Assert.IsFalse(UnitActionRules.CanStartSpecialWindup(simulation, attacker));
+            Assert.IsTrue(UnitActionRules.CanStartMovement(simulation, attacker));
+        }
+
+        [Test]
+        public void MegaArrow_TargetDeathDuringWindupCancelsWithoutManaSpend()
+        {
+            BattleSimulation simulation = CreateMegaArrowSimulation(500);
+            UnitRuntimeState attacker = simulation.Units[0];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            attacker.SetTarget(simulation.Units[1]);
+            var loop = new BattleTickLoop(simulation, TickDuration);
+
+            loop.Tick(new BattleEventQueue());
+            simulation.DefeatUnit(simulation.Units[1]);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.Idle, attacker.SpecialPhase);
+            Assert.AreEqual(attacker.CombatSpec.ManaThreshold, attacker.CurrentMana);
+            Assert.AreEqual(0, simulation.Projectiles.Count);
+            AssertEvent(events, BattleEventType.SpecialWindupCancelled);
+        }
+
+        [Test]
         public void Slam_AtImpactDamagesAllAndOnlyEnemiesWithinRadius()
         {
             BattleSimulation simulation = CreateSlamSimulation();
@@ -309,10 +453,14 @@ namespace DeckBattle.Tests
             Assert.AreEqual(900, simulation.Units[1].CurrentHp);
         }
 
-        private static BattleSimulation CreateSimulation(float windupDuration, float castDuration = 0f)
+        private static BattleSimulation CreateSimulation(
+            float windupDuration,
+            float castDuration = 0f,
+            BattleRuntimeTuning? tuning = null,
+            float attacksPerSecond = 0.1f)
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
-            attacker.AttacksPerSecond = 0.1f;
+            attacker.AttacksPerSecond = attacksPerSecond;
             attacker.ManaThreshold = 10;
             attacker.Special = CreateHasteBurstSpecial(windupDuration, castDuration);
             UnitDefinition target = TestDefinitions.CreateUnit("target", 1);
@@ -323,7 +471,8 @@ namespace DeckBattle.Tests
                 {
                     new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
                     new UnitSpawnData(2, target, BattleSide.Enemy, new HexCoord(2, 1))
-                });
+                },
+                tuning ?? BattleRuntimeTuning.Default);
         }
 
         private static BattleSimulation CreateFurySimulation(int targetHp, HexCoord? targetHex = null)
@@ -335,6 +484,28 @@ namespace DeckBattle.Tests
             attacker.ManaPerAttack = 0;
             attacker.Special = CreateFurySwipesSpecial();
             UnitDefinition target = TestDefinitions.CreateUnit("fury-target", 1);
+            target.MaxHp = targetHp;
+            target.AttacksPerSecond = 1f / 999f;
+            return BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, target, BattleSide.Enemy, targetHex ?? new HexCoord(2, 1))
+                });
+        }
+
+        private static BattleSimulation CreateMegaArrowSimulation(int targetHp, HexCoord? targetHex = null)
+        {
+            UnitDefinition attacker = TestDefinitions.CreateUnit("mega-arrow-attacker", 1, UnitType.Range);
+            attacker.MaxHp = 1000;
+            attacker.Attack = 100;
+            attacker.AttackRange = 2;
+            attacker.AttacksPerSecond = 0.001f;
+            attacker.ManaThreshold = 10;
+            attacker.ManaPerAttack = 0;
+            attacker.Special = CreateMegaArrowSpecial();
+            UnitDefinition target = TestDefinitions.CreateUnit("mega-arrow-target", 1);
             target.MaxHp = targetHp;
             target.AttacksPerSecond = 1f / 999f;
             return BattleSimulation.Create(
@@ -418,6 +589,20 @@ namespace DeckBattle.Tests
             return special;
         }
 
+        private static UnitSpecialDefinition CreateMegaArrowSpecial()
+        {
+            UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            special.Kind = UnitSpecialKind.MegaArrow;
+            special.WindupDuration = TickDuration;
+            special.CastDuration = 0.5f;
+            special.AttackDamageMultiplier = 1.5f;
+            special.AppliedStatus = CreateStunStatus(2f);
+            special.AppliedStatusLifetimeMode = StatusLifetimeMode.OverrideSeconds;
+            special.AppliedStatusDurationOverride = 1f;
+            special.Projectile = CreateProjectile("mega-arrow", 1f);
+            return special;
+        }
+
         private static StatusDefinition CreateHasteStatus(float duration, float magnitude)
         {
             StatusDefinition status = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
@@ -428,12 +613,20 @@ namespace DeckBattle.Tests
             return status;
         }
 
-        private static StatusDefinition CreateStunStatus()
+        private static ProjectileDefinition CreateProjectile(string projectileId, float speed)
+        {
+            ProjectileDefinition projectile = TestDefinitions.Track(ScriptableObject.CreateInstance<ProjectileDefinition>());
+            projectile.ProjectileId = projectileId;
+            projectile.Speed = speed;
+            return projectile;
+        }
+
+        private static StatusDefinition CreateStunStatus(float duration = 1f)
         {
             StatusDefinition status = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
             status.Kind = StatusKind.Stun;
             status.Category = StatusCategory.HarmfulCrowdControl;
-            status.DefaultDuration = 1f;
+            status.DefaultDuration = duration;
             return status;
         }
 

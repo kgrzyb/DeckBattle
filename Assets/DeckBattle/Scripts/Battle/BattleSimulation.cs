@@ -318,7 +318,8 @@ namespace DeckBattle
             UnitRuntimeState target,
             ProjectileCombatSpec projectileCombatSpec,
             int damage,
-            bool isCritical)
+            bool isCritical,
+            ProjectileImpactCombatSpec impact = default)
         {
             if (attacker == null)
             {
@@ -347,7 +348,8 @@ namespace DeckBattle
                 travelDuration,
                 ElapsedTime + travelDuration,
                 damage,
-                isCritical);
+                isCritical,
+                impact);
             nextProjectileId++;
             projectiles.Add(projectile);
             return projectile;

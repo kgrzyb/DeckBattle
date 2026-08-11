@@ -7,7 +7,8 @@ namespace DeckBattle
         None = 0,
         HasteBurst = 1,
         FurySwipes = 2,
-        Slam = 3
+        Slam = 3,
+        MegaArrow = 4
     }
 
     [CreateAssetMenu(fileName = "UnitDefinition", menuName = "Deck Battle/Unit Definition")]

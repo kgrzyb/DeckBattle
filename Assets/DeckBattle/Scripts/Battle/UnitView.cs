@@ -236,11 +236,14 @@ namespace DeckBattle
             TriggerAnimation(UnitVisualState.Idle);
         }
 
-        public void BeginSpecialCast(int sequenceId)
+        public void BeginSpecialCast(int sequenceId, UnitSpecialKind specialKind)
         {
             if (sequenceId != activeSpecialSequenceId) return;
             FaceLastKnownTarget();
-            TriggerAnimation(UnitVisualState.Special, true);
+            if (specialKind != UnitSpecialKind.MegaArrow)
+            {
+                TriggerAnimation(UnitVisualState.Special, true);
+            }
         }
 
         public void PlaySpecialStrike(int sequenceId)

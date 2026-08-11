@@ -48,6 +48,24 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void FormatSpecial_UsesOverriddenStatusDuration()
+        {
+            UnitDefinition unit = TestDefinitions.CreateUnit("mega-arrow", 1);
+            StatusDefinition status = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
+            status.Kind = StatusKind.Stun;
+            status.DisplayName = "Stun";
+            status.DefaultDuration = 2f;
+            UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            special.AppliedStatus = status;
+            special.AppliedStatusLifetimeMode = StatusLifetimeMode.OverrideSeconds;
+            special.AppliedStatusDurationOverride = 1f;
+            special.DescriptionTemplate = "{status} for {statusDuration}.";
+            unit.Special = special;
+
+            Assert.AreEqual("Stun for 1 s.", CardDescriptionTemplateFormatter.FormatSpecial(unit));
+        }
+
+        [Test]
         public void FormatSpecial_UsesAttackDamagePercentAndEffectRadius()
         {
             UnitDefinition unit = TestDefinitions.CreateUnit("slam-unit", 1);
@@ -138,6 +156,22 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1f, aj4X.Special.AttackDamageMultiplier);
             Assert.AreEqual(1, aj4X.Special.EffectRadius);
             Assert.IsTrue(CardDescriptionTemplateFormatter.IsSpecialTemplateValid(aj4X.Special));
+        }
+
+        [Test]
+        public void Content_ArisaUsesConfiguredMegaArrow()
+        {
+            UnitDefinition arisa = AssetDatabase.LoadAssetAtPath<UnitDefinition>("Assets/DeckBattle/Data/Units/Arisa.asset");
+
+            Assert.IsNotNull(arisa);
+            Assert.IsNotNull(arisa.Special);
+            Assert.AreEqual(UnitSpecialKind.MegaArrow, arisa.Special.Kind);
+            Assert.AreEqual(1.5f, arisa.Special.AttackDamageMultiplier);
+            Assert.AreEqual(1.65f, arisa.Special.CastDuration);
+            Assert.AreEqual(StatusKind.Stun, arisa.Special.AppliedStatus.Kind);
+            Assert.AreEqual(StatusLifetimeMode.OverrideSeconds, arisa.Special.AppliedStatusLifetimeMode);
+            Assert.AreEqual(1f, arisa.Special.AppliedStatusDurationOverride);
+            Assert.IsNotNull(arisa.Special.Projectile);
         }
     }
 }

@@ -43,6 +43,7 @@ namespace DeckBattle
         public int SpecialSequenceId;
         public double SpecialWindupEndTime;
         public double SpecialCastEndTime;
+        public double SpecialCastStartTime;
         public int LockedSpecialTargetUnitId;
         public int SpecialStrikesResolved;
         public double NextSpecialStrikeTime;
@@ -207,6 +208,7 @@ namespace DeckBattle
             SpecialSequenceId = 0;
             SpecialWindupEndTime = double.PositiveInfinity;
             SpecialCastEndTime = double.PositiveInfinity;
+            SpecialCastStartTime = double.PositiveInfinity;
             LockedSpecialTargetUnitId = NoTargetUnitId;
             SpecialStrikesResolved = 0;
             NextSpecialStrikeTime = double.PositiveInfinity;

@@ -20,7 +20,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 766bebe44508c5d4a8a6144ab367c602, type: 2}
   - {fileID: 11400000, guid: 584b14920b63c2f49ad2b9511e45f754, type: 2}
   - {fileID: 11400000, guid: a2ea771572b03824fb76dfc97a54122f, type: 2}
-  - {fileID: 11400000, guid: 53f4991f3d7082b45959fdc0ca287b2a, type: 2}
   - {fileID: 11400000, guid: b93add0d98b9afa4db2ef6a9fc8717a2, type: 2}
   - {fileID: 11400000, guid: 9f29511aaece6fc4e9701b86c2893f93, type: 2}
   startingCollection:
@@ -30,7 +29,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b2d9dfc3f41390f4e8e44eb9ca87ffdd, type: 2}
   - {fileID: 11400000, guid: 766bebe44508c5d4a8a6144ab367c602, type: 2}
   - {fileID: 11400000, guid: 584b14920b63c2f49ad2b9511e45f754, type: 2}
-  - {fileID: 11400000, guid: 53f4991f3d7082b45959fdc0ca287b2a, type: 2}
   - {fileID: 11400000, guid: a2ea771572b03824fb76dfc97a54122f, type: 2}
   defaultDeck:
   - {fileID: 11400000, guid: 584b14920b63c2f49ad2b9511e45f754, type: 2}

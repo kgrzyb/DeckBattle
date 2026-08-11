@@ -11,6 +11,9 @@ namespace DeckBattle
         [Min(0.01f)] public float MovementStepDuration = 0.4f;
         [Min(0)] public int MaxPursuitStepsAfterAttack = 2;
 
+        [Header("Specials")]
+        [Min(0f)] public float SpecialRecoveryLockDuration = 0.5f;
+
         [Header("Status Limits")]
         [Min(1)] public int MaxStatusesPerUnit = 8;
         [Min(0.01f)] public float MinDamageMultiplier = 0.1f;
@@ -31,7 +34,8 @@ namespace DeckBattle
                 MaxDamageMultiplier,
                 MinAttackCooldownMultiplier,
                 MaxAttackCooldownMultiplier,
-                MaxMovementSlowMultiplier);
+                MaxMovementSlowMultiplier,
+                SpecialRecoveryLockDuration);
         }
 
         private void OnValidate()
@@ -39,6 +43,7 @@ namespace DeckBattle
             AttackCooldownMultiplier = Mathf.Max(0.01f, AttackCooldownMultiplier);
             MovementStepDuration = Mathf.Max(0.01f, MovementStepDuration);
             MaxPursuitStepsAfterAttack = Mathf.Max(0, MaxPursuitStepsAfterAttack);
+            SpecialRecoveryLockDuration = Mathf.Max(0f, SpecialRecoveryLockDuration);
             MaxStatusesPerUnit = Mathf.Max(1, MaxStatusesPerUnit);
             MinDamageMultiplier = Mathf.Max(0.01f, MinDamageMultiplier);
             MaxDamageMultiplier = Mathf.Max(MinDamageMultiplier, MaxDamageMultiplier);

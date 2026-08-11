@@ -16,6 +16,7 @@ namespace DeckBattle
         public readonly float MinAttackCooldownMultiplier;
         public readonly float MaxAttackCooldownMultiplier;
         public readonly float MaxMovementSlowMultiplier;
+        public readonly float SpecialRecoveryLockDuration;
 
         public BattleRuntimeTuning(
             float attackCooldownMultiplier,
@@ -27,7 +28,8 @@ namespace DeckBattle
             float maxDamageMultiplier = 3f,
             float minAttackCooldownMultiplier = 0.1f,
             float maxAttackCooldownMultiplier = 3f,
-            float maxMovementSlowMultiplier = 3f)
+            float maxMovementSlowMultiplier = 3f,
+            float specialRecoveryLockDuration = 0.5f)
         {
             AttackCooldownMultiplier = Math.Max(0.01f, attackCooldownMultiplier);
             AttackRangeBonus = attackRangeBonus;
@@ -39,6 +41,7 @@ namespace DeckBattle
             MinAttackCooldownMultiplier = Math.Max(0.01f, minAttackCooldownMultiplier);
             MaxAttackCooldownMultiplier = Math.Max(MinAttackCooldownMultiplier, maxAttackCooldownMultiplier);
             MaxMovementSlowMultiplier = Math.Max(1f, maxMovementSlowMultiplier);
+            SpecialRecoveryLockDuration = Math.Max(0f, specialRecoveryLockDuration);
         }
 
         public int GetAttackRange(UnitCombatSpec combatSpec)

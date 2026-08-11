@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bc8c9b2b9f80b5458bc635b3894153c, type: 3}
+  m_Name: Maverick
+  m_EditorClassIdentifier: 
+  CardId: maverick
+  DisplayName: Maverick
+  Rarity: 1
+  ApCost: 3
+  CardArt: {fileID: 21300000, guid: 8ad4a2755d352b043afa25fc318e6872, type: 3}
+  cardKind: 0
+  UnitType: 1
+  MaxHp: 500
+  Attack: 100
+  Power: 3
+  AttackRange: 4
+  CritChance: 0.15
+  CritMultiplier: 2
+  AttacksPerSecond: 0.9
+  AttackWindupPercent: 0.25
+  ManaThreshold: 100
+  ManaPerAttack: 25
+  ManaPerDamageTaken: 10
+  Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
+  Armor: 0
+  ArmorPenetration: 25
+  Projectile: {fileID: 11400000, guid: dc1b0f2c5ac6f7847943c4d589e96d82, type: 2}
+  UnitPrefab: {fileID: 7506552908754966910, guid: 0dd885142cf444241be67946e1888b51,
+    type: 3}
+  RunAnimationSpeedMultiplier: 1.5
+  VfxProfile: {fileID: 0}
+  OnPlayEffect: {fileID: 11400000, guid: cfa0e0516847469aab6f34e5e6e45263, type: 2}

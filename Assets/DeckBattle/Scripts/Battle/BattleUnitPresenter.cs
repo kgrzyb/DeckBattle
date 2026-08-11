@@ -167,7 +167,7 @@ namespace DeckBattle
             if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
             {
                 view.SetTargetWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To));
-                view.BeginSpecialCast(battleEvent.SequenceId);
+                view.BeginSpecialCast(battleEvent.SequenceId, battleEvent.SpecialKind);
             }
         }
 

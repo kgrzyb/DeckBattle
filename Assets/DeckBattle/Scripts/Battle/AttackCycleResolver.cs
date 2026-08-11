@@ -69,7 +69,7 @@ namespace DeckBattle
             return true;
         }
 
-        public static void RestartCooldownAfterSpecial(
+        public static void StartCooldownForSpecialCast(
             BattleSimulation simulation,
             UnitRuntimeState unit,
             BattleEventQueue eventQueue = null)
@@ -85,6 +85,17 @@ namespace DeckBattle
             unit.NextAttackTime = simulation.ElapsedTime + simulation.Tuning.GetAttackCooldown(unit.CombatSpec, unit);
             unit.AttackCycleStartTime = double.PositiveInfinity;
             unit.WindupEndTime = double.PositiveInfinity;
+        }
+
+        public static void RefreshCooldownForSpecialCast(
+            BattleSimulation simulation,
+            UnitRuntimeState unit)
+        {
+            if (simulation == null) throw new ArgumentNullException(nameof(simulation));
+            if (unit == null) throw new ArgumentNullException(nameof(unit));
+
+            unit.NextAttackTime = unit.SpecialCastStartTime
+                + simulation.Tuning.GetAttackCooldown(unit.CombatSpec, unit);
         }
 
         private static void CollectCompletedWindups(

@@ -98,6 +98,9 @@ namespace DeckBattle
         public readonly float WindupDuration;
         public readonly float CastDuration;
         public readonly StatusCombatSpec AppliedStatus;
+        public readonly StatusLifetimeMode AppliedStatusLifetimeMode;
+        public readonly float AppliedStatusDuration;
+        public readonly ProjectileCombatSpec Projectile;
         public readonly int StrikeCount;
         public readonly float AttackDamageMultiplier;
         public readonly int EffectRadius;
@@ -117,6 +120,13 @@ namespace DeckBattle
                     case UnitSpecialKind.Slam:
                         return AttackDamageMultiplier > 0f
                             && EffectRadius >= 0;
+                    case UnitSpecialKind.MegaArrow:
+                        return CastDuration >= WindupDuration
+                            && Projectile.IsValid
+                            && AppliedStatus.Kind == StatusKind.Stun
+                            && AttackDamageMultiplier > 0f
+                            && (AppliedStatusLifetimeMode != StatusLifetimeMode.OverrideSeconds
+                                || AppliedStatusDuration > 0f);
                     default:
                         return false;
                 }
@@ -128,6 +138,9 @@ namespace DeckBattle
             float windupDuration,
             float castDuration,
             StatusCombatSpec appliedStatus,
+            StatusLifetimeMode appliedStatusLifetimeMode,
+            float appliedStatusDuration,
+            ProjectileCombatSpec projectile,
             int strikeCount,
             float attackDamageMultiplier,
             int effectRadius)
@@ -136,6 +149,9 @@ namespace DeckBattle
             WindupDuration = Math.Max(0f, windupDuration);
             CastDuration = Math.Max(0f, castDuration);
             AppliedStatus = appliedStatus;
+            AppliedStatusLifetimeMode = appliedStatusLifetimeMode;
+            AppliedStatusDuration = appliedStatusDuration;
+            Projectile = projectile;
             StrikeCount = Math.Max(1, Math.Min(UnitSpecialDefinition.MaxStrikeCount, strikeCount));
             AttackDamageMultiplier = Math.Max(0f, attackDamageMultiplier);
             EffectRadius = Math.Max(0, effectRadius);
@@ -151,11 +167,17 @@ namespace DeckBattle
             StatusCombatSpec appliedStatus = definition.AppliedStatus != null
                 ? StatusCombatSpec.FromDefinition(definition.AppliedStatus)
                 : default;
+            float appliedStatusDuration = definition.AppliedStatusLifetimeMode == StatusLifetimeMode.OverrideSeconds
+                ? definition.AppliedStatusDurationOverride
+                : -1f;
             return new UnitSpecialCombatSpec(
                 definition.Kind,
                 definition.WindupDuration,
                 definition.CastDuration,
                 appliedStatus,
+                definition.AppliedStatusLifetimeMode,
+                appliedStatusDuration,
+                ProjectileCombatSpec.FromDefinition(definition.Projectile),
                 definition.StrikeCount,
                 definition.AttackDamageMultiplier,
                 definition.EffectRadius);

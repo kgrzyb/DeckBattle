@@ -148,6 +148,7 @@ namespace DeckBattle
             AddUnitViewData(unitPresentationId, definition.UnitPrefab, definition.RunAnimationSpeedMultiplier, definition, context);
             AddUnitVfxProfiles(unitPresentationId, definition.VfxProfile, definition.Special != null ? definition.Special.VfxProfile : null, definition, context);
             AddProjectile(definition.Projectile, context);
+            AddProjectile(definition.Special != null ? definition.Special.Projectile : null, context);
         }
 
         private static void AddProfileDefinitions(BattleVfxProfile profile, List<VfxDefinition> definitions)

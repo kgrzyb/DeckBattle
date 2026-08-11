@@ -2,6 +2,31 @@ using System;
 
 namespace DeckBattle
 {
+    public readonly struct ProjectileImpactCombatSpec
+    {
+        public readonly DamageKind DamageKind;
+        public readonly StatusCombatSpec AppliedStatus;
+        public readonly StatusLifetimeMode StatusLifetimeMode;
+        public readonly float StatusDuration;
+
+        public bool HasAppliedStatus
+        {
+            get { return AppliedStatus.Kind != StatusKind.None; }
+        }
+
+        public ProjectileImpactCombatSpec(
+            DamageKind damageKind,
+            StatusCombatSpec appliedStatus,
+            StatusLifetimeMode statusLifetimeMode,
+            float statusDuration)
+        {
+            DamageKind = damageKind;
+            AppliedStatus = appliedStatus;
+            StatusLifetimeMode = statusLifetimeMode;
+            StatusDuration = statusDuration;
+        }
+    }
+
     public sealed class ProjectileRuntimeState
     {
         public readonly int ProjectileId;
@@ -14,6 +39,7 @@ namespace DeckBattle
         public readonly float TravelDuration;
         public readonly int Damage;
         public readonly bool IsCritical;
+        public readonly ProjectileImpactCombatSpec Impact;
 
         public ProjectileRuntimeState(
             int projectileId,
@@ -25,7 +51,8 @@ namespace DeckBattle
             float travelDuration,
             double impactTime,
             int damage,
-            bool isCritical)
+            bool isCritical,
+            ProjectileImpactCombatSpec impact = default)
         {
             if (projectileId <= 0)
             {
@@ -47,6 +74,7 @@ namespace DeckBattle
             ImpactTime = impactTime;
             Damage = Math.Max(0, damage);
             IsCritical = isCritical;
+            Impact = impact;
         }
     }
 }

@@ -15,6 +15,7 @@ namespace DeckBattle.Tests
                 config.AttackRangeBonus = 2;
                 config.MovementStepDuration = 0.5f;
                 config.MaxPursuitStepsAfterAttack = 4;
+                config.SpecialRecoveryLockDuration = 0.75f;
                 config.MaxStatusesPerUnit = 12;
                 config.MinDamageMultiplier = 0.2f;
                 config.MaxDamageMultiplier = 2.5f;
@@ -28,6 +29,7 @@ namespace DeckBattle.Tests
                 Assert.AreEqual(2, tuning.AttackRangeBonus);
                 Assert.AreEqual(0.5f, tuning.MovementStepDuration);
                 Assert.AreEqual(4, tuning.MaxPursuitStepsAfterAttack);
+                Assert.AreEqual(0.75f, tuning.SpecialRecoveryLockDuration);
                 Assert.AreEqual(12, tuning.MaxStatusesPerUnit);
                 Assert.AreEqual(0.2f, tuning.MinDamageMultiplier);
                 Assert.AreEqual(2.5f, tuning.MaxDamageMultiplier);

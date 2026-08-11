@@ -77,7 +77,29 @@ namespace DeckBattle
                     }
                     UnitRuntimeState attacker;
                     simulation.TryGetUnitById(projectile.AttackerUnitId, out attacker);
-                    HitResolutionResult hit = HitResolver.ResolveHit(simulation, attacker, target, projectile.Damage, projectile.IsCritical, eventQueue);
+                    HitResolutionResult hit = DamageResolver.Resolve(
+                        simulation,
+                        target,
+                        new DamageRequest(
+                            attacker,
+                            projectile.Damage,
+                            projectile.Impact.DamageKind,
+                            projectile.IsCritical),
+                        eventQueue);
+                    if (hit.DidHit
+                        && target.IsAlive
+                        && projectile.Impact.HasAppliedStatus)
+                    {
+                        StatusResolver.TryApply(
+                            simulation,
+                            target,
+                            new StatusApplicationRequest(
+                                projectile.Impact.AppliedStatus,
+                                projectile.AttackerUnitId,
+                                projectile.Impact.StatusDuration,
+                                lifetimeMode: projectile.Impact.StatusLifetimeMode),
+                            eventQueue);
+                    }
                     if (hit.DidHit) { hits++; totalDamage += hit.Damage; if (hit.Died) deaths++; }
                 }
                 else if (eventQueue != null)

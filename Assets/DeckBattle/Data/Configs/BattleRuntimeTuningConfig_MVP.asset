@@ -16,6 +16,7 @@ MonoBehaviour:
   AttackRangeBonus: 0
   MovementStepDuration: 0.38
   MaxPursuitStepsAfterAttack: 2
+  SpecialRecoveryLockDuration: 0.15
   MaxStatusesPerUnit: 8
   MinDamageMultiplier: 0.1
   MaxDamageMultiplier: 10

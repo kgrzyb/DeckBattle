@@ -13,6 +13,14 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void SpecialRecoveryLockDuration_DefaultsToHalfSecondAndClampsNegativeValues()
+        {
+            Assert.AreEqual(0.5f, BattleRuntimeTuning.Default.SpecialRecoveryLockDuration);
+            Assert.AreEqual(0.5f, new BattleRuntimeTuning(1f, 0).SpecialRecoveryLockDuration);
+            Assert.AreEqual(0f, new BattleRuntimeTuning(1f, 0, specialRecoveryLockDuration: -1f).SpecialRecoveryLockDuration);
+        }
+
+        [Test]
         public void AttackRangeBonus_AllowsUnitToAttackFromTunedRange()
         {
             UnitDefinition player = CreateUnit("player", 5, 5, 1, 1f);

@@ -21,7 +21,7 @@ MonoBehaviour:
   UnitType: 0
   MaxHp: 1000
   Attack: 90
-  Power: 4
+  Power: 1
   AttackRange: 1
   CritChance: 0
   CritMultiplier: 2

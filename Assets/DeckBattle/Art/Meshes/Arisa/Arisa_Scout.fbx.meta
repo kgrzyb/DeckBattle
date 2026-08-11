@@ -74,7 +74,7 @@ ModelImporter:
       loop: 0
       hasAdditiveReferencePose: 0
       loopTime: 1
-      loopBlend: 1
+      loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
       loopBlendPositionXZ: 0
@@ -95,7 +95,7 @@ ModelImporter:
       takeName: root|Run
       internalID: 5420418217189406925
       firstFrame: 0
-      lastFrame: 59
+      lastFrame: 29
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -103,7 +103,7 @@ ModelImporter:
       loop: 0
       hasAdditiveReferencePose: 0
       loopTime: 1
-      loopBlend: 1
+      loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
       loopBlendPositionXZ: 0
@@ -124,7 +124,7 @@ ModelImporter:
       takeName: root|Special
       internalID: 7130556382578104480
       firstFrame: 0
-      lastFrame: 99
+      lastFrame: 73
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

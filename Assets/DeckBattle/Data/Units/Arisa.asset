@@ -27,10 +27,10 @@ MonoBehaviour:
   CritMultiplier: 2
   AttacksPerSecond: 0.8
   AttackWindupPercent: 0.25
-  ManaThreshold: 100
+  ManaThreshold: 50
   ManaPerAttack: 10
   ManaPerDamageTaken: 10
-  Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
+  Special: {fileID: 11400000, guid: c50fe9a24ab34ff4db25ebb69542422b, type: 2}
   Armor: 0
   ArmorPenetration: 0
   Projectile: {fileID: 11400000, guid: 187976520e7ddc248aa9fdb8d0a9387e, type: 2}
