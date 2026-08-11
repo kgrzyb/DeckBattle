@@ -17,8 +17,7 @@ Shader "SteamSpirit/UnlitCelShade"
     //   dodaje blask na całym meshu jednolicie. Jeśli potrzebujesz emisji tylko
     //   na fragmencie modelu (np. lampka, rura pary), rozważ osobny prosty mesh/
     //   submesh z tym materiałem zamiast maski w kanale tekstury.
-    // - Outline jako osobny pass (inverted hull), niezmieniony względem
-    //   poprzedniej wersji - w pełni opcjonalny toggle _OUTLINE_ON,
+    // - Outline jako osobny pass (inverted hull), zawsze aktywny dla jednostek,
     //   z fixem na pękanie na UV seamach przez _OUTLINE_SMOOTH_NORMALS
     //   (patrz BakeSmoothNormalsToVertexColor.cs).
     // - Koszt fragmentu: 1 sample tekstury (_BaseMap) - to najtańszy wariant
@@ -40,7 +39,6 @@ Shader "SteamSpirit/UnlitCelShade"
         _LightThreshold  ("Midtone -> Light Threshold", Range(0,1)) = 0.65
         _RampSmoothness ("Band Edge Smoothness", Range(0.001, 0.3)) = 0.05
 
-        [Toggle(_OUTLINE_ON)] _OutlineEnabled ("Enable Outline", Float) = 1
         _OutlineColor ("Outline Color", Color) = (0.05, 0.05, 0.08, 1)
         _OutlineWidth ("Outline Width", Range(0, 0.05)) = 0.01
         [Toggle(_OUTLINE_SMOOTH_NORMALS)] _OutlineSmoothNormals ("Outline: Use Baked Smooth Normals (vertex color)", Float) = 0
@@ -50,6 +48,28 @@ Shader "SteamSpirit/UnlitCelShade"
     {
         Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Geometry" }
         LOD 200
+
+        // Jeden wspólny układ danych materiału dla wszystkich passów. To jest
+        // wymagane, aby URP mógł batchować materiały tego shadera przez SRP Batcher.
+        HLSLINCLUDE
+        #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+        CBUFFER_START(UnityPerMaterial)
+            float4 _BaseMap_ST;
+            float4 _BaseColor;
+            float _Brightness;
+            float4 _EmissionColor;
+            half4 _ShadowColor;
+            half4 _MidColor;
+            half4 _LightColor;
+            float _ShadowThreshold;
+            float _LightThreshold;
+            float _RampSmoothness;
+            half4 _OutlineColor;
+            float _OutlineWidth;
+            float _OutlineSmoothNormals;
+        CBUFFER_END
+        ENDHLSL
 
         Pass
         {
@@ -62,10 +82,7 @@ Shader "SteamSpirit/UnlitCelShade"
             HLSLPROGRAM
             #pragma vertex vertOutline
             #pragma fragment fragOutline
-            #pragma shader_feature_local _OUTLINE_ON
-            #pragma shader_feature_local _OUTLINE_SMOOTH_NORMALS
-
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #pragma shader_feature_local_vertex _OUTLINE_SMOOTH_NORMALS
 
             struct OutlineAttributes
             {
@@ -82,25 +99,18 @@ Shader "SteamSpirit/UnlitCelShade"
                 float4 positionHCS : SV_POSITION;
             };
 
-            half4 _OutlineColor;
-            float _OutlineWidth;
-
             OutlineVaryings vertOutline(OutlineAttributes IN)
             {
                 OutlineVaryings OUT;
 
-                #if defined(_OUTLINE_ON)
-                    #if defined(_OUTLINE_SMOOTH_NORMALS)
-                        // Rozpakowanie [0,1] -> [-1,1] uśrednionej normalnej z vertex color -
-                        // ciągła na szwach, więc outline się tam nie rozjeżdża
-                        float3 extrudeDir = normalize(IN.color.rgb * 2.0 - 1.0);
-                    #else
-                        float3 extrudeDir = normalize(IN.normalOS);
-                    #endif
-                    float3 positionOS = IN.positionOS.xyz + extrudeDir * _OutlineWidth;
+                #if defined(_OUTLINE_SMOOTH_NORMALS)
+                    // Rozpakowanie [0,1] -> [-1,1] uśrednionej normalnej z vertex color -
+                    // ciągła na szwach, więc outline się tam nie rozjeżdża
+                    float3 extrudeDir = normalize(IN.color.rgb * 2.0 - 1.0);
                 #else
-                    float3 positionOS = IN.positionOS.xyz;
+                    float3 extrudeDir = normalize(IN.normalOS);
                 #endif
+                float3 positionOS = IN.positionOS.xyz + extrudeDir * _OutlineWidth;
 
                 OUT.positionHCS = TransformObjectToHClip(positionOS);
                 return OUT;
@@ -147,19 +157,6 @@ Shader "SteamSpirit/UnlitCelShade"
             };
 
             TEXTURE2D(_BaseMap);   SAMPLER(sampler_BaseMap);
-
-            CBUFFER_START(UnityPerMaterial)
-                float4 _BaseMap_ST;
-                float4 _BaseColor;
-                float _Brightness;
-                float4 _EmissionColor;
-                half4 _ShadowColor;
-                half4 _MidColor;
-                half4 _LightColor;
-                float _ShadowThreshold;
-                float _LightThreshold;
-                float _RampSmoothness;
-            CBUFFER_END
 
             Varyings vert(Attributes IN)
             {

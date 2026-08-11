@@ -15,7 +15,8 @@ MonoBehaviour:
   Kind: 1
   Category: 1
   StackingRule: 0
-  DefaultDuration: 1
+  IndependentPerSourceCombination: 0
+  DefaultDuration: 2
   DefaultInterval: 0
   DefaultMagnitude: 0
   MaxStacks: 1
