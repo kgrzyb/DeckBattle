@@ -125,7 +125,7 @@ namespace DeckBattle
                         return false;
                     }
 
-                    binding = CreateProjectileBinding(launchVfx, VfxSpawnSubject.Source, UnitVfxAnchor.Body);
+                    binding = CreateProjectileBinding(launchVfx, VfxSpawnSubject.Source, UnitVfxAnchor.ProjectileLaunch);
                     return true;
                 case BattleEventType.ProjectileResolved:
                     if (!projectileImpactVfxById.TryGetValue(battleEvent.ProjectileId, out VfxDefinition resolvedImpactVfx))

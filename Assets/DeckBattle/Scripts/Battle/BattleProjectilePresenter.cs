@@ -77,8 +77,12 @@ namespace DeckBattle
                 return;
             }
 
-            Vector3 from = boardPresenter.GetWorldPosition(battleEvent.From);
-            from.y += spawnHeight;
+            Vector3 fallbackLaunchPosition = boardPresenter.GetWorldPosition(battleEvent.From);
+            fallbackLaunchPosition.y += spawnHeight;
+            UnitView sourceView = unitViews.TryGet(battleEvent.UnitId, out UnitView resolvedSourceView)
+                ? resolvedSourceView
+                : null;
+            Vector3 from = ResolveLaunchPosition(sourceView, fallbackLaunchPosition);
             Vector3 fallbackTarget = boardPresenter.GetWorldPosition(battleEvent.To);
             fallbackTarget.y += hitHeight;
             Transform targetTransform = unitViews.TryGet(battleEvent.TargetUnitId, out UnitView targetView)
@@ -90,6 +94,13 @@ namespace DeckBattle
             projectileView.Play(from, targetTransform, fallbackTarget, battleEvent.Duration);
             activeProjectileViews.Add(projectileView);
             projectileViewById[battleEvent.ProjectileId] = projectileView;
+        }
+
+        internal static Vector3 ResolveLaunchPosition(UnitView sourceView, Vector3 fallbackLaunchPosition)
+        {
+            return sourceView != null && sourceView.TryGetProjectileLaunchAnchor(out Transform launchAnchor)
+                ? launchAnchor.position
+                : fallbackLaunchPosition;
         }
 
         public void HandleResolved(BattleEvent battleEvent)

@@ -127,10 +127,13 @@ namespace DeckBattle.Tests
             bodyObject.transform.SetParent(unitObject.transform, false);
             GameObject overheadObject = new GameObject("Overhead");
             overheadObject.transform.SetParent(unitObject.transform, false);
+            GameObject projectileLaunchObject = new GameObject("ProjectileLaunch");
+            projectileLaunchObject.transform.SetParent(unitObject.transform, false);
             UnitVfxAnchors anchors = unitObject.AddComponent<UnitVfxAnchors>();
             SetPrivateField(anchors, "ground", groundObject.transform);
             SetPrivateField(anchors, "body", bodyObject.transform);
             SetPrivateField(anchors, "overhead", overheadObject.transform);
+            SetPrivateField(anchors, "projectileLaunch", projectileLaunchObject.transform);
             UnitView unitView = unitObject.AddComponent<UnitView>();
             try
             {
@@ -139,6 +142,8 @@ namespace DeckBattle.Tests
                 Assert.AreSame(groundObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Ground));
                 Assert.AreSame(bodyObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Body));
                 Assert.AreSame(overheadObject.transform, unitView.ResolveVfxAnchor(UnitVfxAnchor.Overhead));
+                Assert.IsTrue(unitView.TryGetProjectileLaunchAnchor(out Transform projectileLaunch));
+                Assert.AreSame(projectileLaunchObject.transform, projectileLaunch);
             }
             finally
             {

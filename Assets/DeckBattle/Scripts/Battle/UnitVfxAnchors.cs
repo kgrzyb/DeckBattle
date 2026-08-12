@@ -8,6 +8,7 @@ namespace DeckBattle
         [SerializeField] private Transform ground;
         [SerializeField] private Transform body;
         [SerializeField] private Transform overhead;
+        [SerializeField] private Transform projectileLaunch;
 
         public Transform Resolve(UnitVfxAnchor anchor)
         {
@@ -19,6 +20,8 @@ namespace DeckBattle
                     return body;
                 case UnitVfxAnchor.Overhead:
                     return overhead;
+                case UnitVfxAnchor.ProjectileLaunch:
+                    return projectileLaunch != null ? projectileLaunch : body;
                 default:
                     return null;
             }
@@ -27,6 +30,12 @@ namespace DeckBattle
         public bool HasAnchor(UnitVfxAnchor anchor)
         {
             return Resolve(anchor) != null;
+        }
+
+        public bool TryGetProjectileLaunch(out Transform anchor)
+        {
+            anchor = projectileLaunch;
+            return anchor != null;
         }
     }
 }

@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2066289834789064982
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2951504307114890327}
+  m_Layer: 0
+  m_Name: ProjectileLaunchAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2951504307114890327
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2066289834789064982}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.267, y: -0.054, z: 0.172}
+  m_LocalScale: {x: 0.833333, y: 0.8333331, z: 0.83333296}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2700433656787819847}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &107035227380698420
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1044,6 +1075,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 501863860266314463}
+    - targetCorrespondingSourceObject: {fileID: 7511111556992726735, guid: a7af5f15e23d30e4d8cf17cee45eb9de,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2951504307114890327}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: a7af5f15e23d30e4d8cf17cee45eb9de,
         type: 3}
@@ -1103,6 +1138,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -7550871470617720242, guid: c61b7deca06656f42a5fed87dc6f8d34,
+        type: 3}
+      propertyPath: projectileLaunch
+      value: 
+      objectReference: {fileID: 2951504307114890327}
     - target: {fileID: 712345678901234568, guid: c61b7deca06656f42a5fed87dc6f8d34,
         type: 3}
       propertyPath: m_LocalPosition.y

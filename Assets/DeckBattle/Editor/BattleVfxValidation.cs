@@ -206,6 +206,19 @@ namespace DeckBattle.Editor
         private static int ValidateUnitAnchors()
         {
             int errors = 0;
+            var projectileUnitPrefabs = new HashSet<GameObject>();
+            string[] unitDefinitionGuids = AssetDatabase.FindAssets("t:UnitDefinition");
+            for (int i = 0; i < unitDefinitionGuids.Length; i++)
+            {
+                UnitDefinition definition = AssetDatabase.LoadAssetAtPath<UnitDefinition>(AssetDatabase.GUIDToAssetPath(unitDefinitionGuids[i]));
+                if (definition != null
+                    && definition.UnitPrefab != null
+                    && (definition.Projectile != null || (definition.Special != null && definition.Special.Projectile != null)))
+                {
+                    projectileUnitPrefabs.Add(definition.UnitPrefab.gameObject);
+                }
+            }
+
             string[] guids = AssetDatabase.FindAssets("t:Prefab");
             for (int i = 0; i < guids.Length; i++)
             {
@@ -238,6 +251,12 @@ namespace DeckBattle.Editor
                 if (!anchors.HasAnchor(UnitVfxAnchor.Overhead))
                 {
                     LogError("A UnitView prefab is missing its Overhead VFX anchor.", prefab);
+                    errors++;
+                }
+
+                if (projectileUnitPrefabs.Contains(prefab) && !anchors.TryGetProjectileLaunch(out Transform _))
+                {
+                    LogError("A projectile UnitView prefab is missing its Projectile Launch anchor.", prefab);
                     errors++;
                 }
             }

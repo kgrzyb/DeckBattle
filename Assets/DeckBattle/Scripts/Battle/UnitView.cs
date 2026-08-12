@@ -149,6 +149,18 @@ namespace DeckBattle
             return resolved != null ? resolved : transform;
         }
 
+        public bool TryGetProjectileLaunchAnchor(out Transform anchor)
+        {
+            CacheVfxAnchors();
+            if (vfxAnchors != null && vfxAnchors.TryGetProjectileLaunch(out anchor))
+            {
+                return true;
+            }
+
+            anchor = null;
+            return false;
+        }
+
         public void SetWorldPosition(Vector3 worldPosition)
         {
             transform.position = worldPosition + Vector3.up * groundOffset;
