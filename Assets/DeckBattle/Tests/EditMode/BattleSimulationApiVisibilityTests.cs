@@ -13,7 +13,14 @@ namespace DeckBattle.Tests
             AssertInternal("StartUnitMovement", typeof(UnitRuntimeState), typeof(HexCoord));
             AssertInternal("CompleteUnitMovement", typeof(UnitRuntimeState));
             AssertInternal("DefeatUnit", typeof(UnitRuntimeState));
-            AssertInternal("SpawnProjectile", typeof(UnitRuntimeState), typeof(UnitRuntimeState), typeof(ProjectileCombatSpec), typeof(int), typeof(bool));
+            AssertInternal(
+                "SpawnProjectile",
+                typeof(UnitRuntimeState),
+                typeof(UnitRuntimeState),
+                typeof(ProjectileCombatSpec),
+                typeof(int),
+                typeof(bool),
+                typeof(ProjectileImpactCombatSpec));
             AssertInternal("RemoveProjectileAt", typeof(int));
             AssertInternal("CompleteBattle", typeof(BattleSide), typeof(bool));
         }

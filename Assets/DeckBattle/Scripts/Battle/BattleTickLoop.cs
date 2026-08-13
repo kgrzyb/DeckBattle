@@ -202,7 +202,7 @@ namespace DeckBattle
                 return false;
             }
 
-            if (HasPendingLongshot(simulation))
+            if (HasPendingCommittedAction(simulation))
             {
                 winner = BattleSide.Player;
                 hasWinner = false;
@@ -221,15 +221,16 @@ namespace DeckBattle
             return true;
         }
 
-        private static bool HasPendingLongshot(BattleSimulation simulation)
+        private static bool HasPendingCommittedAction(BattleSimulation simulation)
         {
             for (int i = 0; i < simulation.Units.Count; i++)
             {
                 UnitRuntimeState unit = simulation.Units[i];
                 if (unit != null
                     && unit.IsAlive
-                    && unit.SpecialPhase == UnitSpecialPhase.Windup
-                    && unit.CombatSpec.Special.Kind == UnitSpecialKind.Longshot)
+                    && (unit.AttackPhase == UnitAttackPhase.Windup
+                        || unit.SpecialPhase == UnitSpecialPhase.Windup
+                        || unit.SpecialPhase == UnitSpecialPhase.Casting))
                 {
                     return true;
                 }

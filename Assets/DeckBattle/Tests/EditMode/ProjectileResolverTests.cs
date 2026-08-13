@@ -106,7 +106,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_DoesNotEndBattleBeforeLethalProjectileLands()
+        public void Tick_DoesNotEndBattleBeforeLethalProjectileAndCommittedMissResolve()
         {
             UnitDefinition attacker = CreateUnit("archer", 10, 10, 3, 1f, UnitType.Range);
             attacker.Projectile = CreateProjectile("arrow", 1f);
@@ -125,8 +125,14 @@ namespace DeckBattle.Tests
 
             BattleTickResult hitTick = loop.Tick(events);
 
-            Assert.IsTrue(hitTick.BattleEnded);
+            Assert.IsFalse(hitTick.BattleEnded);
             Assert.IsTrue(simulation.Units[1].IsDefeated);
+            Assert.AreEqual(1, simulation.Projectiles.Count);
+
+            BattleTickResult missTick = loop.Tick(events);
+
+            Assert.IsTrue(missTick.BattleEnded);
+            Assert.AreEqual(0, simulation.Projectiles.Count);
         }
 
         [Test]

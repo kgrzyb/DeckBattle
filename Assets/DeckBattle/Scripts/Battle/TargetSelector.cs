@@ -106,6 +106,80 @@ namespace DeckBattle
             return selection;
         }
 
+        public static bool TrySelectTargetInCurrentAttackRange(
+            BattleSimulation simulation,
+            UnitRuntimeState attacker,
+            out UnitRuntimeState target)
+        {
+            if (simulation == null)
+            {
+                throw new ArgumentNullException(nameof(simulation));
+            }
+
+            if (attacker == null)
+            {
+                throw new ArgumentNullException(nameof(attacker));
+            }
+
+            target = null;
+            if (!UnitActionRules.CanAcquireTarget(attacker))
+            {
+                return false;
+            }
+
+            int attackRange = simulation.Tuning.GetAttackRange(attacker.CombatSpec);
+            UnitRuntimeState bestNormalTarget = null;
+            int bestNormalDistance = int.MaxValue;
+            UnitRuntimeState bestTauntTarget = null;
+            int bestTauntDistance = int.MaxValue;
+            int bestTauntSequence = int.MaxValue;
+            IReadOnlyList<UnitRuntimeState> units = simulation.Units;
+            for (int i = 0; i < units.Count; i++)
+            {
+                UnitRuntimeState candidate = units[i];
+                if (!TargetingRules.CanBeTargeted(attacker, candidate))
+                {
+                    continue;
+                }
+
+                int distance = simulation.Board.Distance(attacker.CurrentHex, candidate.CurrentHex);
+                if (distance > attackRange)
+                {
+                    continue;
+                }
+
+                if (TryGetTauntSequence(attacker, candidate, out int tauntSequence))
+                {
+                    if (IsBetterCurrentRangeTarget(
+                            candidate,
+                            distance,
+                            tauntSequence,
+                            bestTauntTarget,
+                            bestTauntDistance,
+                            bestTauntSequence))
+                    {
+                        bestTauntTarget = candidate;
+                        bestTauntDistance = distance;
+                        bestTauntSequence = tauntSequence;
+                    }
+                }
+                else if (IsBetterCurrentRangeTarget(
+                             candidate,
+                             distance,
+                             int.MaxValue,
+                             bestNormalTarget,
+                             bestNormalDistance,
+                             int.MaxValue))
+                {
+                    bestNormalTarget = candidate;
+                    bestNormalDistance = distance;
+                }
+            }
+
+            target = bestTauntTarget ?? bestNormalTarget;
+            return target != null;
+        }
+
         private static bool TrySelectTargetByPath(
             BattleSimulation simulation,
             UnitRuntimeState attacker,
@@ -274,6 +348,37 @@ namespace DeckBattle
             }
 
             return false;
+        }
+
+        private static bool IsBetterCurrentRangeTarget(
+            UnitRuntimeState candidate,
+            int candidateDistance,
+            int candidateTauntSequence,
+            UnitRuntimeState selected,
+            int selectedDistance,
+            int selectedTauntSequence)
+        {
+            if (selected == null)
+            {
+                return true;
+            }
+
+            if (candidateDistance != selectedDistance)
+            {
+                return candidateDistance < selectedDistance;
+            }
+
+            if (candidate.CurrentHp != selected.CurrentHp)
+            {
+                return candidate.CurrentHp < selected.CurrentHp;
+            }
+
+            if (candidate.UnitId != selected.UnitId)
+            {
+                return candidate.UnitId < selected.UnitId;
+            }
+
+            return candidateTauntSequence < selectedTauntSequence;
         }
 
         private static UnitRuntimeState SelectTargetInAttackRange(

@@ -111,9 +111,14 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (!unit.IsAlive
-                    || unit.IsMoving
-                    || !TryGetLockedLiveTarget(simulation, unit, out UnitRuntimeState lockedTarget))
+                if (!unit.IsAlive || unit.IsMoving)
+                {
+                    CancelWindupInternal(unit, eventQueue);
+                    workspace.Cancelled[i] = true;
+                    continue;
+                }
+
+                if (!TryGetUnitById(simulation, unit.LockedAttackTargetUnitId, out UnitRuntimeState lockedTarget))
                 {
                     CancelWindupInternal(unit, eventQueue);
                     workspace.Cancelled[i] = true;
@@ -125,7 +130,19 @@ namespace DeckBattle
                     continue;
                 }
 
-                workspace.AddFire(unit, lockedTarget);
+                UnitRuntimeState fireTarget = lockedTarget;
+                if (!lockedTarget.IsAlive
+                    && TargetSelector.TrySelectTargetInCurrentAttackRange(simulation, unit, out UnitRuntimeState replacementTarget))
+                {
+                    unit.SetTarget(replacementTarget);
+                    eventQueue?.Enqueue(BattleEvent.UnitTargetChanged(
+                        unit.UnitId,
+                        replacementTarget.UnitId,
+                        replacementTarget.CurrentHex));
+                    fireTarget = replacementTarget;
+                }
+
+                workspace.AddFire(unit, fireTarget);
             }
         }
 
@@ -149,7 +166,10 @@ namespace DeckBattle
                 attacker.AttackPhase = UnitAttackPhase.Winddown;
                 attacker.LockedAttackTargetUnitId = UnitRuntimeState.NoTargetUnitId;
                 attacker.WindupEndTime = double.PositiveInfinity;
-                attacker.MarkTargetEngaged(target.UnitId);
+                if (target.IsAlive)
+                {
+                    attacker.MarkTargetEngaged(target.UnitId);
+                }
 
                 float remainingWinddown = (float)Math.Max(0d, attacker.NextAttackTime - simulation.ElapsedTime);
                 eventQueue?.Enqueue(BattleEvent.AttackFired(
@@ -302,15 +322,6 @@ namespace DeckBattle
             unit.LockedAttackTargetUnitId = UnitRuntimeState.NoTargetUnitId;
             unit.AttackCycleStartTime = double.PositiveInfinity;
             unit.WindupEndTime = double.PositiveInfinity;
-        }
-
-        private static bool TryGetLockedLiveTarget(
-            BattleSimulation simulation,
-            UnitRuntimeState attacker,
-            out UnitRuntimeState target)
-        {
-            return TryGetUnitById(simulation, attacker.LockedAttackTargetUnitId, out target)
-                && target.IsAlive;
         }
 
         private static bool TryGetUnitById(

@@ -202,8 +202,8 @@ Podczas windupu jednostka:
 - nie wystrzeliwuje pocisku;
 - nie otrzymuje many za wykonanie ataku.
 
-Windup zostaje anulowany, jeżeli zablokowany cel albo atakujący umrze lub
-atakujący znajdzie się w stanie ruchu.
+Windup zostaje anulowany, jeżeli atakujący umrze albo znajdzie się w stanie
+ruchu. Śmierć zablokowanego celu nie anuluje rozpoczętej akcji.
 Wyjście żywego celu z zasięgu nie anuluje już rozpoczętego ataku.
 
 Anulowanie emituje `AttackWindupCancelled`. Nie zużywa jednorazowego bonusu
@@ -223,6 +223,12 @@ workspace. Dopiero potem są rozstrzygane w stabilnej kolejności
 
 Jednostka dopuszczona do tej partii może wykonać `Fire`, nawet jeśli zostanie
 zabita przez wcześniejszy atak z tej samej partii.
+
+Jeżeli zablokowany cel umarł przed `Fire`, resolver jednokrotnie wybiera
+zastępczy, żywy cel wyłącznie w aktualnym zasięgu atakującego, bez ruchu. Przy
+braku zastępstwa `Fire` nadal następuje w pierwotny cel jako miss: cykl, bonus
+następnego ataku i mana są rozliczane normalnie, ale nie występują damage ani
+efekty trafienia.
 
 Przy `Fire`:
 
@@ -325,8 +331,9 @@ Damage następuje dopiero przy `ImpactTime`.
 9. Rozstrzygnięcie nowych kroków ruchu.
 10. Sprawdzenie zakończenia bitwy.
 
-Pocisk rozstrzygnięty w kroku 4 może zabić jednostkę i anulować jej windup
-przed krokiem `Fire`.
+Pocisk rozstrzygnięty w kroku 4 może zabić jednostkę. Windup tej jednostki
+zostaje anulowany, ale śmierć jej zablokowanego celu prowadzi do retargetu w
+bieżącym zasięgu albo do missa przy `Fire`.
 
 ## Zdarzenia i prezentacja
 
@@ -414,7 +421,7 @@ Testy Edit Mode są podstawowym kontraktem implementacji.
 7. Reset działający podczas winddownu.
 8. Reset ignorowany podczas windupu.
 9. Nowy atak po resecie nadal wymagający windupu.
-10. Anulowanie windupu po śmierci celu.
+10. Retarget w bieżącym zasięgu albo miss po śmierci celu.
 11. Brak startu windupu przez pełny czas trwania kroku ruchu.
 12. Anulowanie windupu, jeśli atakujący znajdzie się w ruchu.
 13. Odrzucenie próby rozpoczęcia ruchu podczas windupu.
@@ -451,7 +458,7 @@ Cykl jest głównym sposobem ataku, gdy:
 - attack speed skaluje windup i pełny cykl;
 - windup ma minimum jednego ticka;
 - reset działa wyłącznie dla winddownu;
-- śmierć celu anuluje windup;
+- śmierć celu kończy windup przez retarget w bieżącym zasięgu albo miss;
 - melee zadaje damage przy `Fire`, a projectile przy impact;
 - pełny zestaw testów Edit Mode przechodzi;
 - hot path nie generuje nowych alokacji.

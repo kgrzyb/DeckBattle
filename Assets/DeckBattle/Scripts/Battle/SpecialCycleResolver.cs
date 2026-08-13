@@ -80,8 +80,8 @@ namespace DeckBattle
                 switch (unit.SpecialPhase)
                 {
                     case UnitSpecialPhase.Windup:
-                        if (UnitActionRules.SpecialRequiresTarget(unit.CombatSpec.Special.Kind)
-                            && !TryGetLockedLiveTarget(simulation, unit, out _))
+                        if (UnitActionRules.SpecialLocksTarget(unit.CombatSpec.Special.Kind)
+                            && !TryGetLockedTarget(simulation, unit, out _))
                         {
                             CancelWindup(unit, eventQueue, simulation);
                             break;
@@ -95,9 +95,9 @@ namespace DeckBattle
                     case UnitSpecialPhase.Casting:
                         if (unit.CombatSpec.Special.Kind == UnitSpecialKind.FurySwipes)
                         {
-                            if (!TryGetLockedLiveTarget(simulation, unit, out UnitRuntimeState target))
+                            if (!TryGetLockedTarget(simulation, unit, out UnitRuntimeState target))
                             {
-                                CompleteFuryCast(simulation, unit, eventQueue);
+                                CancelWindup(unit, eventQueue, simulation);
                                 break;
                             }
 
@@ -132,16 +132,8 @@ namespace DeckBattle
         {
             UnitSpecialCombatSpec special = unit.CombatSpec.Special;
             UnitRuntimeState target = null;
-            if (special.Kind == UnitSpecialKind.Longshot)
-            {
-                if (!TryGetLockedTarget(simulation, unit, out target))
-                {
-                    CancelWindup(unit, eventQueue, simulation);
-                    return;
-                }
-            }
-            else if (UnitActionRules.SpecialRequiresTarget(special.Kind)
-                && !TryGetLockedLiveTarget(simulation, unit, out target))
+            if (UnitActionRules.SpecialLocksTarget(special.Kind)
+                && !TryGetLockedTarget(simulation, unit, out target))
             {
                 CancelWindup(unit, eventQueue, simulation);
                 return;
@@ -531,8 +523,7 @@ namespace DeckBattle
                 }
 
                 UnitSpecialCombatSpec special = unit.CombatSpec.Special;
-                if (unit.SpecialStrikesResolved >= special.StrikeCount
-                    || !TryGetLockedLiveTarget(simulation, unit, out _))
+                if (unit.SpecialStrikesResolved >= special.StrikeCount)
                 {
                     CompleteFuryCast(simulation, unit, eventQueue);
                 }
@@ -552,20 +543,6 @@ namespace DeckBattle
                 special.Kind,
                 special.CastDuration,
                 sequenceId));
-        }
-
-        private static bool TryGetLockedLiveTarget(
-            BattleSimulation simulation,
-            UnitRuntimeState unit,
-            out UnitRuntimeState target)
-        {
-            target = null;
-            return unit != null
-                && unit.LockedSpecialTargetUnitId != UnitRuntimeState.NoTargetUnitId
-                && simulation.TryGetUnitById(unit.LockedSpecialTargetUnitId, out target)
-                && target != null
-                && target.IsAlive
-                && target.Side != unit.Side;
         }
 
         private static bool TryGetLockedTarget(

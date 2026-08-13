@@ -225,10 +225,12 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void DeadLockedTarget_CancelsWindupWithoutFiring()
+        public void DeadLockedTarget_FiresAsMissWithoutCancellingWindup()
         {
             BattleSimulation simulation = CreateSimulation(1f);
-            simulation.Units[0].NextAttackTime = 0d;
+            UnitRuntimeState attacker = simulation.Units[0];
+            attacker.NextAttackTime = 0d;
+            attacker.AttackBonusNextCombat = 3;
             var loop = new BattleTickLoop(simulation, TickDuration);
             var events = new BattleEventQueue();
             loop.Tick(events);
@@ -236,10 +238,40 @@ namespace DeckBattle.Tests
             simulation.DefeatUnit(simulation.Units[1]);
             BattleTickResult result = loop.Tick(events);
 
-            Assert.AreEqual(0, result.Attacks);
-            Assert.AreEqual(UnitAttackPhase.AcquireReload, simulation.Units[0].AttackPhase);
-            AssertEvent(events, BattleEventType.AttackWindupCancelled);
-            AssertNoEvent(events, BattleEventType.AttackFired);
+            Assert.AreEqual(1, result.Attacks);
+            Assert.AreEqual(UnitAttackPhase.Winddown, attacker.AttackPhase);
+            Assert.AreEqual(0, attacker.AttackBonusNextCombat);
+            AssertEvent(events, BattleEventType.AttackFired);
+            AssertNoEvent(events, BattleEventType.AttackWindupCancelled);
+            AssertNoEvent(events, BattleEventType.UnitDamaged);
+        }
+
+        [Test]
+        public void DeadLockedTarget_RetargetsToLiveEnemyAlreadyInRange()
+        {
+            BattleSimulation simulation = CreateSimulationWithReplacementTarget();
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState lockedTarget = simulation.Units[1];
+            UnitRuntimeState replacementTarget = simulation.Units[2];
+            attacker.NextAttackTime = 0d;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            int sequenceId = attacker.AttackSequenceId;
+            Assert.AreEqual(lockedTarget.UnitId, attacker.LockedAttackTargetUnitId);
+            simulation.DefeatUnit(lockedTarget);
+
+            BattleTickResult result = loop.Tick(events);
+
+            Assert.AreEqual(1, result.Attacks);
+            Assert.AreEqual(sequenceId, attacker.AttackSequenceId);
+            Assert.AreEqual(replacementTarget.UnitId, attacker.TargetUnitId);
+            Assert.AreEqual(replacementTarget.UnitId, attacker.EngagedTargetUnitId);
+            Assert.AreEqual(4, replacementTarget.CurrentHp);
+            Assert.AreEqual(replacementTarget.UnitId, FindEvent(events, BattleEventType.UnitTargetChanged).TargetUnitId);
+            Assert.AreEqual(replacementTarget.UnitId, FindEvent(events, BattleEventType.AttackFired).TargetUnitId);
+            AssertNoEvent(events, BattleEventType.AttackWindupCancelled);
         }
 
         [Test]
@@ -278,6 +310,28 @@ namespace DeckBattle.Tests
                 {
                     new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
                     new UnitSpawnData(2, target, BattleSide.Enemy, new HexCoord(2, 1))
+                });
+        }
+
+        private static BattleSimulation CreateSimulationWithReplacementTarget()
+        {
+            UnitDefinition attacker = TestDefinitions.CreateUnit("replacement-attacker", 1);
+            attacker.Attack = 1;
+            attacker.AttacksPerSecond = 1f;
+            attacker.AttackWindupPercent = 0.25f;
+
+            UnitDefinition target = TestDefinitions.CreateUnit("replacement-target", 1);
+            target.MaxHp = 5;
+            target.Attack = 0;
+            target.AttacksPerSecond = 1f / 999f;
+
+            return BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, target, BattleSide.Enemy, new HexCoord(2, 1)),
+                    new UnitSpawnData(3, target, BattleSide.Enemy, new HexCoord(1, 2))
                 });
         }
 

@@ -87,6 +87,11 @@ Windup anulują:
 - sleep;
 - silence.
 
+Śmierć zablokowanego celu nie anuluje speciala celowanego. Po rozpoczęciu
+windupu special pozostaje związany z `LockedSpecialTargetUnitId`, nie wykonuje
+retargetowania i kończy pełny cast; strike lub pocisk do martwego celu jest
+rozstrzygany jako miss bez obrażeń i efektów trafienia.
+
 Po anulowaniu:
 
 - efekt speciala nie jest nakładany;

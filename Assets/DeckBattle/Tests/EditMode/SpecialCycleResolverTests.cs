@@ -289,7 +289,34 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void FurySwipes_TargetDeathDuringCastEndsRemainingStrikesWithoutManaRefund()
+        public void FurySwipes_TargetDeathDuringWindupStartsCastWithoutRetargeting()
+        {
+            BattleSimulation simulation = CreateFurySimulation(2000);
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            attacker.SetTarget(target);
+            var loop = new BattleTickLoop(simulation, 0.15f);
+
+            loop.Tick(new BattleEventQueue());
+            Assert.AreEqual(UnitSpecialPhase.Windup, attacker.SpecialPhase);
+            Assert.AreEqual(target.UnitId, attacker.LockedSpecialTargetUnitId);
+            simulation.DefeatUnit(target);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            BattleTickResult castTick = loop.Tick(events);
+
+            Assert.IsFalse(castTick.BattleEnded);
+            Assert.AreEqual(UnitSpecialPhase.Casting, attacker.SpecialPhase);
+            Assert.AreEqual(0, attacker.CurrentMana);
+            Assert.AreEqual(target.UnitId, attacker.LockedSpecialTargetUnitId);
+            AssertEvent(events, BattleEventType.SpecialCastStarted);
+            AssertNoEvent(events, BattleEventType.SpecialWindupCancelled);
+        }
+
+        [Test]
+        public void FurySwipes_TargetDeathDuringCastCompletesRemainingStrikesWithoutManaRefund()
         {
             BattleSimulation simulation = CreateFurySimulation(70);
             UnitRuntimeState attacker = simulation.Units[0];
@@ -305,9 +332,28 @@ namespace DeckBattle.Tests
 
             Assert.IsFalse(simulation.Units[1].IsAlive);
             Assert.AreEqual(0, attacker.CurrentMana);
-            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, attacker.SpecialPhase);
+            Assert.AreEqual(UnitSpecialPhase.Casting, attacker.SpecialPhase);
             Assert.AreEqual(1, CountEvents(events, BattleEventType.SpecialStrikeFired));
             Assert.AreEqual(70, SumDamageEvents(events));
+
+            int strikesAfterDeath = 0;
+            for (int i = 0; i < 9; i++)
+            {
+                BattleTickResult result = loop.Tick(events);
+                if (i < 8)
+                {
+                    Assert.IsFalse(result.BattleEnded);
+                }
+                else
+                {
+                    Assert.IsTrue(result.BattleEnded);
+                }
+                strikesAfterDeath += CountEvents(events, BattleEventType.SpecialStrikeFired);
+            }
+
+            Assert.AreEqual(9, strikesAfterDeath);
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, attacker.SpecialPhase);
+            Assert.AreEqual(0, SumDamageEvents(events));
         }
 
         [Test]
@@ -378,24 +424,28 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void MegaArrow_TargetDeathDuringWindupCancelsWithoutManaSpend()
+        public void MegaArrow_TargetDeathDuringWindupLaunchesProjectileMissAndSpendsMana()
         {
             BattleSimulation simulation = CreateMegaArrowSimulation(500);
             UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
             attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
-            attacker.SetTarget(simulation.Units[1]);
+            attacker.SetTarget(target);
             var loop = new BattleTickLoop(simulation, TickDuration);
 
             loop.Tick(new BattleEventQueue());
-            simulation.DefeatUnit(simulation.Units[1]);
+            simulation.DefeatUnit(target);
             var events = new BattleEventQueue();
 
-            loop.Tick(events);
+            BattleTickResult result = loop.Tick(events);
 
-            Assert.AreEqual(UnitSpecialPhase.Idle, attacker.SpecialPhase);
-            Assert.AreEqual(attacker.CombatSpec.ManaThreshold, attacker.CurrentMana);
-            Assert.AreEqual(0, simulation.Projectiles.Count);
-            AssertEvent(events, BattleEventType.SpecialWindupCancelled);
+            Assert.IsFalse(result.BattleEnded);
+            Assert.AreEqual(UnitSpecialPhase.Casting, attacker.SpecialPhase);
+            Assert.AreEqual(0, attacker.CurrentMana);
+            Assert.AreEqual(1, simulation.Projectiles.Count);
+            Assert.AreEqual(target.UnitId, simulation.Projectiles[0].TargetUnitId);
+            AssertEvent(events, BattleEventType.ProjectileLaunched);
+            AssertNoEvent(events, BattleEventType.SpecialWindupCancelled);
         }
 
         [Test]

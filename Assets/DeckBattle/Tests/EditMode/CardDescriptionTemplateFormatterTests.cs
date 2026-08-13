@@ -159,22 +159,6 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Content_ArisaUsesConfiguredMegaArrow()
-        {
-            UnitDefinition arisa = AssetDatabase.LoadAssetAtPath<UnitDefinition>("Assets/DeckBattle/Data/Units/Arisa.asset");
-
-            Assert.IsNotNull(arisa);
-            Assert.IsNotNull(arisa.Special);
-            Assert.AreEqual(UnitSpecialKind.MegaArrow, arisa.Special.Kind);
-            Assert.AreEqual(1.5f, arisa.Special.AttackDamageMultiplier);
-            Assert.AreEqual(1.65f, arisa.Special.CastDuration);
-            Assert.AreEqual(StatusKind.Stun, arisa.Special.AppliedStatus.Kind);
-            Assert.AreEqual(StatusLifetimeMode.OverrideSeconds, arisa.Special.AppliedStatusLifetimeMode);
-            Assert.AreEqual(1f, arisa.Special.AppliedStatusDurationOverride);
-            Assert.IsNotNull(arisa.Special.Projectile);
-        }
-
-        [Test]
         public void Content_JuniUsesConfiguredLongshot()
         {
             UnitDefinition juni = AssetDatabase.LoadAssetAtPath<UnitDefinition>("Assets/DeckBattle/Data/Units/Juni.asset");

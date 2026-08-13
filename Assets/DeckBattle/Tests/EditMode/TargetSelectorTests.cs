@@ -238,6 +238,28 @@ namespace DeckBattle.Tests
             Assert.IsNull(target);
         }
 
+        [Test]
+        public void TrySelectTargetInCurrentAttackRange_ChoosesOnlyAnEnemyReachableWithoutMovement()
+        {
+            UnitDefinition melee = CreateUnit("melee", 5, 1);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, melee, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, melee, BattleSide.Enemy, new HexCoord(2, 0)),
+                    new UnitSpawnData(3, melee, BattleSide.Enemy, new HexCoord(0, 1))
+                });
+
+            bool found = TargetSelector.TrySelectTargetInCurrentAttackRange(
+                simulation,
+                simulation.Units[0],
+                out UnitRuntimeState target);
+
+            Assert.IsTrue(found);
+            Assert.AreSame(simulation.Units[2], target);
+        }
+
         private static UnitDefinition CreateUnit(string unitId, int hp, int attackRange)
         {
             UnitDefinition definition = TestDefinitions.CreateUnit(unitId, 1);
