@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Vfx_HasteBurst
   m_EditorClassIdentifier: 
   Prefab: {fileID: 7651458050419533627, guid: f33f6b2e10a39774a9b17cdc7f84d881, type: 3}
-  LifetimeMode: 1
+  LifetimeMode: 0
   FallbackLifetime: 0.55
   PrewarmCount: 6
   MaxActiveCount: 12

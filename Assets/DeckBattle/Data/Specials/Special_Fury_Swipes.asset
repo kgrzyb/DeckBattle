@@ -16,7 +16,7 @@ MonoBehaviour:
   Kind: 2
   DescriptionTemplate: Perform {strikeCount} rapid strikes that deal {damagePerHit}
     damage each ({totalDamage} total before armor).
-  WindupDuration: 0
+  EffectDelay: 0
   CastDuration: 1.5
   AppliedStatus: {fileID: 0}
   StrikeCount: 10

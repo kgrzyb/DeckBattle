@@ -16,8 +16,8 @@ MonoBehaviour:
   Kind: 3
   DescriptionTemplate: AJ-4X jumps and slams dealing {damagePerHit} damage to all
     enemy units within a {effectRadius}-hex radius.
-  WindupDuration: 0.85
-  CastDuration: 0.47
+  EffectDelay: 0.85
+  CastDuration: 1.32
   AppliedStatus: {fileID: 0}
   StrikeCount: 1
   AttackDamageMultiplier: 1

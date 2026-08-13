@@ -127,9 +127,9 @@ namespace DeckBattle.Editor
 
                     if (binding.Effect.LifetimeMode == VfxLifetimeMode.Manual
                         && binding.Cue != BattleVfxCue.AttackWindup
-                        && binding.Cue != BattleVfxCue.SpecialWindup)
+                        && binding.Cue != BattleVfxCue.SpecialCast)
                     {
-                        LogError("Manual VFX are currently supported only for AttackWindup and SpecialWindup cues.", profile);
+                        LogError("Manual VFX are currently supported only for AttackWindup and SpecialCast cues.", profile);
                         errors++;
                     }
                 }

@@ -113,7 +113,7 @@ namespace DeckBattle
                 || definition.Kind == StatusKind.Sleep
                 || definition.Kind == StatusKind.Silence)
             {
-                SpecialCycleResolver.CancelWindup(target, eventQueue, simulation);
+                SpecialCycleResolver.CancelActiveSpecial(target, eventQueue, simulation);
             }
 
             if (definition.Kind == StatusKind.Invulnerability)

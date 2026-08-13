@@ -95,7 +95,7 @@ namespace DeckBattle
     public readonly struct UnitSpecialCombatSpec
     {
         public readonly UnitSpecialKind Kind;
-        public readonly float WindupDuration;
+        public readonly float EffectDelay;
         public readonly float CastDuration;
         public readonly StatusCombatSpec AppliedStatus;
         public readonly StatusLifetimeMode AppliedStatusLifetimeMode;
@@ -122,14 +122,16 @@ namespace DeckBattle
                         return AttackDamageMultiplier > 0f
                             && EffectRadius >= 0;
                     case UnitSpecialKind.MegaArrow:
-                        return CastDuration >= WindupDuration
+                        return CastDuration > 0f
+                            && EffectDelay <= CastDuration
                             && Projectile.IsValid
                             && AppliedStatus.Kind == StatusKind.Stun
                             && AttackDamageMultiplier > 0f
                             && (AppliedStatusLifetimeMode != StatusLifetimeMode.OverrideSeconds
                                 || AppliedStatusDuration > 0f);
                     case UnitSpecialKind.Longshot:
-                        return CastDuration >= WindupDuration
+                        return CastDuration > 0f
+                            && EffectDelay <= CastDuration
                             && Projectile.IsValid
                             && AttackDamageMultiplier > 0f
                             && ExecuteHpThresholdPercent > 0
@@ -142,7 +144,7 @@ namespace DeckBattle
 
         public UnitSpecialCombatSpec(
             UnitSpecialKind kind,
-            float windupDuration,
+            float effectDelay,
             float castDuration,
             StatusCombatSpec appliedStatus,
             StatusLifetimeMode appliedStatusLifetimeMode,
@@ -154,8 +156,8 @@ namespace DeckBattle
             int executeHpThresholdPercent)
         {
             Kind = kind;
-            WindupDuration = Math.Max(0f, windupDuration);
             CastDuration = Math.Max(0f, castDuration);
+            EffectDelay = Math.Min(Math.Max(0f, effectDelay), CastDuration);
             AppliedStatus = appliedStatus;
             AppliedStatusLifetimeMode = appliedStatusLifetimeMode;
             AppliedStatusDuration = appliedStatusDuration;
@@ -181,7 +183,7 @@ namespace DeckBattle
                 : -1f;
             return new UnitSpecialCombatSpec(
                 definition.Kind,
-                definition.WindupDuration,
+                definition.EffectDelay,
                 definition.CastDuration,
                 appliedStatus,
                 definition.AppliedStatusLifetimeMode,

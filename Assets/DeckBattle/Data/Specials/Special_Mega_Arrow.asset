@@ -16,7 +16,7 @@ MonoBehaviour:
   Kind: 4
   DescriptionTemplate: Fire a Mega Arrow dealing {totalDamage} damage and stunning
     the target for {statusDuration}.
-  WindupDuration: 0.4
+  EffectDelay: 0.4
   CastDuration: 1.05
   AppliedStatus: {fileID: 11400000, guid: 9e3f5b901466bf44aa1b85a99903dac3, type: 2}
   AppliedStatusLifetimeMode: 1

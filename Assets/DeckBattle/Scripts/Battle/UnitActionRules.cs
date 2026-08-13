@@ -17,7 +17,6 @@ namespace DeckBattle
             if (unit == null
                 || !unit.IsAlive
                 || unit.StatusSnapshot.BlocksMovement
-                || unit.SpecialPhase == UnitSpecialPhase.Windup
                 || unit.SpecialPhase == UnitSpecialPhase.Casting)
             {
                 return false;
@@ -28,7 +27,7 @@ namespace DeckBattle
                 return false;
             }
 
-            return !HasChargedSpecial(unit) || !CanStartSpecialWindup(simulation, unit);
+            return !HasChargedSpecial(unit) || !CanStartSpecialCast(simulation, unit);
         }
 
         public static bool CanStartAttackWindup(UnitRuntimeState unit)
@@ -36,7 +35,6 @@ namespace DeckBattle
             return unit != null
                 && unit.IsAlive
                 && !unit.StatusSnapshot.BlocksAttack
-                && unit.SpecialPhase != UnitSpecialPhase.Windup
                 && unit.SpecialPhase != UnitSpecialPhase.Casting
                 && !HasChargedSpecial(unit);
         }
@@ -46,12 +44,12 @@ namespace DeckBattle
             return unit != null && unit.IsAlive && !unit.StatusSnapshot.BlocksSpecial;
         }
 
-        public static bool CanStartSpecialWindup(UnitRuntimeState unit)
+        public static bool CanStartSpecialCast(UnitRuntimeState unit)
         {
-            return CanStartSpecialWindup(null, unit);
+            return CanStartSpecialCast(null, unit);
         }
 
-        public static bool CanStartSpecialWindup(BattleSimulation simulation, UnitRuntimeState unit)
+        public static bool CanStartSpecialCast(BattleSimulation simulation, UnitRuntimeState unit)
         {
             if (!HasChargedSpecial(unit)
                 || !CanActivateSpecial(unit)
@@ -143,6 +141,27 @@ namespace DeckBattle
             }
 
             return target != null;
+        }
+
+        public static bool TryGetReplacementSpecialTarget(
+            BattleSimulation simulation,
+            UnitRuntimeState unit,
+            UnitSpecialKind specialKind,
+            out UnitRuntimeState target)
+        {
+            if (specialKind == UnitSpecialKind.Longshot)
+            {
+                return TryGetLongshotTarget(simulation, unit, out target);
+            }
+
+            if (specialKind == UnitSpecialKind.FurySwipes
+                || specialKind == UnitSpecialKind.MegaArrow)
+            {
+                return TargetSelector.TrySelectTargetInCurrentAttackRange(simulation, unit, out target);
+            }
+
+            target = null;
+            return false;
         }
 
         public static bool CanBeSelectedAsTarget(UnitRuntimeState unit)

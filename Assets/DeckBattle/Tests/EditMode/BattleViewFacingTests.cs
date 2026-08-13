@@ -98,7 +98,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void ProcessCombatTick_SpecialWindupStartsSpecialAnimation()
+        public void ProcessCombatTick_SpecialCastFacesLockedTargetAfterItDies()
         {
             TestContext context = CreateContext();
             try
@@ -107,14 +107,58 @@ namespace DeckBattle.Tests
                     default,
                     new[]
                     {
-                        BattleEvent.SpecialWindupStarted(
+                        BattleEvent.SpecialCastStarted(
                             context.Player.UnitId,
-                            UnitSpecialKind.HasteBurst,
+                            context.Enemy.UnitId,
+                            UnitSpecialKind.MegaArrow,
                             1,
-                            0.5f)
+                            0.5f,
+                            context.Enemy.CurrentHex),
+                        BattleEvent.UnitDied(context.Enemy.UnitId),
+                        BattleEvent.UnitTargetChanged(context.Player.UnitId, 0, default)
                     });
 
+                Vector3 targetDirection = context.BoardPresenter.GetWorldPosition(context.Enemy.CurrentHex)
+                    - context.PlayerView.transform.position;
+                targetDirection.y = 0f;
+                InvokePrivateMethod(context.PlayerView, "UpdateFacing", 1f);
+
                 Assert.AreEqual("Special", GetPrivateField(context.PlayerView, "visualState").ToString());
+                Assert.That(Vector3.Dot(context.PlayerModel.transform.forward, targetDirection.normalized), Is.GreaterThan(0.999f));
+            }
+            finally
+            {
+                context.Destroy();
+            }
+        }
+
+        [Test]
+        public void ProcessCombatTick_SpecialCastFacesReplacementTarget()
+        {
+            TestContext context = CreateContext();
+            try
+            {
+                HexCoord replacementHex = new HexCoord(1, 2);
+                context.BattleView.ProcessCombatTick(
+                    default,
+                    new[]
+                    {
+                        BattleEvent.SpecialCastStarted(
+                            context.Player.UnitId,
+                            context.Enemy.UnitId,
+                            UnitSpecialKind.MegaArrow,
+                            1,
+                            0.5f,
+                            context.Enemy.CurrentHex),
+                        BattleEvent.UnitTargetChanged(context.Player.UnitId, 3, replacementHex)
+                    });
+
+                Vector3 targetDirection = context.BoardPresenter.GetWorldPosition(replacementHex)
+                    - context.PlayerView.transform.position;
+                targetDirection.y = 0f;
+                InvokePrivateMethod(context.PlayerView, "UpdateFacing", 1f);
+
+                Assert.That(Vector3.Dot(context.PlayerModel.transform.forward, targetDirection.normalized), Is.GreaterThan(0.999f));
             }
             finally
             {

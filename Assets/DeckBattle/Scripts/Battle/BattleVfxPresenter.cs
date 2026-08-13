@@ -162,9 +162,6 @@ namespace DeckBattle
                 case BattleEventType.UnitDied:
                     cue = BattleVfxCue.Death;
                     return true;
-                case BattleEventType.SpecialWindupStarted:
-                    cue = BattleVfxCue.SpecialWindup;
-                    return true;
                 case BattleEventType.SpecialCastStarted:
                     cue = BattleVfxCue.SpecialCast;
                     return true;
@@ -184,8 +181,7 @@ namespace DeckBattle
         {
             int sourceUnitId = GetSourceUnitId(battleEvent);
             int targetUnitId = GetTargetUnitId(battleEvent);
-            bool isSpecialCue = cue == BattleVfxCue.SpecialWindup
-                || cue == BattleVfxCue.SpecialCast
+            bool isSpecialCue = cue == BattleVfxCue.SpecialCast
                 || cue == BattleVfxCue.SpecialStrike
                 || cue == BattleVfxCue.SpecialAreaImpact;
             int profileUnitId = cue == BattleVfxCue.Damaged || cue == BattleVfxCue.CriticalImpact || cue == BattleVfxCue.Death
@@ -245,13 +241,12 @@ namespace DeckBattle
                 case BattleEventType.AttackFired:
                     ReleasePersistent(new SequenceVfxKey(battleEvent.UnitId, battleEvent.SequenceId, BattleVfxCue.AttackWindup));
                     break;
-                case BattleEventType.SpecialWindupStarted:
-                    ReleasePersistent(new SequenceVfxKey(battleEvent.UnitId, battleEvent.SequenceId, BattleVfxCue.SpecialWindup));
-                    break;
-                case BattleEventType.SpecialWindupCancelled:
                 case BattleEventType.SpecialCastStarted:
-                case BattleEventType.UnitSpecialActivated:
-                    ReleasePersistent(new SequenceVfxKey(battleEvent.UnitId, battleEvent.SequenceId, BattleVfxCue.SpecialWindup));
+                    ReleasePersistent(new SequenceVfxKey(battleEvent.UnitId, battleEvent.SequenceId, BattleVfxCue.SpecialCast));
+                    break;
+                case BattleEventType.SpecialCastCancelled:
+                case BattleEventType.SpecialCastCompleted:
+                    ReleasePersistent(new SequenceVfxKey(battleEvent.UnitId, battleEvent.SequenceId, BattleVfxCue.SpecialCast));
                     break;
                 case BattleEventType.UnitDied:
                     ReleasePersistentOwnedByUnit(battleEvent.UnitId);
@@ -262,7 +257,7 @@ namespace DeckBattle
         private static bool IsCancellationEvent(BattleEventType type)
         {
             return type == BattleEventType.AttackWindupCancelled
-                || type == BattleEventType.SpecialWindupCancelled;
+                || type == BattleEventType.SpecialCastCancelled;
         }
 
         private void ReleasePersistentOwnedByUnit(int unitId)
@@ -322,8 +317,8 @@ namespace DeckBattle
                 case BattleEventType.AttackWindupStarted:
                     key = new SequenceVfxKey(battleEvent.UnitId, battleEvent.SequenceId, BattleVfxCue.AttackWindup);
                     return true;
-                case BattleEventType.SpecialWindupStarted:
-                    key = new SequenceVfxKey(battleEvent.UnitId, battleEvent.SequenceId, BattleVfxCue.SpecialWindup);
+                case BattleEventType.SpecialCastStarted:
+                    key = new SequenceVfxKey(battleEvent.UnitId, battleEvent.SequenceId, BattleVfxCue.SpecialCast);
                     return true;
                 default:
                     key = default;

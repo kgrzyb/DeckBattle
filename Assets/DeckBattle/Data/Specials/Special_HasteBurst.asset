@@ -16,8 +16,8 @@ MonoBehaviour:
   Kind: 1
   DescriptionTemplate: Gain {status} for {statusDuration}, reducing attack cooldown
     by {statusMagnitudePercent}.
-  WindupDuration: 0.2
-  CastDuration: 0.1
+  EffectDelay: 0.3
+  CastDuration: 0.3
   AppliedStatus: {fileID: 11400000, guid: 4e0d00312a7651d48aaa399cf14ff515, type: 2}
   StrikeCount: 1
   AttackDamageMultiplier: 1

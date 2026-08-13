@@ -195,14 +195,6 @@ namespace DeckBattle
                         unitPresenter.HandleAttackFired(battleEvent);
                         vfxPresenter?.Handle(battleEvent);
                         break;
-                    case BattleEventType.SpecialWindupStarted:
-                        unitPresenter.HandleSpecialWindupStarted(battleEvent);
-                        vfxPresenter?.Handle(battleEvent);
-                        break;
-                    case BattleEventType.SpecialWindupCancelled:
-                        unitPresenter.HandleSpecialWindupCancelled(battleEvent);
-                        vfxPresenter?.Handle(battleEvent);
-                        break;
                     case BattleEventType.SpecialCastStarted:
                         unitPresenter.HandleSpecialCastStarted(battleEvent);
                         vfxPresenter?.Handle(battleEvent);
@@ -214,8 +206,12 @@ namespace DeckBattle
                     case BattleEventType.SpecialAreaImpact:
                         vfxPresenter?.Handle(battleEvent);
                         break;
-                    case BattleEventType.UnitSpecialActivated:
-                        unitPresenter.HandleSpecialActivated(battleEvent);
+                    case BattleEventType.SpecialCastCancelled:
+                        unitPresenter.HandleSpecialCastCancelled(battleEvent);
+                        vfxPresenter?.Handle(battleEvent);
+                        break;
+                    case BattleEventType.SpecialCastCompleted:
+                        unitPresenter.HandleSpecialCastCompleted(battleEvent);
                         vfxPresenter?.Handle(battleEvent);
                         break;
                     case BattleEventType.UnitDamaged:

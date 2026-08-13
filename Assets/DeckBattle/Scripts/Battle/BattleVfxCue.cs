@@ -9,7 +9,6 @@ namespace DeckBattle
         AttackImpact = 3,
         Damaged = 4,
         CriticalImpact = 5,
-        SpecialWindup = 6,
         SpecialCast = 7,
         SpecialStrike = 8,
         ProjectileLaunch = 9,

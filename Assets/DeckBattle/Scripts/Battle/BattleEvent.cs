@@ -8,7 +8,6 @@ namespace DeckBattle
         UnitDied = 3,
         BattleEnded = 4,
         UnitManaChanged = 5,
-        UnitSpecialActivated = 6,
         UnitCrit = 7,
         ProjectileLaunched = 8,
         ProjectileHit = 9,
@@ -27,12 +26,12 @@ namespace DeckBattle
         UnitHealed = 22,
         ManaDrained = 23,
         DamageRedirected = 24,
-        SpecialWindupStarted = 25,
-        SpecialWindupCancelled = 26,
         UnitTargetChanged = 27,
         SpecialCastStarted = 28,
         SpecialStrikeFired = 29,
-        SpecialAreaImpact = 30
+        SpecialAreaImpact = 30,
+        SpecialCastCancelled = 31,
+        SpecialCastCompleted = 32
     }
 
     public readonly struct BattleEvent
@@ -190,27 +189,6 @@ namespace DeckBattle
             return new BattleEvent(BattleEventType.UnitManaChanged, unitId, 0, default, default, 0, 0, currentMana, 0, 0f, UnitSpecialKind.None, BattleSide.Player, false);
         }
 
-        public static BattleEvent UnitSpecialActivated(int unitId, UnitSpecialKind specialKind, float duration, int sequenceId = 0)
-        {
-            return new BattleEvent(BattleEventType.UnitSpecialActivated, unitId, 0, default, default, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false, sequenceId);
-        }
-
-        public static BattleEvent SpecialWindupStarted(
-            int unitId,
-            UnitSpecialKind specialKind,
-            int sequenceId,
-            float duration,
-            int targetUnitId = 0,
-            HexCoord targetHex = default)
-        {
-            return new BattleEvent(BattleEventType.SpecialWindupStarted, unitId, targetUnitId, default, targetHex, 0, 0, 0, 0, duration, specialKind, BattleSide.Player, false, sequenceId);
-        }
-
-        public static BattleEvent SpecialWindupCancelled(int unitId, UnitSpecialKind specialKind, int sequenceId)
-        {
-            return new BattleEvent(BattleEventType.SpecialWindupCancelled, unitId, 0, default, default, 0, 0, 0, 0, 0f, specialKind, BattleSide.Player, false, sequenceId);
-        }
-
         public static BattleEvent SpecialCastStarted(
             int attackerId,
             int targetId,
@@ -225,6 +203,48 @@ namespace DeckBattle
                 targetId,
                 default,
                 targetHex,
+                0,
+                0,
+                0,
+                0,
+                duration,
+                specialKind,
+                BattleSide.Player,
+                false,
+                sequenceId);
+        }
+
+        public static BattleEvent SpecialCastCancelled(int unitId, UnitSpecialKind specialKind, int sequenceId)
+        {
+            return new BattleEvent(
+                BattleEventType.SpecialCastCancelled,
+                unitId,
+                0,
+                default,
+                default,
+                0,
+                0,
+                0,
+                0,
+                0f,
+                specialKind,
+                BattleSide.Player,
+                false,
+                sequenceId);
+        }
+
+        public static BattleEvent SpecialCastCompleted(
+            int unitId,
+            UnitSpecialKind specialKind,
+            int sequenceId,
+            float duration)
+        {
+            return new BattleEvent(
+                BattleEventType.SpecialCastCompleted,
+                unitId,
+                0,
+                default,
+                default,
                 0,
                 0,
                 0,

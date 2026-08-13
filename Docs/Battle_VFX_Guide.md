@@ -67,7 +67,7 @@ Utwórz asset przez `Create > Deck Battle > VFX Definition`, nazwij go np. `Vfx_
 | --- | --- | --- |
 | `Duration` | Krótki burst o znanej długości. | Pool zwróci efekt po `Fallback Lifetime`, nawet jeśli cząsteczki nadal są widoczne. |
 | `ParticleSystemAlive` | Jednorazowy efekt, którego czas zależy od cząstek. | Prefab musi mieć Particle System i żaden z nich nie może być zapętlony. `Fallback Lifetime` nadal zabezpiecza przed błędną konfiguracją. |
-| `Manual` | Windup ataku, windup speciala oraz aktywny VFX statusu. | W profilach bitewnych dozwolony wyłącznie dla `AttackWindup` i `SpecialWindup`. Nie używaj go dla zwykłego impactu. |
+| `Manual` | Windup ataku, aktywny cast speciala oraz aktywny VFX statusu. | W profilach bitewnych dozwolony wyłącznie dla `AttackWindup` i `SpecialCast`. Nie używaj go dla zwykłego impactu. |
 
 Pool ma globalny limit prewarmu `64` instancji na komponencie `BattleVfxPool` w scenie `Battle`. Nie podnoś go bez pomiaru na urządzeniu. Diagnostyka poola udostępnia `PoolMissCount`, `SkippedSpawnCount` i `PeakActiveCount` — wartości te warto sprawdzić po gęstej walce.
 
@@ -82,8 +82,7 @@ Utwórz `BattleVfxProfile` przez `Create > Deck Battle > Battle VFX Profile`, a 
 | `Damaged` | Jednostka otrzymuje niekrytyczne obrażenia. | Krótki burst przy `Target`, anchor `Body`. |
 | `CriticalImpact` | Jednostka otrzymuje obrażenia krytyczne. | Mocniejszy wariant `Damaged` przy `Target`. |
 | `Death` | Jednostka ginie. | Burst przy `Target`, `Body` lub `Feet`, zwykle bez `Follow Anchor`. |
-| `SpecialWindup` | Początek przygotowania speciala. | `Manual`, `Source`, anchor `Special` lub `Body`, `Follow Anchor` włączone. |
-| `SpecialCast` | Rozpoczęcie rzucenia speciala. | Jednorazowy burst przy źródle lub celu. |
+| `SpecialCast` | Rozpoczęcie castu speciala. | Jednorazowy burst przy źródle lub celu; uruchamia się od razu po zapełnieniu many. |
 | `SpecialStrike` | Każdy cios speciala. | Krótki impact przy celu albo efekt przy broni źródła. |
 
 `AttackImpact` jest zarezerwowany w enumie, ale obecnie nie jest emitowany przez `BattleVfxPresenter`. Nie konfiguruj go, jeśli oczekujesz widocznego efektu.
@@ -103,7 +102,7 @@ Utwórz `BattleVfxProfile` przez `Create > Deck Battle > Battle VFX Profile`, a 
 
 Dla zwykłych cue system szuka kolejno: profil jednostki (`UnitDefinition > Vfx Profile`), a potem `BattleVfxProfile_Default`.
 
-Dla `SpecialWindup`, `SpecialCast` i `SpecialStrike` kolejność jest następująca: profil speciala (`UnitSpecialDefinition > Vfx Profile`), profil jednostki, profil domyślny.
+Dla `SpecialCast` i `SpecialStrike` kolejność jest następująca: profil speciala (`UnitSpecialDefinition > Vfx Profile`), profil jednostki, profil domyślny.
 
 Dla `Damaged`, `CriticalImpact` i `Death` profil jest wybierany na podstawie jednostki będącej celem, a nie atakującego.
 
@@ -161,7 +160,7 @@ Te metody emitują typowany sygnał prezentacyjny (`UnitAnimationVfxSignal`). St
 - `Prewarm Count <= Max Active Count` oraz `Max Retained Count <= Max Active Count`.
 - `ParticleSystemAlive` nie ma zapętlonych cząstek.
 - Profil nie zawiera dwóch wpisów z tym samym cue.
-- `Manual` jest użyty tylko dla `AttackWindup`, `SpecialWindup` lub aktywnego efektu statusu.
+- `Manual` jest użyty tylko dla `AttackWindup`, `SpecialCast` lub aktywnego efektu statusu.
 - Efekt jest sprawdzony przy przyspieszonej walce, kilku trafieniach naraz i śmierci jednostki.
 - Walidator `Deck Battle > Validation > Validate Battle VFX` kończy się bez błędów.
 

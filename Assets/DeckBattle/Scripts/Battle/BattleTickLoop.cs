@@ -63,7 +63,7 @@ namespace DeckBattle
             ProjectileResolver.ResolveProjectiles(simulation, eventQueue);
 
             RefreshTargets(simulation, eventQueue);
-            SpecialCycleResolver.AdvanceActiveCycles(simulation, eventQueue, specialCycleWorkspace, TickDuration);
+            SpecialCycleResolver.AdvanceActiveCasts(simulation, eventQueue, specialCycleWorkspace);
             CombatResolutionResult combat = AttackCycleResolver.Resolve(simulation, eventQueue, attackCycleWorkspace, TickDuration);
 
             // Melee deaths and projectile/attack side effects can invalidate targets
@@ -77,7 +77,7 @@ namespace DeckBattle
                 targetSelections,
                 targetSelectionValid);
             GrantPassiveMana(simulation, eventQueue);
-            SpecialCycleResolver.Resolve(simulation, eventQueue, specialCycleWorkspace, TickDuration);
+            SpecialCycleResolver.StartReadyCasts(simulation, eventQueue, TickDuration);
             BattleSide winner;
             bool hasWinner;
             bool ended = TryEndBattle(simulation, out winner, out hasWinner);
@@ -118,8 +118,7 @@ namespace DeckBattle
                 }
 
                 if (UnitActionRules.SpecialLocksTarget(unit.CombatSpec.Special.Kind)
-                    && (unit.SpecialPhase == UnitSpecialPhase.Windup
-                        || unit.SpecialPhase == UnitSpecialPhase.Casting))
+                    && unit.SpecialPhase == UnitSpecialPhase.Casting)
                 {
                     continue;
                 }
@@ -229,7 +228,6 @@ namespace DeckBattle
                 if (unit != null
                     && unit.IsAlive
                     && (unit.AttackPhase == UnitAttackPhase.Windup
-                        || unit.SpecialPhase == UnitSpecialPhase.Windup
                         || unit.SpecialPhase == UnitSpecialPhase.Casting))
                 {
                     return true;

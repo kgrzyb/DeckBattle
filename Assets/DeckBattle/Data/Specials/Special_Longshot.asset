@@ -17,7 +17,7 @@ MonoBehaviour:
   DescriptionTemplate: Jump and fire at the enemy with the lowest HP, dealing {attackDamagePercent}
     Attack Damage. Execute the target if it is below {executeHpThresholdPercent} HP
     on impact.
-  WindupDuration: 0.85
+  EffectDelay: 0.85
   CastDuration: 1.65
   AppliedStatus: {fileID: 0}
   AppliedStatusLifetimeMode: 0

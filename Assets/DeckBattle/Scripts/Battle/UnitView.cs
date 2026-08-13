@@ -49,6 +49,7 @@ namespace DeckBattle
         private Vector3 moveFrom;
         private Vector3 moveTo;
         private Vector3 lastKnownTargetWorldPosition;
+        private Vector3 specialFacingTargetWorldPosition;
         private readonly Vector3[] queuedMoveTargets = new Vector3[MaxQueuedMoves];
         private readonly float[] queuedMoveDurations = new float[MaxQueuedMoves];
         private float moveElapsed;
@@ -62,6 +63,7 @@ namespace DeckBattle
         private bool isDying;
         private bool isTurning;
         private bool hasKnownTargetWorldPosition;
+        private bool hasSpecialFacingTarget;
         private bool hasResolvedVfxAnchors;
         private int activeAttackSequenceId;
         private int activeSpecialSequenceId;
@@ -227,42 +229,41 @@ namespace DeckBattle
             TriggerAnimation(UnitVisualState.Idle);
         }
 
-        public void BeginSpecialWindup(int sequenceId, UnitSpecialKind specialKind, float duration)
+        public void BeginSpecialCast(int sequenceId, UnitSpecialKind specialKind, Vector3 targetWorldPosition, bool hasTarget)
         {
             activeSpecialSequenceId = sequenceId;
-            if (specialKind != UnitSpecialKind.FurySwipes)
+            hasSpecialFacingTarget = hasTarget;
+            if (hasTarget)
             {
-                TriggerAnimation(UnitVisualState.Special, true);
+                specialFacingTargetWorldPosition = targetWorldPosition;
+                FaceWorldPosition(specialFacingTargetWorldPosition);
             }
+            else
+            {
+                FaceLastKnownTarget();
+            }
+
+            TriggerAnimation(UnitVisualState.Special, true);
         }
 
-        public void CompleteSpecialWindup(int sequenceId)
+        public void CompleteSpecialCast(int sequenceId)
         {
             if (sequenceId != activeSpecialSequenceId) return;
+            hasSpecialFacingTarget = false;
             TriggerAnimation(UnitVisualState.Idle);
         }
 
-        public void CancelSpecialWindup(int sequenceId)
+        public void CancelSpecialCast(int sequenceId)
         {
             if (sequenceId != activeSpecialSequenceId) return;
+            hasSpecialFacingTarget = false;
             TriggerAnimation(UnitVisualState.Idle);
-        }
-
-        public void BeginSpecialCast(int sequenceId, UnitSpecialKind specialKind)
-        {
-            if (sequenceId != activeSpecialSequenceId) return;
-            FaceLastKnownTarget();
-            if (specialKind != UnitSpecialKind.MegaArrow
-                && specialKind != UnitSpecialKind.Longshot)
-            {
-                TriggerAnimation(UnitVisualState.Special, true);
-            }
         }
 
         public void PlaySpecialStrike(int sequenceId)
         {
             if (sequenceId != activeSpecialSequenceId) return;
-            FaceLastKnownTarget();
+            FaceSpecialTarget();
         }
 
         public void PlaySpecialAttackAnimationEvent()
@@ -272,7 +273,7 @@ namespace DeckBattle
                 return;
             }
 
-            FaceLastKnownTarget();
+            FaceSpecialTarget();
             AnimationVfxSignal?.Invoke(this, UnitAnimationVfxSignal.SpecialContact);
         }
 
@@ -327,6 +328,11 @@ namespace DeckBattle
         {
             lastKnownTargetWorldPosition = worldPosition;
             hasKnownTargetWorldPosition = true;
+            if (visualState == UnitVisualState.Special && hasSpecialFacingTarget)
+            {
+                specialFacingTargetWorldPosition = worldPosition;
+            }
+
             if (!isMoving && queuedMoveCount == 0)
             {
                 FaceWorldPosition(worldPosition);
@@ -379,6 +385,7 @@ namespace DeckBattle
             activeSpecialSequenceId = 0;
             isTurning = false;
             hasKnownTargetWorldPosition = false;
+            hasSpecialFacingTarget = false;
             if (modelRoot != null)
             {
                 modelRoot.localScale = baseModelScale;
@@ -489,6 +496,11 @@ namespace DeckBattle
 
         private void UpdateFacing(float deltaTime)
         {
+            if (visualState == UnitVisualState.Special)
+            {
+                FaceSpecialTarget();
+            }
+
             if (!isTurning || modelRoot == null)
             {
                 return;
@@ -509,6 +521,17 @@ namespace DeckBattle
             {
                 FaceWorldPosition(lastKnownTargetWorldPosition);
             }
+        }
+
+        private void FaceSpecialTarget()
+        {
+            if (hasSpecialFacingTarget)
+            {
+                FaceWorldPosition(specialFacingTargetWorldPosition);
+                return;
+            }
+
+            FaceLastKnownTarget();
         }
 
         private static string FormatUnitName(BattleSide side, int runtimeId, UnitDefinition definition)

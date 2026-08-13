@@ -133,32 +133,19 @@ namespace DeckBattle
             view.PlayAttackFire(battleEvent.SequenceId);
         }
 
-        public void HandleSpecialWindupStarted(BattleEvent battleEvent)
+        public void HandleSpecialCastCompleted(BattleEvent battleEvent)
         {
             if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
             {
-                if (battleEvent.TargetUnitId > 0)
-                {
-                    view.SetTargetWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To));
-                }
-
-                view.BeginSpecialWindup(battleEvent.SequenceId, battleEvent.SpecialKind, battleEvent.Duration);
+                view.CompleteSpecialCast(battleEvent.SequenceId);
             }
         }
 
-        public void HandleSpecialWindupCancelled(BattleEvent battleEvent)
+        public void HandleSpecialCastCancelled(BattleEvent battleEvent)
         {
             if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
             {
-                view.CancelSpecialWindup(battleEvent.SequenceId);
-            }
-        }
-
-        public void HandleSpecialActivated(BattleEvent battleEvent)
-        {
-            if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
-            {
-                view.CompleteSpecialWindup(battleEvent.SequenceId);
+                view.CancelSpecialCast(battleEvent.SequenceId);
             }
         }
 
@@ -166,8 +153,20 @@ namespace DeckBattle
         {
             if (unitViews.TryGet(battleEvent.UnitId, out UnitView view))
             {
-                view.SetTargetWorldPosition(boardPresenter.GetWorldPosition(battleEvent.To));
-                view.BeginSpecialCast(battleEvent.SequenceId, battleEvent.SpecialKind);
+                bool hasTarget = battleEvent.TargetUnitId > 0;
+                Vector3 targetWorldPosition = hasTarget
+                    ? boardPresenter.GetWorldPosition(battleEvent.To)
+                    : default;
+                if (hasTarget)
+                {
+                    view.SetTargetWorldPosition(targetWorldPosition);
+                }
+
+                view.BeginSpecialCast(
+                    battleEvent.SequenceId,
+                    battleEvent.SpecialKind,
+                    targetWorldPosition,
+                    hasTarget);
             }
         }
 

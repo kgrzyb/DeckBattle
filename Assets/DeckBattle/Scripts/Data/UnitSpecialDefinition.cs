@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DeckBattle
 {
@@ -11,7 +12,9 @@ namespace DeckBattle
         public UnitSpecialKind Kind;
         [InspectorName("Description")]
         [TextArea] public string DescriptionTemplate;
-        [Min(0f)] public float WindupDuration = 0.25f;
+        [FormerlySerializedAs("WindupDuration")]
+        [Tooltip("Delay from cast start to the special payload. This does not delay mana spend or the cast animation.")]
+        [Min(0f)] public float EffectDelay;
         [Min(0f)] public float CastDuration;
         public StatusDefinition AppliedStatus;
         public StatusLifetimeMode AppliedStatusLifetimeMode = StatusLifetimeMode.UseDefinitionDuration;
@@ -25,8 +28,12 @@ namespace DeckBattle
 
         private void OnValidate()
         {
-            WindupDuration = Mathf.Max(0f, WindupDuration);
+            EffectDelay = Mathf.Max(0f, EffectDelay);
             CastDuration = Mathf.Max(0f, CastDuration);
+            if (CastDuration > 0f)
+            {
+                EffectDelay = Mathf.Min(EffectDelay, CastDuration);
+            }
             AppliedStatusDurationOverride = Mathf.Max(0f, AppliedStatusDurationOverride);
             StrikeCount = Mathf.Clamp(StrikeCount, 1, MaxStrikeCount);
             AttackDamageMultiplier = Mathf.Max(0f, AttackDamageMultiplier);

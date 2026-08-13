@@ -11,8 +11,6 @@ namespace DeckBattle.Tests
             UnitRuntimeState unit = simulation.Units[0];
             var events = new BattleEventQueue();
 
-            unit.SpecialPhase = UnitSpecialPhase.Windup;
-            CombatResolver.GrantManaPulse(simulation, unit, events);
             unit.SpecialPhase = UnitSpecialPhase.Casting;
             CombatResolver.GrantManaPulse(simulation, unit, events);
             unit.SpecialPhase = UnitSpecialPhase.RecoveryLock;
@@ -111,7 +109,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Tick_HasteBurstActivatesAfterSpecialWindupAndAppliesHasteForFollowingCycle()
+        public void Tick_HasteBurstActivatesAfterSpecialCastStartsAndAppliesHasteForFollowingCycle()
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
             attacker.ManaThreshold = 10;
@@ -138,7 +136,7 @@ namespace DeckBattle.Tests
             Assert.IsTrue(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, simulation.Units[0].UnitId, out int hasteIndex));
             Assert.That(simulation.Units[0].Statuses[hasteIndex].EndTime, Is.EqualTo(6d).Within(0.000001d));
             Assert.AreEqual(0.5f, simulation.Units[0].StatusSnapshot.Haste);
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.5d).Within(0.000001d));
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
             AssertSpecialActivation(events, UnitSpecialKind.HasteBurst);
         }
 
@@ -180,7 +178,7 @@ namespace DeckBattle.Tests
             TestDefinitions.ResolveNextAttack(simulation);
             ResolveReadySpecial(simulation, new BattleEventQueue());
 
-            AssertHasteEndTime(simulation.Units[0], 7.5d);
+            AssertHasteEndTime(simulation.Units[0], 7.25d);
         }
 
         [Test]
@@ -271,7 +269,7 @@ namespace DeckBattle.Tests
                 loop.Tick(events);
                 for (int eventIndex = 0; eventIndex < events.Count; eventIndex++)
                 {
-                    if (events[eventIndex].Type == BattleEventType.UnitSpecialActivated)
+                    if (events[eventIndex].Type == BattleEventType.SpecialCastCompleted)
                     {
                         return;
                     }
@@ -296,7 +294,7 @@ namespace DeckBattle.Tests
             for (int i = 0; i < events.Count; i++)
             {
                 BattleEvent battleEvent = events[i];
-                if (battleEvent.Type == BattleEventType.UnitSpecialActivated && battleEvent.SpecialKind == kind)
+                if (battleEvent.Type == BattleEventType.SpecialCastCompleted && battleEvent.SpecialKind == kind)
                 {
                     return;
                 }
@@ -309,7 +307,7 @@ namespace DeckBattle.Tests
         {
             for (int i = 0; i < events.Count; i++)
             {
-                Assert.AreNotEqual(BattleEventType.UnitSpecialActivated, events[i].Type);
+                Assert.AreNotEqual(BattleEventType.SpecialCastCompleted, events[i].Type);
             }
         }
     }
