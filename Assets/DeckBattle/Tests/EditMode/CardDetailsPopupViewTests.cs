@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
@@ -22,8 +23,8 @@ namespace DeckBattle.Tests
 
                 view.Show(card);
 
-                Assert.IsFalse(root.transform.Find("UnitDetails/Hp").gameObject.activeSelf);
-                Assert.IsFalse(root.transform.Find("UnitDetails/Attack").gameObject.activeSelf);
+                Assert.IsFalse(root.transform.Find("UnitDetails/Stat_HP").gameObject.activeSelf);
+                Assert.IsFalse(root.transform.Find("UnitDetails/Stat_Attack").gameObject.activeSelf);
                 Assert.IsTrue(root.transform.Find("SpellDetails/SpellTarget").gameObject.activeSelf);
                 Assert.IsTrue(root.transform.Find("SpellDetails/SpellEffect").gameObject.activeSelf);
             }
@@ -45,8 +46,8 @@ namespace DeckBattle.Tests
                 view.Show(unit);
 
                 Assert.IsFalse(view.IsShowingCardDetails);
-                Assert.IsTrue(root.transform.Find("UnitDetails/Hp").gameObject.activeSelf);
-                Assert.IsTrue(root.transform.Find("UnitDetails/Attack").gameObject.activeSelf);
+                Assert.IsTrue(root.transform.Find("UnitDetails/Stat_HP").gameObject.activeSelf);
+                Assert.IsTrue(root.transform.Find("UnitDetails/Stat_Attack").gameObject.activeSelf);
                 Assert.IsFalse(root.transform.Find("SpellDetails/SpellTarget").gameObject.activeSelf);
                 Assert.IsFalse(root.transform.Find("SpellDetails/SpellEffect").gameObject.activeSelf);
             }
@@ -65,6 +66,7 @@ namespace DeckBattle.Tests
             {
                 UnitDefinition unit = TestDefinitions.CreateUnit("scout", 3);
                 unit.Attack = 30;
+                unit.AttackRange = 3;
                 unit.CritChance = 15f;
                 unit.CritMultiplier = 2.5f;
                 unit.ManaThreshold = 100;
@@ -94,12 +96,13 @@ namespace DeckBattle.Tests
                 view.Show(unit);
 
                 Assert.AreEqual("3", root.transform.Find("ApCost").GetComponent<TMPro.TextMeshProUGUI>().text);
-                Assert.AreEqual("30", root.transform.Find("UnitDetails/Attack").GetComponent<TMPro.TextMeshProUGUI>().text);
-                Assert.AreEqual("15%", root.transform.Find("UnitDetails/CritChance").GetComponent<TMPro.TextMeshProUGUI>().text);
-                Assert.AreEqual("2.5×", root.transform.Find("UnitDetails/CritMultiplier").GetComponent<TMPro.TextMeshProUGUI>().text);
-                Assert.AreEqual("100", root.transform.Find("UnitDetails/ManaThreshold").GetComponent<TMPro.TextMeshProUGUI>().text);
-                Assert.AreEqual("+25", root.transform.Find("UnitDetails/ManaPerAttack").GetComponent<TMPro.TextMeshProUGUI>().text);
-                Assert.AreEqual("+10", root.transform.Find("UnitDetails/ManaPerDamageTaken").GetComponent<TMPro.TextMeshProUGUI>().text);
+                Assert.AreEqual("30", FindStatText(root, "Stat_Attack").text);
+                Assert.AreEqual("3 hex", FindStatText(root, "Stat_AttackRange").text);
+                Assert.AreEqual("15%", FindStatText(root, "Stat_CritChance").text);
+                Assert.AreEqual("2.5×", FindStatText(root, "Stat_CritMultiplier").text);
+                Assert.AreEqual("100", FindStatText(root, "Stat_ManaThreshold").text);
+                Assert.AreEqual("+25", FindStatText(root, "Stat_ManaPerAttack").text);
+                Assert.AreEqual("+10", FindStatText(root, "Stat_ManaPerDamageTaken").text);
                 Assert.AreEqual("SPECIAL", root.transform.Find("UnitDetails/SpecialDetails/SpecialHeader").GetComponent<TMPro.TextMeshProUGUI>().text);
                 Assert.AreEqual("60 damage.", root.transform.Find("UnitDetails/SpecialDetails/SpecialDescription").GetComponent<TMPro.TextMeshProUGUI>().text);
                 Assert.AreEqual("ON PLAY", root.transform.Find("UnitDetails/OnPlayDetails/OnPlayHeader").GetComponent<TMPro.TextMeshProUGUI>().text);
@@ -144,17 +147,22 @@ namespace DeckBattle.Tests
             GameObject spellDetails = CreateRoot("SpellDetails", root.transform);
             GameObject specialDetails = CreateRoot("SpecialDetails", unitDetails.transform);
             GameObject onPlayDetails = CreateRoot("OnPlayDetails", unitDetails.transform);
+            var statViews = new List<StatView>
+            {
+                CreateStat("Stat_HP", unitDetails.transform, UnitStatType.Hp),
+                CreateStat("Stat_Attack", unitDetails.transform, UnitStatType.Attack),
+                CreateStat("Stat_AttackRange", unitDetails.transform, UnitStatType.AttackRange),
+                CreateStat("Stat_CritChance", unitDetails.transform, UnitStatType.CritChance),
+                CreateStat("Stat_CritMultiplier", unitDetails.transform, UnitStatType.CritMultiplier),
+                CreateStat("Stat_ManaThreshold", unitDetails.transform, UnitStatType.ManaThreshold),
+                CreateStat("Stat_ManaPerAttack", unitDetails.transform, UnitStatType.ManaPerAttack),
+                CreateStat("Stat_ManaPerDamageTaken", unitDetails.transform, UnitStatType.ManaPerDamageTaken)
+            };
 
             SetField(view, "canvasGroup", root.GetComponent<CanvasGroup>());
             SetField(view, "backgroundImage", root.GetComponent<UnityEngine.UI.Image>());
             SetField(view, "apCostText", CreateText("ApCost", root.transform));
-            SetField(view, "hpText", CreateText("Hp", unitDetails.transform));
-            SetField(view, "attackText", CreateText("Attack", unitDetails.transform));
-            SetField(view, "critChanceText", CreateText("CritChance", unitDetails.transform));
-            SetField(view, "critMultiplierText", CreateText("CritMultiplier", unitDetails.transform));
-            SetField(view, "manaThresholdText", CreateText("ManaThreshold", unitDetails.transform));
-            SetField(view, "manaPerAttackText", CreateText("ManaPerAttack", unitDetails.transform));
-            SetField(view, "manaPerDamageTakenText", CreateText("ManaPerDamageTaken", unitDetails.transform));
+            SetField(view, "statViews", statViews);
             SetField(view, "specialHeaderText", CreateText("SpecialHeader", specialDetails.transform));
             SetField(view, "specialDescriptionText", CreateText("SpecialDescription", specialDetails.transform));
             SetField(view, "onPlayHeaderText", CreateText("OnPlayHeader", onPlayDetails.transform));
@@ -183,11 +191,32 @@ namespace DeckBattle.Tests
             return textObject.GetComponent<TMPro.TextMeshProUGUI>();
         }
 
-        private static void SetField(CardDetailsPopupView view, string fieldName, object value)
+        private static StatView CreateStat(string name, Transform parent, UnitStatType statType)
         {
-            typeof(CardDetailsPopupView)
+            GameObject statObject = new GameObject(name, typeof(RectTransform), typeof(StatView));
+            statObject.transform.SetParent(parent, false);
+            StatView statView = statObject.GetComponent<StatView>();
+
+            GameObject iconObject = new GameObject("icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+            iconObject.transform.SetParent(statObject.transform, false);
+            TMPro.TextMeshProUGUI valueText = CreateText("text", statObject.transform);
+
+            SetField(statView, "statType", statType);
+            SetField(statView, "icon", iconObject.GetComponent<UnityEngine.UI.Image>());
+            SetField(statView, "valueText", valueText);
+            return statView;
+        }
+
+        private static TMPro.TextMeshProUGUI FindStatText(GameObject root, string statName)
+        {
+            return root.transform.Find("UnitDetails/" + statName + "/text").GetComponent<TMPro.TextMeshProUGUI>();
+        }
+
+        private static void SetField(object target, string fieldName, object value)
+        {
+            target.GetType()
                 .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(view, value);
+                .SetValue(target, value);
         }
 
         private static void InvokeAwake(CardDetailsPopupView view)

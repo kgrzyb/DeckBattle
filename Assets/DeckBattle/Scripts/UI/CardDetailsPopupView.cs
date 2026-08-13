@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -13,21 +14,7 @@ namespace DeckBattle
         [SerializeField] private Image cardArtImage;
         [SerializeField] private TextMeshProUGUI nameText;
         [SerializeField] private TextMeshProUGUI apCostText;
-        [SerializeField] private TextMeshProUGUI hpText;
-        [SerializeField] private TextMeshProUGUI attackText;
-        [SerializeField] private TextMeshProUGUI powerText;
-        [SerializeField] private TextMeshProUGUI attackRangeText;
-        [FormerlySerializedAs("critText")]
-        [SerializeField] private TextMeshProUGUI critChanceText;
-        [SerializeField] private TextMeshProUGUI critMultiplierText;
-        [FormerlySerializedAs("cooldownText")]
-        [SerializeField] private TextMeshProUGUI attackSpeedText;
-        [FormerlySerializedAs("manaText")]
-        [SerializeField] private TextMeshProUGUI manaThresholdText;
-        [SerializeField] private TextMeshProUGUI manaPerAttackText;
-        [SerializeField] private TextMeshProUGUI manaPerDamageTakenText;
-        [SerializeField] private TextMeshProUGUI armorText;
-        [SerializeField] private TextMeshProUGUI armorPenetrationText;
+        [SerializeField] private List<StatView> statViews = new List<StatView>();
         [SerializeField] private TextMeshProUGUI specialHeaderText;
         [SerializeField] private TextMeshProUGUI specialDescriptionText;
         [SerializeField] private TextMeshProUGUI onPlayHeaderText;
@@ -39,18 +26,6 @@ namespace DeckBattle
         [SerializeField] private GameObject specialDetailsRoot;
         [SerializeField] private GameObject onPlayDetailsRoot;
         [SerializeField] private GameObject spellDetailsRoot;
-        [SerializeField] private Image hpIcon;
-        [SerializeField] private Image attackIcon;
-        [SerializeField] private Image powerIcon;
-        [SerializeField] private Image attackRangeIcon;
-        [SerializeField] private Image critChanceIcon;
-        [SerializeField] private Image critMultiplierIcon;
-        [SerializeField] private Image attackSpeedIcon;
-        [SerializeField] private Image manaThresholdIcon;
-        [SerializeField] private Image manaPerAttackIcon;
-        [SerializeField] private Image manaPerDamageTakenIcon;
-        [SerializeField] private Image armorIcon;
-        [SerializeField] private Image armorPenetrationIcon;
         [SerializeField] private TextMeshProUGUI spellTargetText;
         [SerializeField] private TextMeshProUGUI spellEffectText;
         [SerializeField] private TextMeshProUGUI spellAmountText;
@@ -167,18 +142,7 @@ namespace DeckBattle
         {
             SetUnitDetailsVisible(true);
             SetSpellDetailsVisible(false);
-            SetText(hpText, definition.MaxHp.ToString());
-            SetText(attackText, definition.Attack.ToString());
-            SetText(powerText, definition.Power.ToString());
-            SetText(attackRangeText, definition.AttackRange.ToString());
-            SetText(critChanceText, FormatPercent(definition.CritChance));
-            SetText(critMultiplierText, FormatNumber(definition.CritMultiplier) + "×");
-            SetText(attackSpeedText, FormatNumber(definition.AttacksPerSecond) + "/s");
-            SetText(manaThresholdText, definition.ManaThreshold.ToString());
-            SetText(manaPerAttackText, FormatSigned(definition.ManaPerAttack));
-            SetText(manaPerDamageTakenText, FormatSigned(definition.ManaPerDamageTaken));
-            SetText(armorText, FormatPercent(definition.Armor));
-            SetText(armorPenetrationText, FormatPercent(definition.ArmorPenetration));
+            ApplyStats(definition);
             ApplyAbilityDescriptions(definition);
         }
 
@@ -211,18 +175,7 @@ namespace DeckBattle
 
         private void ClearUnitDetails()
         {
-            SetText(hpText, string.Empty);
-            SetText(attackText, string.Empty);
-            SetText(powerText, string.Empty);
-            SetText(attackRangeText, string.Empty);
-            SetText(critChanceText, string.Empty);
-            SetText(critMultiplierText, string.Empty);
-            SetText(attackSpeedText, string.Empty);
-            SetText(manaThresholdText, string.Empty);
-            SetText(manaPerAttackText, string.Empty);
-            SetText(manaPerDamageTakenText, string.Empty);
-            SetText(armorText, string.Empty);
-            SetText(armorPenetrationText, string.Empty);
+            ClearStats();
             SetText(specialHeaderText, string.Empty);
             SetText(specialDescriptionText, string.Empty);
             SetText(onPlayHeaderText, string.Empty);
@@ -232,32 +185,45 @@ namespace DeckBattle
         private void SetUnitDetailsVisible(bool visible)
         {
             SetGameObjectActive(unitDetailsRoot, visible);
-            SetTextActive(hpText, visible);
-            SetTextActive(attackText, visible);
-            SetTextActive(powerText, visible);
-            SetTextActive(attackRangeText, visible);
-            SetTextActive(critChanceText, visible);
-            SetTextActive(critMultiplierText, visible);
-            SetTextActive(attackSpeedText, visible);
-            SetTextActive(manaThresholdText, visible);
-            SetTextActive(manaPerAttackText, visible);
-            SetTextActive(manaPerDamageTakenText, visible);
-            SetTextActive(armorText, visible);
-            SetTextActive(armorPenetrationText, visible);
+            SetStatsVisible(visible);
             SetAbilityDetailsVisible(specialDetailsRoot, specialHeaderText, specialDescriptionText, visible);
             SetAbilityDetailsVisible(onPlayDetailsRoot, onPlayHeaderText, onPlayDescriptionText, visible);
-            SetImageActive(hpIcon, visible);
-            SetImageActive(attackIcon, visible);
-            SetImageActive(powerIcon, visible);
-            SetImageActive(attackRangeIcon, visible);
-            SetImageActive(critChanceIcon, visible);
-            SetImageActive(critMultiplierIcon, visible);
-            SetImageActive(attackSpeedIcon, visible);
-            SetImageActive(manaThresholdIcon, visible);
-            SetImageActive(manaPerAttackIcon, visible);
-            SetImageActive(manaPerDamageTakenIcon, visible);
-            SetImageActive(armorIcon, visible);
-            SetImageActive(armorPenetrationIcon, visible);
+        }
+
+        private void ApplyStats(UnitDefinition definition)
+        {
+            for (int i = 0; i < statViews.Count; i++)
+            {
+                StatView statView = statViews[i];
+                if (statView != null)
+                {
+                    statView.Apply(definition);
+                }
+            }
+        }
+
+        private void ClearStats()
+        {
+            for (int i = 0; i < statViews.Count; i++)
+            {
+                StatView statView = statViews[i];
+                if (statView != null)
+                {
+                    statView.Clear();
+                }
+            }
+        }
+
+        private void SetStatsVisible(bool visible)
+        {
+            for (int i = 0; i < statViews.Count; i++)
+            {
+                StatView statView = statViews[i];
+                if (statView != null)
+                {
+                    statView.SetVisible(visible);
+                }
+            }
         }
 
         private void SetSpellDetailsVisible(bool visible)
@@ -285,30 +251,12 @@ namespace DeckBattle
             }
         }
 
-        private static void SetImageActive(Image image, bool active)
-        {
-            if (image != null && image.gameObject.activeSelf != active)
-            {
-                image.gameObject.SetActive(active);
-            }
-        }
-
         private static void SetText(TextMeshProUGUI text, string value)
         {
             if (text != null)
             {
                 text.text = value;
             }
-        }
-
-        private static string FormatPercent(float value)
-        {
-            return FormatNumber(value) + "%";
-        }
-
-        private static string FormatSigned(int value)
-        {
-            return value > 0 ? "+" + value : value.ToString();
         }
 
         private static string FormatTargetingKind(SpellTargetingKind targetingKind)
@@ -385,11 +333,6 @@ namespace DeckBattle
             SetGameObjectActive(root, visible);
             SetTextActive(headerText, visible);
             SetTextActive(descriptionText, visible);
-        }
-
-        private static string FormatNumber(float value)
-        {
-            return value.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private void ApplySafeArea()
