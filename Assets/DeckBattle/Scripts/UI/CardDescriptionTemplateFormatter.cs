@@ -130,6 +130,8 @@ namespace DeckBattle
                     return TokenResolution.Known(FormatPercent(special.AttackDamageMultiplier));
                 case "effectRadius":
                     return TokenResolution.Known(Math.Max(0, special.EffectRadius).ToString());
+                case "executeHpThresholdPercent":
+                    return TokenResolution.Known(FormatPercent(special.ExecuteHpThresholdPercent / 100f));
                 case "totalDamage":
                     return TokenResolution.Known(CalculateTotalDamage(unitDefinition, special).ToString());
                 case "strikeCount":
@@ -187,6 +189,7 @@ namespace DeckBattle
             return token == "damagePerHit"
                 || token == "attackDamagePercent"
                 || token == "effectRadius"
+                || token == "executeHpThresholdPercent"
                 || token == "totalDamage"
                 || token == "strikeCount"
                 || token == "castDuration"

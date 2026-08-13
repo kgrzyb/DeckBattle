@@ -399,6 +399,89 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Longshot_LocksLowestHpTargetAtWindupStartAndDoesNotRetargetBeforeFiring()
+        {
+            BattleSimulation simulation = CreateLongshotSimulation(twoEnemies: true);
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState firstEnemy = simulation.Units[1];
+            UnitRuntimeState lockedEnemy = simulation.Units[2];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            firstEnemy.CurrentHp = 400;
+            lockedEnemy.CurrentHp = 300;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+
+            Assert.AreEqual(lockedEnemy.UnitId, attacker.LockedSpecialTargetUnitId);
+            firstEnemy.CurrentHp = 1;
+            events.Clear();
+
+            loop.Tick(events);
+
+            Assert.AreEqual(1, simulation.Projectiles.Count);
+            Assert.AreEqual(lockedEnemy.UnitId, simulation.Projectiles[0].TargetUnitId);
+            AssertEvent(events, BattleEventType.ProjectileLaunched);
+        }
+
+        [Test]
+        public void Longshot_FiresAtDeadLockedTargetAndProjectileResolvesAsMiss()
+        {
+            BattleSimulation simulation = CreateLongshotSimulation(twoEnemies: false);
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            Assert.AreEqual(target.UnitId, attacker.LockedSpecialTargetUnitId);
+            simulation.DefeatUnit(target);
+            events.Clear();
+
+            BattleTickResult launchTick = loop.Tick(events);
+
+            Assert.IsFalse(launchTick.BattleEnded);
+            Assert.AreEqual(1, simulation.Projectiles.Count);
+            Assert.AreEqual(target.UnitId, simulation.Projectiles[0].TargetUnitId);
+            AssertEvent(events, BattleEventType.ProjectileLaunched);
+
+            events.Clear();
+            ProjectileResolutionResult result = ProjectileResolver.ResolveProjectiles(simulation, 5f, events);
+
+            Assert.AreEqual(0, result.Hits);
+            Assert.AreEqual(0, result.TotalDamage);
+            Assert.AreEqual(0, simulation.Projectiles.Count);
+            Assert.AreEqual(0, FindEvent(events, BattleEventType.ProjectileResolved).Amount);
+            AssertNoEvent(events, BattleEventType.ProjectileHit);
+            AssertNoEvent(events, BattleEventType.UnitDamaged);
+        }
+
+        [Test]
+        public void Longshot_ExecutesTargetBelowThresholdAtImpact()
+        {
+            BattleSimulation simulation = CreateLongshotSimulation(twoEnemies: false);
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
+            attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
+            target.CurrentHp = 199;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+
+            loop.Tick(new BattleEventQueue());
+            loop.Tick(new BattleEventQueue());
+            var events = new BattleEventQueue();
+
+            ProjectileResolutionResult result = ProjectileResolver.ResolveProjectiles(simulation, 5f, events);
+
+            Assert.AreEqual(1, result.Hits);
+            Assert.AreEqual(199, result.TotalDamage);
+            Assert.IsTrue(target.IsDefeated);
+            Assert.AreEqual(0, target.CurrentHp);
+            Assert.AreEqual(199, FindEvent(events, BattleEventType.UnitDamaged).Amount);
+            AssertEvent(events, BattleEventType.UnitDied);
+        }
+
+        [Test]
         public void Slam_AtImpactDamagesAllAndOnlyEnemiesWithinRadius()
         {
             BattleSimulation simulation = CreateSlamSimulation();
@@ -536,6 +619,34 @@ namespace DeckBattle.Tests
                 });
         }
 
+        private static BattleSimulation CreateLongshotSimulation(bool twoEnemies)
+        {
+            UnitDefinition attacker = TestDefinitions.CreateUnit("longshot-attacker", 1, UnitType.Range);
+            attacker.MaxHp = 1000;
+            attacker.Attack = 100;
+            attacker.AttackRange = 1;
+            attacker.AttacksPerSecond = 0.001f;
+            attacker.ManaThreshold = 10;
+            attacker.ManaPerTick = 0;
+            attacker.Special = CreateLongshotSpecial();
+            UnitDefinition firstEnemy = CreatePassiveUnit("longshot-first-enemy");
+            UnitDefinition secondEnemy = CreatePassiveUnit("longshot-second-enemy");
+            return BattleSimulation.Create(
+                new HexBoard(6, 6, 1f),
+                twoEnemies
+                    ? new[]
+                    {
+                        new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
+                        new UnitSpawnData(2, firstEnemy, BattleSide.Enemy, new HexCoord(3, 1)),
+                        new UnitSpawnData(3, secondEnemy, BattleSide.Enemy, new HexCoord(4, 1))
+                    }
+                    : new[]
+                    {
+                        new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
+                        new UnitSpawnData(2, firstEnemy, BattleSide.Enemy, new HexCoord(3, 1))
+                    });
+        }
+
         private static UnitDefinition CreateSlamUnit(string unitId)
         {
             UnitDefinition unit = TestDefinitions.CreateUnit(unitId, 1);
@@ -603,6 +714,18 @@ namespace DeckBattle.Tests
             return special;
         }
 
+        private static UnitSpecialDefinition CreateLongshotSpecial()
+        {
+            UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            special.Kind = UnitSpecialKind.Longshot;
+            special.WindupDuration = TickDuration;
+            special.CastDuration = 0.5f;
+            special.AttackDamageMultiplier = 1.5f;
+            special.ExecuteHpThresholdPercent = 20;
+            special.Projectile = CreateProjectile("longshot", 1f);
+            return special;
+        }
+
         private static StatusDefinition CreateHasteStatus(float duration, float magnitude)
         {
             StatusDefinition status = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
@@ -660,6 +783,20 @@ namespace DeckBattle.Tests
             }
 
             return count;
+        }
+
+        private static BattleEvent FindEvent(BattleEventQueue events, BattleEventType type)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == type)
+                {
+                    return events[i];
+                }
+            }
+
+            Assert.Fail("Expected event: " + type);
+            return default;
         }
 
         private static int SumDamageEvents(BattleEventQueue events)

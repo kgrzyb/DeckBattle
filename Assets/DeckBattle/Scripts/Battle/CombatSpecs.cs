@@ -104,6 +104,7 @@ namespace DeckBattle
         public readonly int StrikeCount;
         public readonly float AttackDamageMultiplier;
         public readonly int EffectRadius;
+        public readonly int ExecuteHpThresholdPercent;
 
         public bool IsValid
         {
@@ -127,6 +128,12 @@ namespace DeckBattle
                             && AttackDamageMultiplier > 0f
                             && (AppliedStatusLifetimeMode != StatusLifetimeMode.OverrideSeconds
                                 || AppliedStatusDuration > 0f);
+                    case UnitSpecialKind.Longshot:
+                        return CastDuration >= WindupDuration
+                            && Projectile.IsValid
+                            && AttackDamageMultiplier > 0f
+                            && ExecuteHpThresholdPercent > 0
+                            && ExecuteHpThresholdPercent < 100;
                     default:
                         return false;
                 }
@@ -143,7 +150,8 @@ namespace DeckBattle
             ProjectileCombatSpec projectile,
             int strikeCount,
             float attackDamageMultiplier,
-            int effectRadius)
+            int effectRadius,
+            int executeHpThresholdPercent)
         {
             Kind = kind;
             WindupDuration = Math.Max(0f, windupDuration);
@@ -155,6 +163,7 @@ namespace DeckBattle
             StrikeCount = Math.Max(1, Math.Min(UnitSpecialDefinition.MaxStrikeCount, strikeCount));
             AttackDamageMultiplier = Math.Max(0f, attackDamageMultiplier);
             EffectRadius = Math.Max(0, effectRadius);
+            ExecuteHpThresholdPercent = Math.Max(0, Math.Min(100, executeHpThresholdPercent));
         }
 
         public static UnitSpecialCombatSpec FromDefinition(UnitSpecialDefinition definition)
@@ -180,7 +189,8 @@ namespace DeckBattle
                 ProjectileCombatSpec.FromDefinition(definition.Projectile),
                 definition.StrikeCount,
                 definition.AttackDamageMultiplier,
-                definition.EffectRadius);
+                definition.EffectRadius,
+                definition.ExecuteHpThresholdPercent);
         }
     }
 

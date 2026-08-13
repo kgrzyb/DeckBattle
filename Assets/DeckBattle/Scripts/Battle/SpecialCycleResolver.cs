@@ -132,7 +132,15 @@ namespace DeckBattle
         {
             UnitSpecialCombatSpec special = unit.CombatSpec.Special;
             UnitRuntimeState target = null;
-            if (UnitActionRules.SpecialRequiresTarget(special.Kind)
+            if (special.Kind == UnitSpecialKind.Longshot)
+            {
+                if (!TryGetLockedTarget(simulation, unit, out target))
+                {
+                    CancelWindup(unit, eventQueue, simulation);
+                    return;
+                }
+            }
+            else if (UnitActionRules.SpecialRequiresTarget(special.Kind)
                 && !TryGetLockedLiveTarget(simulation, unit, out target))
             {
                 CancelWindup(unit, eventQueue, simulation);
@@ -178,6 +186,21 @@ namespace DeckBattle
                 return;
             }
 
+            if (special.Kind == UnitSpecialKind.Longshot)
+            {
+                float resolvedWindupDuration = Math.Max(tickDuration, special.WindupDuration);
+                unit.SpecialCastEndTime = windupEndTime - resolvedWindupDuration + special.CastDuration;
+                eventQueue?.Enqueue(BattleEvent.SpecialCastStarted(
+                    unit.UnitId,
+                    target.UnitId,
+                    special.Kind,
+                    unit.SpecialSequenceId,
+                    special.CastDuration,
+                    target.CurrentHex));
+                LaunchLongshot(simulation, unit, target, special, eventQueue);
+                return;
+            }
+
             if (special.Kind == UnitSpecialKind.Slam)
             {
                 unit.SpecialCastEndTime = simulation.ElapsedTime + Math.Max(tickDuration, special.CastDuration);
@@ -203,7 +226,8 @@ namespace DeckBattle
             int sequenceId = unit.SpecialSequenceId;
 
             if (special.Kind == UnitSpecialKind.Slam
-                || special.Kind == UnitSpecialKind.MegaArrow)
+                || special.Kind == UnitSpecialKind.MegaArrow
+                || special.Kind == UnitSpecialKind.Longshot)
             {
                 EnterRecoveryLock(unit, simulation.ElapsedTime, simulation.Tuning.SpecialRecoveryLockDuration);
                 eventQueue?.Enqueue(BattleEvent.UnitSpecialActivated(
@@ -269,6 +293,49 @@ namespace DeckBattle
                 special.Projectile.PresentationId));
         }
 
+        private static void LaunchLongshot(
+            BattleSimulation simulation,
+            UnitRuntimeState attacker,
+            UnitRuntimeState target,
+            UnitSpecialCombatSpec special,
+            BattleEventQueue eventQueue)
+        {
+            int damage = DamageCalculator.CalculateSpecialDamage(
+                attacker,
+                target,
+                special.AttackDamageMultiplier,
+                simulation.Tuning);
+            var impact = new ProjectileImpactCombatSpec(
+                DamageKind.Special,
+                default,
+                StatusLifetimeMode.UseDefinitionDuration,
+                0f,
+                special.ExecuteHpThresholdPercent);
+            ProjectileRuntimeState projectile = simulation.SpawnProjectile(
+                attacker,
+                target,
+                special.Projectile,
+                damage,
+                false,
+                impact);
+            int sequenceId = attacker.SpecialSequenceId;
+            eventQueue?.Enqueue(BattleEvent.SpecialStrikeFired(
+                attacker.UnitId,
+                target.UnitId,
+                special.Kind,
+                sequenceId,
+                1,
+                target.CurrentHex));
+            eventQueue?.Enqueue(BattleEvent.ProjectileLaunched(
+                projectile.ProjectileId,
+                attacker.UnitId,
+                target.UnitId,
+                projectile.FromHex,
+                projectile.LastKnownTargetHex,
+                projectile.TravelDuration,
+                special.Projectile.PresentationId));
+        }
+
         private static void EnterRecoveryLock(UnitRuntimeState unit, double startTime, float duration)
         {
             unit.SpecialPhase = UnitSpecialPhase.RecoveryLock;
@@ -308,7 +375,14 @@ namespace DeckBattle
 
                 UnitSpecialCombatSpec special = unit.CombatSpec.Special;
                 UnitRuntimeState target = null;
-                if (UnitActionRules.SpecialRequiresTarget(special.Kind)
+                if (special.Kind == UnitSpecialKind.Longshot)
+                {
+                    if (!UnitActionRules.TryGetLongshotTarget(simulation, unit, out target))
+                    {
+                        continue;
+                    }
+                }
+                else if (UnitActionRules.SpecialRequiresTarget(special.Kind)
                     && !UnitActionRules.TryGetTargetedSpecialTarget(simulation, unit, out target))
                 {
                     continue;
@@ -491,6 +565,19 @@ namespace DeckBattle
                 && simulation.TryGetUnitById(unit.LockedSpecialTargetUnitId, out target)
                 && target != null
                 && target.IsAlive
+                && target.Side != unit.Side;
+        }
+
+        private static bool TryGetLockedTarget(
+            BattleSimulation simulation,
+            UnitRuntimeState unit,
+            out UnitRuntimeState target)
+        {
+            target = null;
+            return unit != null
+                && unit.LockedSpecialTargetUnitId != UnitRuntimeState.NoTargetUnitId
+                && simulation.TryGetUnitById(unit.LockedSpecialTargetUnitId, out target)
+                && target != null
                 && target.Side != unit.Side;
         }
 

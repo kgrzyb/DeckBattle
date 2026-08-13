@@ -173,5 +173,21 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1f, arisa.Special.AppliedStatusDurationOverride);
             Assert.IsNotNull(arisa.Special.Projectile);
         }
+
+        [Test]
+        public void Content_JuniUsesConfiguredLongshot()
+        {
+            UnitDefinition juni = AssetDatabase.LoadAssetAtPath<UnitDefinition>("Assets/DeckBattle/Data/Units/Juni.asset");
+
+            Assert.IsNotNull(juni);
+            Assert.IsNotNull(juni.Special);
+            Assert.AreEqual(UnitSpecialKind.Longshot, juni.Special.Kind);
+            Assert.AreEqual(1.5f, juni.Special.AttackDamageMultiplier);
+            Assert.AreEqual(20, juni.Special.ExecuteHpThresholdPercent);
+            Assert.IsNotNull(juni.Special.Projectile);
+            Assert.IsTrue(CardDescriptionTemplateFormatter.IsSpecialTemplateValid(juni.Special));
+            StringAssert.Contains("150%", CardDescriptionTemplateFormatter.FormatSpecial(juni));
+            StringAssert.Contains("20%", CardDescriptionTemplateFormatter.FormatSpecial(juni));
+        }
     }
 }

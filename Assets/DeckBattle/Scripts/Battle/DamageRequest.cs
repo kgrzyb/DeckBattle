@@ -10,6 +10,7 @@ namespace DeckBattle
         public readonly bool BypassesGuard;
         public readonly bool CanTriggerMark;
         public readonly bool CanApplyLifesteal;
+        public readonly int ExecuteHpThresholdPercent;
 
         public DamageRequest(
             UnitRuntimeState source,
@@ -19,7 +20,8 @@ namespace DeckBattle
             bool isRedirected = false,
             bool bypassesGuard = false,
             bool canTriggerMark = true,
-            bool canApplyLifesteal = true)
+            bool canApplyLifesteal = true,
+            int executeHpThresholdPercent = 0)
         {
             Source = source;
             Amount = amount;
@@ -29,6 +31,9 @@ namespace DeckBattle
             BypassesGuard = bypassesGuard;
             CanTriggerMark = canTriggerMark;
             CanApplyLifesteal = canApplyLifesteal;
+            ExecuteHpThresholdPercent = executeHpThresholdPercent < 0
+                ? 0
+                : executeHpThresholdPercent > 100 ? 100 : executeHpThresholdPercent;
         }
     }
 }

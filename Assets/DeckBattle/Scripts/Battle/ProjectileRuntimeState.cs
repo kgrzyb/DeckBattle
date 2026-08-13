@@ -8,6 +8,7 @@ namespace DeckBattle
         public readonly StatusCombatSpec AppliedStatus;
         public readonly StatusLifetimeMode StatusLifetimeMode;
         public readonly float StatusDuration;
+        public readonly int ExecuteHpThresholdPercent;
 
         public bool HasAppliedStatus
         {
@@ -18,12 +19,14 @@ namespace DeckBattle
             DamageKind damageKind,
             StatusCombatSpec appliedStatus,
             StatusLifetimeMode statusLifetimeMode,
-            float statusDuration)
+            float statusDuration,
+            int executeHpThresholdPercent = 0)
         {
             DamageKind = damageKind;
             AppliedStatus = appliedStatus;
             StatusLifetimeMode = statusLifetimeMode;
             StatusDuration = statusDuration;
+            ExecuteHpThresholdPercent = Math.Max(0, Math.Min(100, executeHpThresholdPercent));
         }
     }
 

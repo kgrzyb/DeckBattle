@@ -117,7 +117,7 @@ namespace DeckBattle
                     continue;
                 }
 
-                if (UnitActionRules.SpecialRequiresTarget(unit.CombatSpec.Special.Kind)
+                if (UnitActionRules.SpecialLocksTarget(unit.CombatSpec.Special.Kind)
                     && (unit.SpecialPhase == UnitSpecialPhase.Windup
                         || unit.SpecialPhase == UnitSpecialPhase.Casting))
                 {
@@ -202,6 +202,13 @@ namespace DeckBattle
                 return false;
             }
 
+            if (HasPendingLongshot(simulation))
+            {
+                winner = BattleSide.Player;
+                hasWinner = false;
+                return false;
+            }
+
             if (playerAlive == enemyAlive)
             {
                 winner = BattleSide.Player;
@@ -212,6 +219,23 @@ namespace DeckBattle
             winner = playerAlive ? BattleSide.Player : BattleSide.Enemy;
             hasWinner = true;
             return true;
+        }
+
+        private static bool HasPendingLongshot(BattleSimulation simulation)
+        {
+            for (int i = 0; i < simulation.Units.Count; i++)
+            {
+                UnitRuntimeState unit = simulation.Units[i];
+                if (unit != null
+                    && unit.IsAlive
+                    && unit.SpecialPhase == UnitSpecialPhase.Windup
+                    && unit.CombatSpec.Special.Kind == UnitSpecialKind.Longshot)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 

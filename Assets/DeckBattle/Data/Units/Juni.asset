@@ -29,7 +29,7 @@ MonoBehaviour:
   AttackWindupPercent: 0.4
   ManaThreshold: 100
   ManaPerTick: 3
-  Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
+  Special: {fileID: 11400000, guid: f681d0a593194f8eb4d23a6138e78975, type: 2}
   Armor: 0
   ArmorPenetration: 25
   Projectile: {fileID: 11400000, guid: 7e5d1d993fe28c244a4975e94c796fbc, type: 2}

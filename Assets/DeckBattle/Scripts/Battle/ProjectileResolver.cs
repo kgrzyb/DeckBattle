@@ -84,7 +84,8 @@ namespace DeckBattle
                             attacker,
                             projectile.Damage,
                             projectile.Impact.DamageKind,
-                            projectile.IsCritical),
+                            projectile.IsCritical,
+                            executeHpThresholdPercent: projectile.Impact.ExecuteHpThresholdPercent),
                         eventQueue);
                     if (hit.DidHit
                         && target.IsAlive

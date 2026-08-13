@@ -252,7 +252,8 @@ namespace DeckBattle
         {
             if (sequenceId != activeSpecialSequenceId) return;
             FaceLastKnownTarget();
-            if (specialKind != UnitSpecialKind.MegaArrow)
+            if (specialKind != UnitSpecialKind.MegaArrow
+                && specialKind != UnitSpecialKind.Longshot)
             {
                 TriggerAnimation(UnitVisualState.Special, true);
             }
