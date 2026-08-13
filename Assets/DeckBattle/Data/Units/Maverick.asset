@@ -23,7 +23,7 @@ MonoBehaviour:
   Attack: 100
   Power: 3
   AttackRange: 4
-  CritChance: 0.15
+  CritChance: 15
   CritMultiplier: 2
   AttacksPerSecond: 0.9
   AttackWindupPercent: 0.25
