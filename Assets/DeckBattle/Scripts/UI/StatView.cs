@@ -68,7 +68,7 @@ namespace DeckBattle
                 case UnitStatType.AttackRange:
                     return definition.AttackRange + " hex";
                 case UnitStatType.CritChance:
-                    return FormatPercent(definition.CritChance);
+                    return FormatCritChance(definition.CritChance);
                 case UnitStatType.CritMultiplier:
                     return FormatNumber(definition.CritMultiplier) + "×";
                 case UnitStatType.AttackSpeed:
@@ -89,6 +89,12 @@ namespace DeckBattle
         private static string FormatPercent(float value)
         {
             return FormatNumber(value) + "%";
+        }
+
+        private static string FormatCritChance(float value)
+        {
+            float percentage = Mathf.Abs(value) <= 1f ? value * 100f : value;
+            return Mathf.RoundToInt(percentage).ToString(CultureInfo.InvariantCulture) + "%";
         }
 
         private static string FormatSigned(int value)

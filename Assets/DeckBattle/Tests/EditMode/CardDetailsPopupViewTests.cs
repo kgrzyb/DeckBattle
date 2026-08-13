@@ -67,7 +67,7 @@ namespace DeckBattle.Tests
                 UnitDefinition unit = TestDefinitions.CreateUnit("scout", 3);
                 unit.Attack = 30;
                 unit.AttackRange = 3;
-                unit.CritChance = 15f;
+                unit.CritChance = 0.15f;
                 unit.CritMultiplier = 2.5f;
                 unit.ManaThreshold = 100;
                 unit.ManaPerTick = 3;
