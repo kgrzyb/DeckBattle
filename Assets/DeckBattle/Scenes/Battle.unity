@@ -169,8 +169,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
@@ -835,11 +835,13 @@ MonoBehaviour:
   battleController: {fileID: 225271482}
   uiController: {fileID: 2012690322}
   battleCamera: {fileID: 1149497570}
+  battleCameraController: {fileID: 2147480001}
   boardRaycastMask:
     serializedVersion: 2
     m_Bits: 4294967295
   raycastDistance: 100
   unitDragThresholdPixels: 18
+  cameraDragThresholdPixels: 18
 --- !u!114 &225271485
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3594,6 +3596,7 @@ GameObject:
   - component: {fileID: 1149497571}
   - component: {fileID: 1149497570}
   - component: {fileID: 1149497572}
+  - component: {fileID: 2147480001}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -5150,6 +5153,57 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 390e378ebfb49734ca6ccfe8f4926c72, type: 3}
+--- !u!114 &2147480001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1149497569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 221b164a84dd0f2418e1925bdfe3a434, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  controlledCamera: {fileID: 1149497570}
+  focusTarget: {fileID: 2147480003}
+  minDistance: 24
+  maxDistance: 40
+  pinchSensitivity: 32
+  panOffsetLimitsX: {x: -4, y: 4}
+  panOffsetLimitsZ: {x: -3, y: 3}
+  panSensitivity: 5
+--- !u!1 &2147480002
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2147480003}
+  m_Layer: 0
+  m_Name: BattleCameraFocus
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2147480003
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2147480002}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -1.5225127}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -5163,3 +5217,4 @@ SceneRoots:
   - {fileID: 1722280023}
   - {fileID: 1691093957}
   - {fileID: 2012690326}
+  - {fileID: 2147480003}

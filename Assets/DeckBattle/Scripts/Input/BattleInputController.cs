@@ -12,15 +12,20 @@ namespace DeckBattle
             SelectedCard,
             PressingUnit,
             DraggingUnit,
-            SelectedUnit
+            SelectedUnit,
+            PendingBoardTap,
+            PanningCamera,
+            PinchingCamera
         }
 
         [SerializeField] private BattleController battleController;
         [SerializeField] private BattleUIController uiController;
         [SerializeField] private Camera battleCamera;
+        [SerializeField] private BattleCameraController battleCameraController;
         [SerializeField] private LayerMask boardRaycastMask = ~0;
         [SerializeField] private float raycastDistance = 80f;
         [SerializeField] private float unitDragThresholdPixels = 18f;
+        [SerializeField] private float cameraDragThresholdPixels = 18f;
 
         private readonly RaycastHit[] raycastHits = new RaycastHit[8];
 
@@ -41,10 +46,18 @@ namespace DeckBattle
         private HexTileView currentUnitDragTile;
         private bool currentUnitDragHasTarget;
         private bool currentUnitDragTileLegal;
+        private InputMode modeBeforeCameraGesture;
+        private int cameraPointerId = -1;
+        private Vector2 cameraGestureStartScreenPosition;
+        private Vector2 cameraGestureLastScreenPosition;
+        private int pinchFirstPointerId = -1;
+        private int pinchSecondPointerId = -1;
+        private float lastPinchDistance;
 
         private void OnValidate()
         {
             unitDragThresholdPixels = Mathf.Max(1f, unitDragThresholdPixels);
+            cameraDragThresholdPixels = Mathf.Max(1f, cameraDragThresholdPixels);
         }
 
         private void Awake()
@@ -52,6 +65,11 @@ namespace DeckBattle
             if (battleCamera == null)
             {
                 battleCamera = Camera.main;
+            }
+
+            if (battleCameraController == null && battleCamera != null)
+            {
+                battleCameraController = battleCamera.GetComponent<BattleCameraController>();
             }
         }
 
@@ -66,6 +84,7 @@ namespace DeckBattle
         private void OnDisable()
         {
             RestoreDraggedCardView();
+            CancelCameraGesture();
 
             if (battleController != null)
             {
@@ -75,6 +94,8 @@ namespace DeckBattle
 
         private void Update()
         {
+            UpdateMouseWheelZoom();
+
             if (mode == InputMode.DraggingCard)
             {
                 return;
@@ -92,6 +113,24 @@ namespace DeckBattle
                 return;
             }
 
+            if (mode == InputMode.PendingBoardTap)
+            {
+                UpdatePendingBoardTap();
+                return;
+            }
+
+            if (mode == InputMode.PanningCamera)
+            {
+                UpdateCameraPan();
+                return;
+            }
+
+            if (mode == InputMode.PinchingCamera)
+            {
+                UpdateCameraPinch();
+                return;
+            }
+
             Vector2 screenPosition;
             int pointerId;
             if (!TryGetPointerDown(out screenPosition, out pointerId))
@@ -104,7 +143,7 @@ namespace DeckBattle
                 return;
             }
 
-            HandleBoardTap(screenPosition, pointerId);
+            HandleBoardPointerDown(screenPosition, pointerId);
         }
 
         public bool BeginCardDrag(CardView cardView, CardRuntimeState card, Vector2 screenPosition)
@@ -237,6 +276,242 @@ namespace DeckBattle
         public void HideCardDetails()
         {
             ClearSelection();
+        }
+
+        private void HandleBoardPointerDown(Vector2 screenPosition, int pointerId)
+        {
+            if (TryBeginPlayerUnitPress(screenPosition, pointerId))
+            {
+                return;
+            }
+
+            BeginPendingBoardTap(screenPosition, pointerId);
+        }
+
+        private bool TryBeginPlayerUnitPress(Vector2 screenPosition, int pointerId)
+        {
+            if (mode == InputMode.SelectedCard)
+            {
+                return false;
+            }
+
+            UnitView unitView = RaycastForUnit(screenPosition);
+            RuntimeUnit unit = unitView != null ? unitView.Unit : null;
+            if (mode == InputMode.SelectedUnit && selectedUnit != null && unit != selectedUnit)
+            {
+                return false;
+            }
+
+            BattleState state = battleController != null ? battleController.State : null;
+            if (unit == null || unit.Side != BattleSide.Player || !PreparationTurnService.CanPlayerPrepare(state))
+            {
+                return false;
+            }
+
+            BeginUnitPress(unitView, screenPosition, pointerId);
+            return true;
+        }
+
+        private void BeginPendingBoardTap(Vector2 screenPosition, int pointerId)
+        {
+            modeBeforeCameraGesture = mode;
+            mode = InputMode.PendingBoardTap;
+            cameraPointerId = pointerId;
+            cameraGestureStartScreenPosition = screenPosition;
+            cameraGestureLastScreenPosition = screenPosition;
+        }
+
+        private void UpdatePendingBoardTap()
+        {
+            if (TryBeginCameraPinch())
+            {
+                return;
+            }
+
+            Vector2 screenPosition;
+            bool isPressed;
+            bool isReleased;
+            bool isCanceled;
+            GetPointerState(
+                cameraPointerId,
+                cameraGestureLastScreenPosition,
+                out screenPosition,
+                out isPressed,
+                out isReleased,
+                out isCanceled);
+            cameraGestureLastScreenPosition = screenPosition;
+
+            if (isCanceled || (!isPressed && !isReleased))
+            {
+                RestoreModeBeforeCameraGesture();
+                return;
+            }
+
+            if (isReleased)
+            {
+                int pointerId = cameraPointerId;
+                RestoreModeBeforeCameraGesture();
+                HandleBoardTap(screenPosition, pointerId);
+                return;
+            }
+
+            float threshold = cameraDragThresholdPixels * cameraDragThresholdPixels;
+            if ((screenPosition - cameraGestureStartScreenPosition).sqrMagnitude <= threshold || battleCameraController == null)
+            {
+                return;
+            }
+
+            mode = InputMode.PanningCamera;
+        }
+
+        private void UpdateCameraPan()
+        {
+            if (TryBeginCameraPinch())
+            {
+                return;
+            }
+
+            Vector2 screenPosition;
+            bool isPressed;
+            bool isReleased;
+            bool isCanceled;
+            GetPointerState(
+                cameraPointerId,
+                cameraGestureLastScreenPosition,
+                out screenPosition,
+                out isPressed,
+                out isReleased,
+                out isCanceled);
+
+            if (isCanceled || isReleased || !isPressed)
+            {
+                RestoreModeBeforeCameraGesture();
+                return;
+            }
+
+            Vector2 screenDelta = screenPosition - cameraGestureLastScreenPosition;
+            cameraGestureLastScreenPosition = screenPosition;
+            if (screenDelta.sqrMagnitude > 0f)
+            {
+                battleCameraController.Pan(screenDelta / GetScreenGestureScale());
+            }
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+            {
+                CancelCameraGesture();
+            }
+        }
+
+        private bool TryBeginCameraPinch()
+        {
+            if (battleCameraController == null || cameraPointerId < 0 || Input.touchCount < 2)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                Touch touch = Input.GetTouch(i);
+                if (touch.fingerId == cameraPointerId
+                    || touch.phase == TouchPhase.Ended
+                    || touch.phase == TouchPhase.Canceled
+                    || IsPointerOverUi(touch.fingerId))
+                {
+                    continue;
+                }
+
+                pinchFirstPointerId = cameraPointerId;
+                pinchSecondPointerId = touch.fingerId;
+                lastPinchDistance = Vector2.Distance(cameraGestureLastScreenPosition, touch.position);
+                mode = InputMode.PinchingCamera;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void UpdateCameraPinch()
+        {
+            Vector2 firstPosition;
+            Vector2 secondPosition;
+            bool firstActive;
+            bool secondActive;
+            bool wasCanceled;
+            GetTouchPosition(pinchFirstPointerId, out firstPosition, out firstActive, out wasCanceled);
+            bool secondCanceled;
+            GetTouchPosition(pinchSecondPointerId, out secondPosition, out secondActive, out secondCanceled);
+
+            if (wasCanceled || secondCanceled || !firstActive || !secondActive)
+            {
+                RestoreModeBeforeCameraGesture();
+                return;
+            }
+
+            float currentDistance = Vector2.Distance(firstPosition, secondPosition);
+            float normalizedPinchDelta = (currentDistance - lastPinchDistance) / GetScreenGestureScale();
+            lastPinchDistance = currentDistance;
+            if (!Mathf.Approximately(normalizedPinchDelta, 0f))
+            {
+                battleCameraController.Zoom(normalizedPinchDelta);
+            }
+        }
+
+        private void RestoreModeBeforeCameraGesture()
+        {
+            InputMode restoredMode = modeBeforeCameraGesture;
+            ResetCameraGestureState();
+            mode = restoredMode;
+        }
+
+        private void CancelCameraGesture()
+        {
+            if (mode == InputMode.PendingBoardTap
+                || mode == InputMode.PanningCamera
+                || mode == InputMode.PinchingCamera)
+            {
+                RestoreModeBeforeCameraGesture();
+                return;
+            }
+
+            ResetCameraGestureState();
+        }
+
+        private void ResetCameraGestureState()
+        {
+            modeBeforeCameraGesture = InputMode.Idle;
+            cameraPointerId = -1;
+            cameraGestureStartScreenPosition = Vector2.zero;
+            cameraGestureLastScreenPosition = Vector2.zero;
+            pinchFirstPointerId = -1;
+            pinchSecondPointerId = -1;
+            lastPinchDistance = 0f;
+        }
+
+        private void UpdateMouseWheelZoom()
+        {
+            if (battleCameraController == null
+                || Input.touchCount > 0
+                || mode == InputMode.DraggingCard
+                || mode == InputMode.PressingUnit
+                || mode == InputMode.DraggingUnit
+                || IsPointerOverUi(-1))
+            {
+                return;
+            }
+
+            float scrollDelta = Input.mouseScrollDelta.y;
+            if (!Mathf.Approximately(scrollDelta, 0f))
+            {
+                battleCameraController.Zoom(scrollDelta / GetScreenGestureScale());
+            }
+        }
+
+        private static float GetScreenGestureScale()
+        {
+            return Mathf.Max(1f, Mathf.Min(Screen.width, Screen.height));
         }
 
         private void HandleBoardTap(Vector2 screenPosition, int pointerId)
@@ -793,6 +1068,7 @@ namespace DeckBattle
             currentUnitDragTile = null;
             currentUnitDragHasTarget = false;
             currentUnitDragTileLegal = false;
+            ResetCameraGestureState();
 
             if (uiController != null)
             {
@@ -977,17 +1253,81 @@ namespace DeckBattle
 
         private static bool TryGetPointerDown(out Vector2 screenPosition, out int pointerId)
         {
-            if (Input.touchCount > 0)
+            for (int i = 0; i < Input.touchCount; i++)
             {
-                Touch touch = Input.GetTouch(0);
+                Touch touch = Input.GetTouch(i);
+                if (touch.phase != TouchPhase.Began)
+                {
+                    continue;
+                }
+
                 screenPosition = touch.position;
                 pointerId = touch.fingerId;
-                return touch.phase == TouchPhase.Began;
+                return true;
             }
 
             screenPosition = Input.mousePosition;
             pointerId = -1;
             return Input.GetMouseButtonDown(0);
+        }
+
+        private static void GetPointerState(
+            int pointerId,
+            Vector2 fallbackPosition,
+            out Vector2 screenPosition,
+            out bool isPressed,
+            out bool isReleased,
+            out bool isCanceled)
+        {
+            if (pointerId >= 0)
+            {
+                for (int i = 0; i < Input.touchCount; i++)
+                {
+                    Touch touch = Input.GetTouch(i);
+                    if (touch.fingerId != pointerId)
+                    {
+                        continue;
+                    }
+
+                    screenPosition = touch.position;
+                    isCanceled = touch.phase == TouchPhase.Canceled;
+                    isReleased = touch.phase == TouchPhase.Ended;
+                    isPressed = !isCanceled && !isReleased;
+                    return;
+                }
+
+                screenPosition = fallbackPosition;
+                isPressed = false;
+                isReleased = false;
+                isCanceled = true;
+                return;
+            }
+
+            screenPosition = Input.mousePosition;
+            isReleased = Input.GetMouseButtonUp(0);
+            isPressed = Input.GetMouseButton(0);
+            isCanceled = !isPressed && !isReleased;
+        }
+
+        private static void GetTouchPosition(int pointerId, out Vector2 screenPosition, out bool isActive, out bool isCanceled)
+        {
+            for (int i = 0; i < Input.touchCount; i++)
+            {
+                Touch touch = Input.GetTouch(i);
+                if (touch.fingerId != pointerId)
+                {
+                    continue;
+                }
+
+                screenPosition = touch.position;
+                isCanceled = touch.phase == TouchPhase.Canceled;
+                isActive = touch.phase != TouchPhase.Ended && !isCanceled;
+                return;
+            }
+
+            screenPosition = Vector2.zero;
+            isActive = false;
+            isCanceled = true;
         }
 
         private bool TryGetTrackedPointer(out Vector2 screenPosition, out bool isPressed, out bool isReleased)
