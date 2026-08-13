@@ -55,6 +55,7 @@ namespace DeckBattle
         private int shownPlayerHp = int.MinValue;
         private int shownEnemyHp = int.MinValue;
         private int shownAp = int.MinValue;
+        private int shownMaxAp = int.MinValue;
         private int shownRound = int.MinValue;
         private int shownUnits = int.MinValue;
         private int shownMaxUnits = int.MinValue;
@@ -228,9 +229,9 @@ namespace DeckBattle
             PlayerBattleState player = state.Player;
             PlayerBattleState enemy = state.Enemy;
 
-            SetTextIfChanged(playerHpText, ref shownPlayerHp, player.Hp, "HP ");
-            SetTextIfChanged(enemyHpText, ref shownEnemyHp, enemy.Hp, "AI ");
-            SetTextIfChanged(apText, ref shownAp, player.Ap, "AP ");
+            SetTextIfChanged(playerHpText, ref shownPlayerHp, player.Hp, string.Empty);
+            SetTextIfChanged(enemyHpText, ref shownEnemyHp, enemy.Hp, string.Empty);
+            SetApTextIfChanged(player.Ap, state.CurrentRoundAp);
             SetTextIfChanged(roundText, ref shownRound, state.RoundNumber, "Runda ");
 
             int units = player.Units.Count;
@@ -562,6 +563,18 @@ namespace DeckBattle
 
             cachedValue = value;
             text.text = prefix + value;
+        }
+
+        private void SetApTextIfChanged(int currentAp, int maxAp)
+        {
+            if (apText == null || (shownAp == currentAp && shownMaxAp == maxAp))
+            {
+                return;
+            }
+
+            shownAp = currentAp;
+            shownMaxAp = maxAp;
+            apText.SetText("{0}/{1}", currentAp, maxAp);
         }
 
         private void HandleReadyClicked()

@@ -8,6 +8,10 @@ namespace DeckBattle
         [SerializeField] private Camera controlledCamera;
         [SerializeField] private Transform focusTarget;
 
+        [Header("Default Pose")]
+        [Tooltip("Optional transform containing the camera pose restored by ResetToDefaultPose. When empty, the camera's scene transform is used.")]
+        [SerializeField] private Transform defaultPose;
+
         [Header("Zoom")]
         [SerializeField, Min(0.1f)] private float minDistance = 24f;
         [SerializeField, Min(0.1f)] private float maxDistance = 45f;
@@ -19,7 +23,8 @@ namespace DeckBattle
         [SerializeField, Min(0f)] private float panSensitivity = 12f;
 
         private BattleCameraPanState panState;
-        private Vector3 initialFocusPosition;
+        private Vector3 initialCameraPosition;
+        private float initialDistance;
         private Quaternion initialRotation;
         private bool isInitialized;
 
@@ -63,6 +68,20 @@ namespace DeckBattle
             ApplyPose();
         }
 
+        /// <summary>
+        /// Restores the position, rotation, pan offset, and zoom captured from the configured default pose.
+        /// </summary>
+        public void ResetToDefaultPose()
+        {
+            if (!EnsureInitialized())
+            {
+                return;
+            }
+
+            panState.Reset();
+            ApplyPose();
+        }
+
         private bool EnsureInitialized()
         {
             if (!isInitialized)
@@ -82,16 +101,17 @@ namespace DeckBattle
                 return;
             }
 
-            Vector3 cameraOffset = controlledCamera.transform.position - focusTarget.position;
-            float initialDistance = cameraOffset.magnitude;
-            initialFocusPosition = focusTarget.position;
-            initialRotation = controlledCamera.transform.rotation;
+            Transform poseSource = defaultPose != null ? defaultPose : controlledCamera.transform;
+            Vector3 cameraOffset = poseSource.position - focusTarget.position;
+            initialCameraPosition = poseSource.position;
+            initialRotation = poseSource.rotation;
             panState = new BattleCameraPanState(
-                initialDistance,
+                cameraOffset.magnitude,
                 panOffsetLimitsX,
                 panOffsetLimitsZ,
                 minDistance,
                 maxDistance);
+            initialDistance = panState.Distance;
             isInitialized = true;
             ApplyPose();
         }
@@ -99,8 +119,9 @@ namespace DeckBattle
         private void ApplyPose()
         {
             Vector2 panOffset = panState.PanOffset;
-            Vector3 focusPosition = initialFocusPosition + new Vector3(panOffset.x, 0f, panOffset.y);
-            Vector3 position = focusPosition - initialRotation * Vector3.forward * panState.Distance;
+            Vector3 panPosition = new Vector3(panOffset.x, 0f, panOffset.y);
+            Vector3 zoomPosition = initialRotation * Vector3.forward * (initialDistance - panState.Distance);
+            Vector3 position = initialCameraPosition + panPosition + zoomPosition;
             controlledCamera.transform.SetPositionAndRotation(position, initialRotation);
         }
 

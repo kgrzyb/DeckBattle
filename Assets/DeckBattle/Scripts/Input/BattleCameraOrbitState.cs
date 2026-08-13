@@ -8,6 +8,7 @@ namespace DeckBattle
 
         private readonly Vector2 panOffsetLimitsX;
         private readonly Vector2 panOffsetLimitsZ;
+        private readonly float initialDistance;
         private readonly float minDistance;
         private readonly float maxDistance;
 
@@ -37,7 +38,8 @@ namespace DeckBattle
             maxDistance = Mathf.Max(minDistance, NormalizeDistance(sourceMaxDistance, minDistance));
 
             panOffset = Vector2.zero;
-            distance = Mathf.Clamp(NormalizeDistance(initialDistance, minDistance), minDistance, maxDistance);
+            this.initialDistance = Mathf.Clamp(NormalizeDistance(initialDistance, minDistance), minDistance, maxDistance);
+            distance = this.initialDistance;
         }
 
         public bool Pan(Vector2 normalizedScreenDelta, float panSensitivity)
@@ -73,6 +75,18 @@ namespace DeckBattle
             }
 
             distance = nextDistance;
+            return true;
+        }
+
+        public bool Reset()
+        {
+            if (panOffset == Vector2.zero && Mathf.Approximately(distance, initialDistance))
+            {
+                return false;
+            }
+
+            panOffset = Vector2.zero;
+            distance = initialDistance;
             return true;
         }
 

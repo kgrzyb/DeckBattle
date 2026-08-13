@@ -43,6 +43,20 @@ namespace DeckBattle.Tests
         }
 
         [Test]
+        public void Reset_RestoresInitialPanAndZoom()
+        {
+            var state = CreateState();
+            state.Pan(new Vector2(-1f, -1f), 10f);
+            state.Zoom(0.5f, 20f);
+
+            bool didReset = state.Reset();
+
+            Assert.IsTrue(didReset);
+            Assert.AreEqual(Vector2.zero, state.PanOffset);
+            Assert.AreEqual(30f, state.Distance);
+        }
+
+        [Test]
         public void Constructor_NormalizesInvertedOrInvalidLimits()
         {
             var state = new BattleCameraPanState(

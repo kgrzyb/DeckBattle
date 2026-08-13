@@ -117,6 +117,11 @@ namespace DeckBattle
             return side == BattleSide.Player ? BattleSide.Enemy : BattleSide.Player;
         }
 
+        public int CurrentRoundAp
+        {
+            get { return CalculateRoundAp(); }
+        }
+
         private static BattleSide ResolveInitialPreparationSide(int seed)
         {
             var preparationOrderRandom = new DeterministicRandom(seed ^ PreparationOrderSeedSalt);
@@ -133,7 +138,7 @@ namespace DeckBattle
         private void PreparePlayerForNextRound(PlayerBattleState player)
         {
             player.IsReady = false;
-            player.Ap = CalculateRoundAp();
+            player.Ap = CurrentRoundAp;
             player.RoundDamageBonus = CalculateRoundDamageBonus();
             FormationService.RestoreFormationAndResetRoundHealth(player);
             DeckService.DrawCards(player, Config.DrawPerRound, Config.MaxHandSize);
