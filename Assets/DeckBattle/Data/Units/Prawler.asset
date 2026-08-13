@@ -28,8 +28,7 @@ MonoBehaviour:
   AttacksPerSecond: 1.25
   AttackWindupPercent: 0.5
   ManaThreshold: 100
-  ManaPerAttack: 25
-  ManaPerDamageTaken: 10
+  ManaPerTick: 3
   Special: {fileID: 11400000, guid: 1d0e7fec28d5eb6428a5cdcfd7002c05, type: 2}
   Armor: 0
   ArmorPenetration: 0

@@ -76,8 +76,8 @@ damage = effective attack * 0.7 * outgoing modifiers * armor mitigation
 - Wartość jest wyliczana na moment każdego uderzenia, więc aktywne wtedy buffy,
   debuffy, armor, exposed, shield oraz invulnerability działają normalnie.
 - `AttackBonusNextCombat` nie jest zużywany przez special.
-- Uderzenia nie dodają `ManaPerAttack` rzucającemu.
-- Cel nadal otrzymuje `ManaPerDamageTaken` zgodnie ze wspólnym
+- Uderzenia nie dodają rzucającemu impulsu `ManaPerTick` za basic attack.
+- Cel nadal otrzymuje impuls `ManaPerTick` zgodnie ze wspólnym
   `DamageResolver`.
 - Użyć `DamageKind.Special`. Oznacza to brak mechanik zastrzeżonych obecnie dla
   zwykłego `Direct`: Fury nie konsumuje `Mark`, nie uruchamia lifestealu i nie
@@ -356,8 +356,8 @@ Plan konfiguracji:
 - armor, outgoing modifier, exposed, shield i invulnerability współdziałają ze
   wspólną ścieżką obrażeń;
 - brak critów oraz brak zużycia RNG;
-- brak `ManaPerAttack`, Mark, lifesteal i Guard dla `DamageKind.Special`;
-- cel otrzymuje `ManaPerDamageTaken`;
+- brak impulsu many dla rzucającego za basic attack, Mark, lifesteal i Guard dla `DamageKind.Special`;
+- cel otrzymuje impuls `ManaPerTick`;
 - coarse tick wykonuje wszystkie zaległe uderzenia raz i w dobrym porządku;
 - dwa Fury w tym samym ticku zachowują ustaloną granicę równoczesności;
 - stun/sleep/silence i śmierć rzucającego w castingu zatrzymują dalsze hity bez
@@ -452,7 +452,7 @@ Uruchomić przez Unity MCP, w otwartym Editorze:
 - poza zasięgiem nadal dochodzi do celu;
 - windup nie zadaje obrażeń i nie wydaje many;
 - cast wydaje manę raz i wykonuje maksymalnie 10 uderzeń w 1,5 s;
-- każdy hit ma bazowy mnożnik 0,7, bez crita i bez `ManaPerAttack`;
+- każdy hit ma bazowy mnożnik 0,7, bez crita i bez impulsu many dla rzucającego;
 - pełna seria przeciw niebronionemu celowi daje 700% attack damage;
 - target jest zablokowany, a seria nie retargetuje po jego śmierci;
 - przerwania kończą logikę i animację bez zaległych hitów;

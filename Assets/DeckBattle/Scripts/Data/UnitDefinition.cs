@@ -35,8 +35,7 @@ namespace DeckBattle
         [Min(0.001f)] public float AttacksPerSecond = 1f;
         [Range(0f, 1f)] public float AttackWindupPercent = 0.25f;
         public int ManaThreshold = 100;
-        public int ManaPerAttack = 10;
-        public int ManaPerDamageTaken = 10;
+        public int ManaPerTick = 3;
         public UnitSpecialDefinition Special;
         public float Armor = 0f;
         public float ArmorPenetration = 0f;
@@ -59,8 +58,7 @@ namespace DeckBattle
             AttacksPerSecond = Mathf.Max(0.001f, AttacksPerSecond);
             AttackWindupPercent = Mathf.Clamp01(AttackWindupPercent);
             ManaThreshold = Mathf.Max(0, ManaThreshold);
-            ManaPerAttack = Mathf.Max(0, ManaPerAttack);
-            ManaPerDamageTaken = Mathf.Max(0, ManaPerDamageTaken);
+            ManaPerTick = Mathf.Max(0, ManaPerTick);
             Armor = Mathf.Clamp(Armor, 0f, 100f);
             ArmorPenetration = Mathf.Clamp(ArmorPenetration, 0f, 100f);
             if (RunAnimationSpeedMultiplier <= 0f

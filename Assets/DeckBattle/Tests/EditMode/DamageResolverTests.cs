@@ -20,6 +20,7 @@ namespace DeckBattle.Tests
 
             Assert.AreEqual(0, result.Damage);
             Assert.AreEqual(target.CombatSpec.MaxHp, target.CurrentHp);
+            Assert.AreEqual(0, target.CurrentMana);
             Assert.AreEqual(1, target.Statuses.Count);
             Assert.AreEqual(StatusKind.Sleep, target.Statuses[0].Kind);
             AssertEventTypeDoesNotExist(events, BattleEventType.UnitDamaged);
@@ -41,6 +42,27 @@ namespace DeckBattle.Tests
             BattleEvent criticalDamage = FindEvent(events, BattleEventType.UnitDamaged);
             Assert.AreEqual(3, criticalDamage.Amount);
             Assert.IsTrue(criticalDamage.IsCritical);
+        }
+
+        [Test]
+        public void SpecialDamage_GrantsManaPulseOnlyToTheDamagedTarget()
+        {
+            BattleSimulation simulation = CreateSimulation();
+            UnitRuntimeState attacker = simulation.Units[0];
+            UnitRuntimeState target = simulation.Units[1];
+            var events = new BattleEventQueue();
+
+            DamageResolver.Resolve(
+                simulation,
+                target,
+                new DamageRequest(attacker, 2, DamageKind.Special, false),
+                events);
+
+            Assert.AreEqual(0, attacker.CurrentMana);
+            Assert.AreEqual(3, target.CurrentMana);
+            Assert.AreEqual(BattleEventType.UnitDamaged, events[0].Type);
+            Assert.AreEqual(BattleEventType.UnitManaChanged, events[1].Type);
+            Assert.AreEqual(target.UnitId, events[1].UnitId);
         }
 
         [Test]

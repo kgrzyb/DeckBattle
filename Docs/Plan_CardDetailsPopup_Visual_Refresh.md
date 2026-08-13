@@ -11,8 +11,7 @@ Ustalenia:
 - AP pokazuje wyłącznie wartość, bez napisu `AP` i bez ikony;
 - szansa na trafienie krytyczne i mnożnik trafienia krytycznego są osobnymi
   statystykami;
-- próg many, mana za atak i mana za otrzymane obrażenia są osobnymi
-  statystykami;
+- próg many i mana co tick są osobnymi statystykami;
 - `SPECIAL` i `ON PLAY` pozostają osobnymi tekstami nagłówków;
 - pod nagłówkiem wyświetlany jest tylko ręcznie napisany opis;
 - wartości w opisach są obliczane dla konkretnej jednostki przed wstawieniem do
@@ -70,8 +69,7 @@ Docelowe elementy:
 | Crit Multiplier | `2×` | podwójny rozbłysk uderzenia |
 | Attack Speed | `1.25/s` | uskrzydlony miecz |
 | Mana Threshold | `100` | kryształ many |
-| Mana per Attack | `+25` | kryształ z mieczem |
-| Mana per Damage Taken | `+10` | kryształ z uderzoną tarczą |
+| Mana per Tick | `+3` | kryształ many |
 | Armor | `20%` | tarcza |
 | Armor Penetration | `15%` | przebita tarcza |
 

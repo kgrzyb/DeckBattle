@@ -7,18 +7,17 @@ namespace DeckBattle
 {
     public enum UnitStatType
     {
-        Hp,
-        Attack,
-        Power,
-        AttackRange,
-        CritChance,
-        CritMultiplier,
-        AttackSpeed,
-        ManaThreshold,
-        ManaPerAttack,
-        ManaPerDamageTaken,
-        Armor,
-        ArmorPenetration
+        Hp = 0,
+        Attack = 1,
+        Power = 2,
+        AttackRange = 3,
+        CritChance = 4,
+        CritMultiplier = 5,
+        AttackSpeed = 6,
+        ManaThreshold = 7,
+        ManaPerTick = 8,
+        Armor = 10,
+        ArmorPenetration = 11
     }
 
     public sealed class StatView : MonoBehaviour
@@ -76,10 +75,8 @@ namespace DeckBattle
                     return FormatNumber(definition.AttacksPerSecond) + "/s";
                 case UnitStatType.ManaThreshold:
                     return definition.ManaThreshold.ToString();
-                case UnitStatType.ManaPerAttack:
-                    return FormatSigned(definition.ManaPerAttack);
-                case UnitStatType.ManaPerDamageTaken:
-                    return FormatSigned(definition.ManaPerDamageTaken);
+                case UnitStatType.ManaPerTick:
+                    return "+ " + definition.ManaPerTick;
                 case UnitStatType.Armor:
                     return FormatPercent(definition.Armor);
                 case UnitStatType.ArmorPenetration:

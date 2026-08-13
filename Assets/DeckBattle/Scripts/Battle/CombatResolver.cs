@@ -18,12 +18,31 @@ namespace DeckBattle
                 return;
             }
 
+            int previousMana = unit.CurrentMana;
             int threshold = unit.CombatSpec.ManaThreshold;
-            unit.CurrentMana = threshold > 0
+            int currentMana = threshold > 0
                 ? Math.Min(threshold, Math.Max(0, unit.CurrentMana + amount))
                 : Math.Max(0, unit.CurrentMana + amount);
-            eventQueue?.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
+            if (currentMana == previousMana)
+            {
+                return;
+            }
 
+            unit.CurrentMana = currentMana;
+            eventQueue?.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, currentMana));
+        }
+
+        internal static void GrantManaPulse(
+            BattleSimulation simulation,
+            UnitRuntimeState unit,
+            BattleEventQueue eventQueue)
+        {
+            if (unit == null)
+            {
+                return;
+            }
+
+            AddMana(simulation, unit, unit.CombatSpec.ManaPerTick, eventQueue);
         }
     }
 

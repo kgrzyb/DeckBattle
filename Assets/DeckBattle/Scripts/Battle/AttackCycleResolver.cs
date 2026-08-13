@@ -190,7 +190,7 @@ namespace DeckBattle
                         projectile.LastKnownTargetHex,
                         projectile.TravelDuration,
                         projectileSpec.PresentationId));
-                    CombatResolver.AddMana(simulation, attacker, attacker.CombatSpec.ManaPerAttack, eventQueue);
+                    CombatResolver.GrantManaPulse(simulation, attacker, eventQueue);
                 }
                 else
                 {
@@ -201,7 +201,7 @@ namespace DeckBattle
                         damage,
                         isCritical,
                         eventQueue);
-                    CombatResolver.AddMana(simulation, attacker, attacker.CombatSpec.ManaPerAttack, eventQueue);
+                    CombatResolver.GrantManaPulse(simulation, attacker, eventQueue);
                     if (hit.DidHit)
                     {
                         totalDamage += hit.Damage;

@@ -76,6 +76,7 @@ namespace DeckBattle
                 eventQueue,
                 targetSelections,
                 targetSelectionValid);
+            GrantPassiveMana(simulation, eventQueue);
             SpecialCycleResolver.Resolve(simulation, eventQueue, specialCycleWorkspace, TickDuration);
             BattleSide winner;
             bool hasWinner;
@@ -154,6 +155,14 @@ namespace DeckBattle
             }
 
             unit.ClearTarget();
+        }
+
+        private static void GrantPassiveMana(BattleSimulation simulation, BattleEventQueue eventQueue)
+        {
+            for (int i = 0; i < simulation.Units.Count; i++)
+            {
+                CombatResolver.GrantManaPulse(simulation, simulation.Units[i], eventQueue);
+            }
         }
 
         private static bool TryEndBattle(BattleSimulation simulation, out BattleSide winner, out bool hasWinner)

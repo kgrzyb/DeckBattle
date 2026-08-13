@@ -5,6 +5,54 @@ namespace DeckBattle.Tests
     public sealed class BattleTickLoopTests
     {
         [Test]
+        public void Tick_GrantsOnePassiveManaPulseToEveryLivingIdleUnit()
+        {
+            UnitDefinition player = CreateUnit("player", 20, 0, 1, 100f);
+            UnitDefinition enemy = CreateUnit("enemy", 20, 0, 1, 100f);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(1, 0))
+                });
+            var loop = new BattleTickLoop(simulation, 0.25f);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+
+            Assert.AreEqual(3, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(3, simulation.Units[1].CurrentMana);
+            Assert.AreEqual(2, CountEvents(events, BattleEventType.UnitManaChanged));
+        }
+
+        [Test]
+        public void Tick_BasicAttackAndDamageEachGrantTheSameManaPulseAsThePassiveTick()
+        {
+            UnitDefinition player = CreateUnit("player", 20, 1, 1, 1f);
+            UnitDefinition enemy = CreateUnit("enemy", 20, 0, 1, 100f);
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, player, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, enemy, BattleSide.Enemy, new HexCoord(1, 0))
+                });
+            simulation.Units[0].NextAttackTime = 0d;
+            simulation.Units[1].NextAttackTime = 999d;
+            var loop = new BattleTickLoop(simulation, 0.25f);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+            loop.Tick(events);
+
+            Assert.AreEqual(9, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(9, simulation.Units[1].CurrentMana);
+            Assert.Less(
+                FindEventIndex(events, BattleEventType.UnitDamaged, simulation.Units[1].UnitId),
+                FindManaEventIndex(events, simulation.Units[0].UnitId, 6));
+        }
+        [Test]
         public void Tick_OneVsOneMelee_MovesThenEndsDeterministically()
         {
             BattleSimulation first = CreateMeleeDuel();
@@ -407,8 +455,7 @@ namespace DeckBattle.Tests
         {
             UnitDefinition definition = CreateUnit(unitId, 35, 5, 1, 0.5f);
             definition.ManaThreshold = 100;
-            definition.ManaPerAttack = 25;
-            definition.ManaPerDamageTaken = 10;
+            definition.ManaPerTick = 3;
             return definition;
         }
 
@@ -423,6 +470,52 @@ namespace DeckBattle.Tests
             }
 
             Assert.Fail("Expected event type was not emitted: " + type);
+        }
+
+        private static int CountEvents(BattleEventQueue events, BattleEventType type)
+        {
+            int count = 0;
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == type)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int FindManaEventIndex(BattleEventQueue events, int unitId, int currentMana)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                BattleEvent battleEvent = events[i];
+                if (battleEvent.Type == BattleEventType.UnitManaChanged
+                    && battleEvent.UnitId == unitId
+                    && battleEvent.CurrentMana == currentMana)
+                {
+                    return i;
+                }
+            }
+
+            Assert.Fail("Expected mana event was not emitted for unit " + unitId + " with mana " + currentMana + ".");
+            return -1;
+        }
+
+        private static int FindEventIndex(BattleEventQueue events, BattleEventType type, int unitId)
+        {
+            for (int i = 0; i < events.Count; i++)
+            {
+                BattleEvent battleEvent = events[i];
+                if (battleEvent.Type == type && battleEvent.UnitId == unitId)
+                {
+                    return i;
+                }
+            }
+
+            Assert.Fail("Expected event type was not emitted: " + type);
+            return -1;
         }
 
         private static BattleEvent FindEvent(BattleEventQueue events, BattleEventType type, int unitId)

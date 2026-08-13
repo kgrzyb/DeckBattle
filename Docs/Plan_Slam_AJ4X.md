@@ -24,7 +24,7 @@ Założenia planu:
 - untargetable nie chroni przed obrażeniami obszarowymi, natomiast armor,
   penetration, outgoing damage modifiers, exposed, shield i invulnerability
   działają przez istniejący pipeline obrażeń;
-- `Slam` nie może krytykować, nie generuje `ManaPerAttack` i używa
+- `Slam` nie może krytykować, nie generuje impulsu many dla rzucającego i używa
   `DamageKind.Special`, zgodnie z `FurySwipes`;
 - obrażenia są rozstrzygane przez symulację, nigdy przez `Animation Event`.
 
@@ -250,7 +250,7 @@ Rozszerzyć `SpecialCycleResolverTests` o przypadki:
 - kilka celów w promieniu dostaje obrażenia w tym samym ticku;
 - brak celów nadal kończy cast i zużywa manę;
 - armor, shield i invulnerability przechodzą przez istniejący resolver;
-- Slam nie krytykuje, nie daje `ManaPerAttack` i nie jest przejmowany przez
+- Slam nie krytykuje, nie daje impulsu many rzucającemu i nie jest przejmowany przez
   guard;
 - stun/sleep/silence/śmierć przed impaktem anulują damage bez wydania many;
 - przerwanie po impakcie nie cofa damage i nie pozwala na drugi impakt;

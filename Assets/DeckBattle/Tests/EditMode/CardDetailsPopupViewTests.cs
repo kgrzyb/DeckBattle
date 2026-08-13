@@ -70,8 +70,7 @@ namespace DeckBattle.Tests
                 unit.CritChance = 15f;
                 unit.CritMultiplier = 2.5f;
                 unit.ManaThreshold = 100;
-                unit.ManaPerAttack = 25;
-                unit.ManaPerDamageTaken = 10;
+                unit.ManaPerTick = 3;
                 UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
                 special.StrikeCount = 10;
                 special.AttackDamageMultiplier = 2f;
@@ -101,8 +100,7 @@ namespace DeckBattle.Tests
                 Assert.AreEqual("15%", FindStatText(root, "Stat_CritChance").text);
                 Assert.AreEqual("2.5×", FindStatText(root, "Stat_CritMultiplier").text);
                 Assert.AreEqual("100", FindStatText(root, "Stat_ManaThreshold").text);
-                Assert.AreEqual("+25", FindStatText(root, "Stat_ManaPerAttack").text);
-                Assert.AreEqual("+10", FindStatText(root, "Stat_ManaPerDamageTaken").text);
+                Assert.AreEqual("+ 3", FindStatText(root, "Stat_ManaPerTick").text);
                 Assert.AreEqual("SPECIAL", root.transform.Find("UnitDetails/SpecialDetails/SpecialHeader").GetComponent<TMPro.TextMeshProUGUI>().text);
                 Assert.AreEqual("60 damage.", root.transform.Find("UnitDetails/SpecialDetails/SpecialDescription").GetComponent<TMPro.TextMeshProUGUI>().text);
                 Assert.AreEqual("ON PLAY", root.transform.Find("UnitDetails/OnPlayDetails/OnPlayHeader").GetComponent<TMPro.TextMeshProUGUI>().text);
@@ -155,8 +153,7 @@ namespace DeckBattle.Tests
                 CreateStat("Stat_CritChance", unitDetails.transform, UnitStatType.CritChance),
                 CreateStat("Stat_CritMultiplier", unitDetails.transform, UnitStatType.CritMultiplier),
                 CreateStat("Stat_ManaThreshold", unitDetails.transform, UnitStatType.ManaThreshold),
-                CreateStat("Stat_ManaPerAttack", unitDetails.transform, UnitStatType.ManaPerAttack),
-                CreateStat("Stat_ManaPerDamageTaken", unitDetails.transform, UnitStatType.ManaPerDamageTaken)
+                CreateStat("Stat_ManaPerTick", unitDetails.transform, UnitStatType.ManaPerTick)
             };
 
             SetField(view, "canvasGroup", root.GetComponent<CanvasGroup>());

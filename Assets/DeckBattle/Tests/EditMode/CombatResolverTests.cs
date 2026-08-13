@@ -5,6 +5,45 @@ namespace DeckBattle.Tests
     public sealed class CombatResolverTests
     {
         [Test]
+        public void GrantManaPulse_AppliesConfiguredManaPerTickOnlyWhileIdle()
+        {
+            BattleSimulation simulation = CreateSimulation(1f);
+            UnitRuntimeState unit = simulation.Units[0];
+            var events = new BattleEventQueue();
+
+            unit.SpecialPhase = UnitSpecialPhase.Windup;
+            CombatResolver.GrantManaPulse(simulation, unit, events);
+            unit.SpecialPhase = UnitSpecialPhase.Casting;
+            CombatResolver.GrantManaPulse(simulation, unit, events);
+            unit.SpecialPhase = UnitSpecialPhase.RecoveryLock;
+            CombatResolver.GrantManaPulse(simulation, unit, events);
+
+            Assert.AreEqual(0, unit.CurrentMana);
+            Assert.AreEqual(0, events.Count);
+
+            unit.SpecialPhase = UnitSpecialPhase.Idle;
+            CombatResolver.GrantManaPulse(simulation, unit, events);
+
+            Assert.AreEqual(3, unit.CurrentMana);
+            Assert.AreEqual(1, events.Count);
+            Assert.AreEqual(BattleEventType.UnitManaChanged, events[0].Type);
+        }
+
+        [Test]
+        public void GrantManaPulse_DoesNotEmitEventWhenManaIsAlreadyAtThreshold()
+        {
+            BattleSimulation simulation = CreateSimulation(1f);
+            UnitRuntimeState unit = simulation.Units[0];
+            unit.CurrentMana = unit.CombatSpec.ManaThreshold;
+            var events = new BattleEventQueue();
+
+            CombatResolver.GrantManaPulse(simulation, unit, events);
+
+            Assert.AreEqual(unit.CombatSpec.ManaThreshold, unit.CurrentMana);
+            Assert.AreEqual(0, events.Count);
+        }
+
+        [Test]
         public void Tick_WaitsForInitialCooldownThenSchedulesFromWindupStart()
         {
             BattleSimulation simulation = CreateSimulation(0.5f);
@@ -93,13 +132,13 @@ namespace DeckBattle.Tests
             TestDefinitions.ResolveNextAttack(simulation, events);
 
             Assert.IsFalse(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, simulation.Units[0].UnitId, out _));
-            Assert.AreEqual(10, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(9, simulation.Units[0].CurrentMana);
             ResolveReadySpecial(simulation, events);
 
             Assert.IsTrue(simulation.Units[0].Statuses.TryFind(StatusKind.Haste, simulation.Units[0].UnitId, out int hasteIndex));
-            Assert.That(simulation.Units[0].Statuses[hasteIndex].EndTime, Is.EqualTo(5.75d).Within(0.000001d));
+            Assert.That(simulation.Units[0].Statuses[hasteIndex].EndTime, Is.EqualTo(6d).Within(0.000001d));
             Assert.AreEqual(0.5f, simulation.Units[0].StatusSnapshot.Haste);
-            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
+            Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.5d).Within(0.000001d));
             AssertSpecialActivation(events, UnitSpecialKind.HasteBurst);
         }
 
@@ -136,12 +175,12 @@ namespace DeckBattle.Tests
 
             TestDefinitions.ResolveNextAttack(simulation);
             ResolveReadySpecial(simulation, new BattleEventQueue());
-            AssertHasteEndTime(simulation.Units[0], 5.75d);
+            AssertHasteEndTime(simulation.Units[0], 6d);
 
             TestDefinitions.ResolveNextAttack(simulation);
             ResolveReadySpecial(simulation, new BattleEventQueue());
 
-            AssertHasteEndTime(simulation.Units[0], 6.75d);
+            AssertHasteEndTime(simulation.Units[0], 7.5d);
         }
 
         [Test]

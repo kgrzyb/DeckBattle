@@ -481,7 +481,7 @@ namespace DeckBattle.Tests
             attacker.Attack = 100;
             attacker.AttacksPerSecond = 0.1f;
             attacker.ManaThreshold = 10;
-            attacker.ManaPerAttack = 0;
+            attacker.ManaPerTick = 0;
             attacker.Special = CreateFurySwipesSpecial();
             UnitDefinition target = TestDefinitions.CreateUnit("fury-target", 1);
             target.MaxHp = targetHp;
@@ -503,7 +503,7 @@ namespace DeckBattle.Tests
             attacker.AttackRange = 2;
             attacker.AttacksPerSecond = 0.001f;
             attacker.ManaThreshold = 10;
-            attacker.ManaPerAttack = 0;
+            attacker.ManaPerTick = 0;
             attacker.Special = CreateMegaArrowSpecial();
             UnitDefinition target = TestDefinitions.CreateUnit("mega-arrow-target", 1);
             target.MaxHp = targetHp;
@@ -543,7 +543,7 @@ namespace DeckBattle.Tests
             unit.Attack = 100;
             unit.AttacksPerSecond = 0.001f;
             unit.ManaThreshold = 10;
-            unit.ManaPerAttack = 0;
+            unit.ManaPerTick = 0;
             unit.Special = CreateSlamSpecial();
             return unit;
         }
@@ -553,7 +553,7 @@ namespace DeckBattle.Tests
             UnitDefinition unit = TestDefinitions.CreateUnit(unitId, 1);
             unit.MaxHp = 1000;
             unit.AttacksPerSecond = 0.001f;
-            unit.ManaPerAttack = 0;
+            unit.ManaPerTick = 0;
             return unit;
         }
 
