@@ -173,5 +173,31 @@ namespace DeckBattle.Tests
             StringAssert.Contains("150%", CardDescriptionTemplateFormatter.FormatSpecial(juni));
             StringAssert.Contains("20%", CardDescriptionTemplateFormatter.FormatSpecial(juni));
         }
+
+        [Test]
+        public void Content_CptSabatiniUsesConfiguredArrgh()
+        {
+            UnitDefinition sabatini = AssetDatabase.LoadAssetAtPath<UnitDefinition>("Assets/DeckBattle/Data/Units/Cpt.Sabatini.asset");
+            StatusPresentationCatalog statusCatalog = AssetDatabase.LoadAssetAtPath<StatusPresentationCatalog>(
+                "Assets/DeckBattle/Data/Statuses/_StatusPresentationCatalog.asset");
+
+            Assert.IsNotNull(sabatini);
+            Assert.IsNotNull(sabatini.Special);
+            Assert.AreEqual(UnitSpecialKind.Arrgh, sabatini.Special.Kind);
+            Assert.AreEqual(0.3f, sabatini.Special.EffectDelay);
+            Assert.AreEqual(StatusLifetimeMode.OverrideSeconds, sabatini.Special.AppliedStatusLifetimeMode);
+            Assert.AreEqual(5f, sabatini.Special.AppliedStatusDurationOverride);
+            Assert.IsNotNull(sabatini.Special.AppliedStatus);
+            Assert.AreEqual(StatusKind.Empower, sabatini.Special.AppliedStatus.Kind);
+            Assert.IsTrue(CardDescriptionTemplateFormatter.IsSpecialTemplateValid(sabatini.Special));
+            Assert.AreEqual(
+                "Grant all allied units Empower for 5 s, increasing damage dealt by 50%.",
+                CardDescriptionTemplateFormatter.FormatSpecial(sabatini));
+
+            Assert.IsNotNull(statusCatalog);
+            Assert.IsTrue(statusCatalog.TryGet(StatusKind.Empower, out StatusPresentationEntry empowerPresentation));
+            Assert.AreEqual(StatusPresentationMode.Icon, empowerPresentation.Mode);
+            Assert.IsNotNull(empowerPresentation.Icon);
+        }
     }
 }

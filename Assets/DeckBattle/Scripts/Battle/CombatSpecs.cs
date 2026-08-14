@@ -136,6 +136,12 @@ namespace DeckBattle
                             && AttackDamageMultiplier > 0f
                             && ExecuteHpThresholdPercent > 0
                             && ExecuteHpThresholdPercent < 100;
+                    case UnitSpecialKind.Arrgh:
+                        return CastDuration > 0f
+                            && EffectDelay <= CastDuration
+                            && AppliedStatus.Kind == StatusKind.Empower
+                            && (AppliedStatusLifetimeMode != StatusLifetimeMode.OverrideSeconds
+                                || AppliedStatusDuration > 0f);
                     default:
                         return false;
                 }

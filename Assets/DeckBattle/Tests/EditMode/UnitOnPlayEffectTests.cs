@@ -20,7 +20,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(0.25f, sharedEffect.Steps[0].Effect.Percent, 0.0001f);
 
             string[] unitGuids = AssetDatabase.FindAssets("t:UnitDefinition", new[] { "Assets/DeckBattle/Data/Units" });
-            Assert.AreEqual(9, unitGuids.Length);
+            Assert.AreEqual(10, unitGuids.Length);
             for (int i = 0; i < unitGuids.Length; i++)
             {
                 UnitDefinition unit = AssetDatabase.LoadAssetAtPath<UnitDefinition>(AssetDatabase.GUIDToAssetPath(unitGuids[i]));

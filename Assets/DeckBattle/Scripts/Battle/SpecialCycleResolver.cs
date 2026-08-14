@@ -184,6 +184,9 @@ namespace DeckBattle
                         AttackCycleResolver.RefreshCooldownForSpecialCast(simulation, unit);
                     }
                     break;
+                case UnitSpecialKind.Arrgh:
+                    ApplyArrghToAllies(simulation, unit, special, eventQueue);
+                    break;
                 case UnitSpecialKind.Slam:
                     workspace.AddSlamImpact(unit, unit.SpecialSequenceId, unit.CurrentHex);
                     break;
@@ -510,6 +513,39 @@ namespace DeckBattle
                 eventQueue);
             return result == StatusApplicationResult.Applied
                 || result == StatusApplicationResult.Refreshed;
+        }
+
+        private static void ApplyArrghToAllies(
+            BattleSimulation simulation,
+            UnitRuntimeState caster,
+            UnitSpecialCombatSpec special,
+            BattleEventQueue eventQueue)
+        {
+            if (!special.IsValid
+                || special.Kind != UnitSpecialKind.Arrgh
+                || special.AppliedStatus.Kind != StatusKind.Empower)
+            {
+                return;
+            }
+
+            for (int i = 0; i < simulation.Units.Count; i++)
+            {
+                UnitRuntimeState candidate = simulation.Units[i];
+                if (candidate == null || !candidate.IsAlive || candidate.Side != caster.Side)
+                {
+                    continue;
+                }
+
+                StatusResolver.TryApply(
+                    simulation,
+                    candidate,
+                    new StatusApplicationRequest(
+                        special.AppliedStatus,
+                        caster.UnitId,
+                        special.AppliedStatusDuration,
+                        lifetimeMode: special.AppliedStatusLifetimeMode),
+                    eventQueue);
+            }
         }
 
         private static void EnterRecoveryLock(UnitRuntimeState unit, double startTime, float duration)

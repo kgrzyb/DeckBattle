@@ -678,6 +678,68 @@ namespace DeckBattle.Tests
             Assert.AreEqual(900, simulation.Units[1].CurrentHp);
         }
 
+        [Test]
+        public void Arrgh_AppliesEmpowerToAllLivingAlliesAtConfiguredDelay()
+        {
+            const float tickDuration = 0.15f;
+            BattleSimulation simulation = CreateArrghSimulation();
+            UnitRuntimeState caster = simulation.Units[0];
+            UnitRuntimeState ally = simulation.Units[1];
+            UnitRuntimeState defeatedAlly = simulation.Units[2];
+            UnitRuntimeState enemy = simulation.Units[3];
+            caster.CurrentMana = caster.CombatSpec.ManaThreshold;
+            var loop = new BattleTickLoop(simulation, tickDuration);
+            var events = new BattleEventQueue();
+
+            loop.Tick(events);
+
+            Assert.AreEqual(UnitSpecialPhase.Casting, caster.SpecialPhase);
+            Assert.AreEqual(0, caster.CurrentMana);
+            Assert.IsFalse(caster.Statuses.TryFind(StatusKind.Empower, caster.UnitId, out _));
+            Assert.AreEqual(0, CountEvents(events, BattleEventType.StatusApplied));
+
+            loop.Tick(events);
+
+            Assert.IsFalse(caster.Statuses.TryFind(StatusKind.Empower, caster.UnitId, out _));
+            Assert.AreEqual(0, CountEvents(events, BattleEventType.StatusApplied));
+
+            loop.Tick(events);
+
+            Assert.IsTrue(caster.Statuses.TryFind(StatusKind.Empower, caster.UnitId, out int casterEmpowerIndex));
+            Assert.IsTrue(ally.Statuses.TryFind(StatusKind.Empower, caster.UnitId, out int allyEmpowerIndex));
+            Assert.IsFalse(defeatedAlly.Statuses.TryFind(StatusKind.Empower, caster.UnitId, out _));
+            Assert.IsFalse(enemy.Statuses.TryFind(StatusKind.Empower, caster.UnitId, out _));
+            StatusInstance casterEmpower = caster.Statuses[casterEmpowerIndex];
+            StatusInstance allyEmpower = ally.Statuses[allyEmpowerIndex];
+            Assert.That(casterEmpower.EndTime, Is.EqualTo(simulation.ElapsedTime + 5d).Within(0.000001d));
+            Assert.That(allyEmpower.EndTime, Is.EqualTo(simulation.ElapsedTime + 5d).Within(0.000001d));
+            Assert.AreEqual(2, CountEvents(events, BattleEventType.StatusApplied));
+        }
+
+        [Test]
+        public void Arrgh_CancelledBeforeEffectDoesNotApplyEmpower()
+        {
+            BattleSimulation simulation = CreateArrghSimulation();
+            UnitRuntimeState caster = simulation.Units[0];
+            caster.CurrentMana = caster.CombatSpec.ManaThreshold;
+            var loop = new BattleTickLoop(simulation, TickDuration);
+
+            loop.Tick(new BattleEventQueue());
+            StatusApplicationResult result = StatusResolver.TryApply(
+                simulation,
+                caster,
+                new StatusApplicationRequest(CreateStunStatus(), 99));
+
+            loop.Tick(new BattleEventQueue());
+
+            Assert.AreEqual(StatusApplicationResult.Applied, result);
+            Assert.AreEqual(UnitSpecialPhase.RecoveryLock, caster.SpecialPhase);
+            for (int i = 0; i < simulation.Units.Count; i++)
+            {
+                Assert.IsFalse(simulation.Units[i].Statuses.TryFind(StatusKind.Empower, caster.UnitId, out _));
+            }
+        }
+
         private static BattleSimulation CreateSimulation(
             float effectDelay,
             float castDuration = 0f,
@@ -799,6 +861,30 @@ namespace DeckBattle.Tests
                 });
         }
 
+        private static BattleSimulation CreateArrghSimulation()
+        {
+            UnitDefinition caster = TestDefinitions.CreateUnit("arrgh-caster", 1);
+            caster.MaxHp = 1000;
+            caster.AttacksPerSecond = 0.001f;
+            caster.ManaThreshold = 10;
+            caster.ManaPerSecond = 0;
+            caster.Special = CreateArrghSpecial();
+            UnitDefinition ally = CreatePassiveUnit("arrgh-ally");
+            UnitDefinition defeatedAlly = CreatePassiveUnit("arrgh-defeated-ally");
+            UnitDefinition enemy = CreatePassiveUnit("arrgh-enemy");
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(6, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, caster, BattleSide.Player, new HexCoord(1, 1)),
+                    new UnitSpawnData(2, ally, BattleSide.Player, new HexCoord(2, 1)),
+                    new UnitSpawnData(3, defeatedAlly, BattleSide.Player, new HexCoord(1, 2)),
+                    new UnitSpawnData(4, enemy, BattleSide.Enemy, new HexCoord(4, 1))
+                });
+            simulation.Units[2].CurrentHp = 0;
+            return simulation;
+        }
+
         private static BattleSimulation CreateLongshotSimulation(bool twoEnemies)
         {
             UnitDefinition attacker = TestDefinitions.CreateUnit("longshot-attacker", 1, UnitType.Range);
@@ -906,11 +992,34 @@ namespace DeckBattle.Tests
             return special;
         }
 
+        private static UnitSpecialDefinition CreateArrghSpecial()
+        {
+            UnitSpecialDefinition special = TestDefinitions.Track(ScriptableObject.CreateInstance<UnitSpecialDefinition>());
+            special.Kind = UnitSpecialKind.Arrgh;
+            special.EffectDelay = 0.3f;
+            special.CastDuration = 1.5f;
+            special.AppliedStatus = CreateEmpowerStatus(3f, 0.5f);
+            special.AppliedStatusLifetimeMode = StatusLifetimeMode.OverrideSeconds;
+            special.AppliedStatusDurationOverride = 5f;
+            return special;
+        }
+
         private static StatusDefinition CreateHasteStatus(float duration, float magnitude)
         {
             StatusDefinition status = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
             status.Kind = StatusKind.Haste;
             status.Category = StatusCategory.Beneficial;
+            status.DefaultDuration = duration;
+            status.DefaultMagnitude = magnitude;
+            return status;
+        }
+
+        private static StatusDefinition CreateEmpowerStatus(float duration, float magnitude)
+        {
+            StatusDefinition status = TestDefinitions.Track(ScriptableObject.CreateInstance<StatusDefinition>());
+            status.Kind = StatusKind.Empower;
+            status.Category = StatusCategory.Beneficial;
+            status.StackingRule = StatusStackingRule.RefreshPerSource;
             status.DefaultDuration = duration;
             status.DefaultMagnitude = magnitude;
             return status;
