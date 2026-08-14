@@ -154,8 +154,28 @@ namespace DeckBattle.Editor
                 for (int entryIndex = 0; entryIndex < entries.Length; entryIndex++)
                 {
                     StatusPresentationEntry entry = entries[entryIndex];
-                    if (entry == null || entry.Mode != StatusPresentationMode.Vfx)
+                    if (entry == null)
                     {
+                        continue;
+                    }
+
+                    if (entry.ShowsIcon && entry.Icon == null)
+                    {
+                        LogError("Status presentation entry for " + entry.Kind + " enables an icon but has no sprite.", catalog);
+                        errors++;
+                    }
+
+                    if (!entry.UsesVfx)
+                    {
+                        continue;
+                    }
+
+                    if (entry.ApplyVfxDefinition == null
+                        && entry.ActiveVfxDefinition == null
+                        && entry.RemoveVfxDefinition == null)
+                    {
+                        LogError("Status presentation entry for " + entry.Kind + " enables VFX but has no VFX definition.", catalog);
+                        errors++;
                         continue;
                     }
 

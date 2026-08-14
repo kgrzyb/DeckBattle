@@ -50,7 +50,7 @@ namespace DeckBattle
 
         public void HandleStatusEvent(BattleEvent battleEvent)
         {
-            if (presentationCatalog == null || !presentationCatalog.TryGet(battleEvent.StatusKind, out StatusPresentationEntry entry) || entry.Mode != StatusPresentationMode.Vfx)
+            if (presentationCatalog == null || !presentationCatalog.TryGet(battleEvent.StatusKind, out StatusPresentationEntry entry) || !entry.UsesVfx)
             {
                 return;
             }
@@ -145,7 +145,7 @@ namespace DeckBattle
 
                 syncVersions[kindIndex] = syncVersion;
                 int desired = GetTotalStacks(statuses, kind);
-                if (presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) && entry.Mode == StatusPresentationMode.Vfx)
+                if (presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) && entry.UsesVfx)
                 {
                     Reconcile(unitId, kind, desired, unitView, entry);
                 }
@@ -367,7 +367,7 @@ namespace DeckBattle
             for (int i = 0; i < entries.Length; i++)
             {
                 StatusPresentationEntry entry = entries[i];
-                if (entry == null || entry.Mode != StatusPresentationMode.Vfx) continue;
+                if (entry == null || !entry.UsesVfx) continue;
                 Prewarm(entry.ApplyVfxDefinition);
                 Prewarm(entry.ActiveVfxDefinition);
                 Prewarm(entry.RemoveVfxDefinition);

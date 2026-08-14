@@ -20,6 +20,7 @@ namespace DeckBattle
         [SerializeField] private TMP_Text hpText;
         [SerializeField] private TMP_Text manaText;
         [SerializeField] private RectTransform statusIconRoot;
+        [SerializeField] private GameObject statusIconPrefab;
         [SerializeField, Range(1, 4)] private int maxVisibleStatusIcons = 4;
 
         private readonly StatusIconSlot[] statusIconSlots = new StatusIconSlot[4];
@@ -101,10 +102,21 @@ namespace DeckBattle
                 return;
             }
 
-            EnsureStatusIconSlots();
+            int statusCount = statuses != null ? statuses.Count : 0;
+            if (statusCount == 0 && statusIconSlots[0] == null)
+            {
+                shownStatusVersion = 0;
+                SetShield(totalShield);
+                return;
+            }
+
+            if (!EnsureStatusIconSlots())
+            {
+                SetShield(totalShield);
+                return;
+            }
             int visibleCount = 0;
             int hiddenCount = 0;
-            int statusCount = statuses != null ? statuses.Count : 0;
             for (int priority = 0; priority <= 4; priority++)
             {
                 for (int i = 0; i < statusCount; i++)
@@ -158,10 +170,21 @@ namespace DeckBattle
                 return;
             }
 
-            EnsureStatusIconSlots();
+            int statusCount = statuses != null ? statuses.Count : 0;
+            if (statusCount == 0 && statusIconSlots[0] == null)
+            {
+                shownStatusVersion = 0;
+                SetShield(totalShield);
+                return;
+            }
+
+            if (!EnsureStatusIconSlots())
+            {
+                SetShield(totalShield);
+                return;
+            }
             int visibleCount = 0;
             int hiddenCount = 0;
-            int statusCount = statuses != null ? statuses.Count : 0;
             for (int priority = 0; priority <= 4; priority++)
             {
                 for (int i = 0; i < statusCount; i++)
@@ -200,13 +223,16 @@ namespace DeckBattle
 
         private void SetCatalogStatuses(UnitStatusCollection statuses, StatusPresentationCatalog presentationCatalog)
         {
-            EnsureStatusIconSlots();
+            if (!EnsureStatusIconSlots())
+            {
+                return;
+            }
             int selectedCount = 0;
             int statusCount = statuses != null ? statuses.Count : 0;
             for (int i = 0; i < statusCount; i++)
             {
                 StatusKind kind = statuses[i].Kind;
-                if (!presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) || entry.Mode != StatusPresentationMode.Icon)
+                if (!presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) || !entry.ShowsIcon || entry.Icon == null)
                 {
                     continue;
                 }
@@ -258,13 +284,16 @@ namespace DeckBattle
 
         private void SetCatalogPresentationStatuses(IReadOnlyList<StatusPresentationState> statuses, StatusPresentationCatalog presentationCatalog)
         {
-            EnsureStatusIconSlots();
+            if (!EnsureStatusIconSlots())
+            {
+                return;
+            }
             int selectedCount = 0;
             int statusCount = statuses != null ? statuses.Count : 0;
             for (int i = 0; i < statusCount; i++)
             {
                 StatusKind kind = statuses[i].Kind;
-                if (!presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) || entry.Mode != StatusPresentationMode.Icon)
+                if (!presentationCatalog.TryGet(kind, out StatusPresentationEntry entry) || !entry.ShowsIcon || entry.Icon == null)
                 {
                     continue;
                 }
@@ -480,41 +509,37 @@ namespace DeckBattle
             SetFill(hpDamageFillImage, hpDamageFillTransform, shownDamageFill);
         }
 
-        private void EnsureStatusIconSlots()
+        private bool EnsureStatusIconSlots()
         {
             if (statusIconSlots[0] != null)
             {
-                return;
+                return true;
             }
 
             RectTransform root = statusIconRoot != null ? statusIconRoot : RectTransform;
+            if (statusIconPrefab == null)
+            {
+                Debug.LogError($"{nameof(UnitStatusOverlayView)} requires a StatusIcon prefab.", this);
+                return false;
+            }
+
             for (int i = 0; i < statusIconSlots.Length; i++)
             {
-                var iconObject = new GameObject("StatusIcon" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                RectTransform iconTransform = iconObject.GetComponent<RectTransform>();
-                iconTransform.SetParent(root, false);
-                iconTransform.anchorMin = new Vector2(0.5f, 0.5f);
-                iconTransform.anchorMax = new Vector2(0.5f, 0.5f);
-                iconTransform.pivot = new Vector2(0.5f, 0.5f);
-                iconTransform.sizeDelta = new Vector2(15f, 15f);
-                iconTransform.anchoredPosition = new Vector2(-27f + (18f * i), -26f);
+                GameObject iconObject = Instantiate(statusIconPrefab, root, false);
                 Image image = iconObject.GetComponent<Image>();
-                image.raycastTarget = false;
+                TMP_Text label = iconObject.GetComponentInChildren<TMP_Text>(true);
+                if (image == null || label == null)
+                {
+                    Debug.LogError($"StatusIcon prefab must contain an {nameof(Image)} and a child {nameof(TMP_Text)}.", iconObject);
+                    Destroy(iconObject);
+                    return false;
+                }
 
-                var labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
-                RectTransform labelTransform = labelObject.GetComponent<RectTransform>();
-                labelTransform.SetParent(iconTransform, false);
-                labelTransform.anchorMin = Vector2.zero;
-                labelTransform.anchorMax = Vector2.one;
-                labelTransform.offsetMin = Vector2.zero;
-                labelTransform.offsetMax = Vector2.zero;
-                TMP_Text label = labelObject.GetComponent<TMP_Text>();
-                label.alignment = TextAlignmentOptions.Center;
-                label.fontSize = 8f;
-                label.raycastTarget = false;
                 statusIconSlots[i] = new StatusIconSlot(iconObject, image, label);
                 statusIconSlots[i].SetVisible(false);
             }
+
+            return true;
         }
 
         private void EnsureShieldBar()

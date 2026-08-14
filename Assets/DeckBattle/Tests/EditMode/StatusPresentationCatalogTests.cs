@@ -14,12 +14,13 @@ namespace DeckBattle.Tests
             {
                 SetEntries(catalog, new[]
                 {
-                    new StatusPresentationEntry { Kind = StatusKind.Stun, Mode = StatusPresentationMode.Icon },
+                    new StatusPresentationEntry { Kind = StatusKind.Stun, Mode = StatusPresentationMode.IconAndVfx },
                     new StatusPresentationEntry { Kind = StatusKind.Burn, Mode = StatusPresentationMode.Vfx }
                 });
 
                 Assert.IsTrue(catalog.TryGet(StatusKind.Stun, out StatusPresentationEntry stun));
-                Assert.AreEqual(StatusPresentationMode.Icon, stun.Mode);
+                Assert.IsTrue(stun.ShowsIcon);
+                Assert.IsTrue(stun.UsesVfx);
                 Assert.IsTrue(catalog.TryGet(StatusKind.Burn, out StatusPresentationEntry burn));
                 Assert.AreEqual(StatusPresentationMode.Vfx, burn.Mode);
                 Assert.IsFalse(catalog.TryGet(StatusKind.Shield, out _));

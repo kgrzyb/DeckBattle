@@ -196,7 +196,8 @@ namespace DeckBattle.Tests
 
             Assert.IsNotNull(statusCatalog);
             Assert.IsTrue(statusCatalog.TryGet(StatusKind.Empower, out StatusPresentationEntry empowerPresentation));
-            Assert.AreEqual(StatusPresentationMode.Icon, empowerPresentation.Mode);
+            Assert.IsTrue(empowerPresentation.ShowsIcon);
+            Assert.IsTrue(empowerPresentation.UsesVfx);
             Assert.IsNotNull(empowerPresentation.Icon);
         }
     }

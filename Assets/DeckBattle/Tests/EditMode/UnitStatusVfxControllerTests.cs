@@ -29,7 +29,7 @@ namespace DeckBattle.Tests
                     new StatusPresentationEntry
                     {
                         Kind = StatusKind.Haste,
-                        Mode = StatusPresentationMode.Vfx,
+                        Mode = StatusPresentationMode.IconAndVfx,
                         ApplyVfxDefinition = definition
                     }
                 });

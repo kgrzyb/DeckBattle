@@ -78,5 +78,15 @@ namespace DeckBattle
         public Vector3 LocalPosition;
         public Vector3 LocalEulerAngles;
         public Vector3 LocalScale = Vector3.one;
+
+        public bool ShowsIcon
+        {
+            get { return (Mode & StatusPresentationMode.Icon) != 0; }
+        }
+
+        public bool UsesVfx
+        {
+            get { return (Mode & StatusPresentationMode.Vfx) != 0; }
+        }
     }
 }

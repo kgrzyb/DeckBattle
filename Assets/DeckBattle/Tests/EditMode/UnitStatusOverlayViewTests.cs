@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -164,6 +165,7 @@ namespace DeckBattle.Tests
         public void SetStatuses_CreatesAtMostFourPooledIconSlots()
         {
             GameObject root = new GameObject("Overlay", typeof(RectTransform), typeof(UnitStatusOverlayView));
+            GameObject statusIconPrefab = CreateStatusIconPrefab();
             var statuses = new UnitStatusCollection(8);
             statuses.TryAdd(new StatusInstance { Kind = StatusKind.Stun, Stacks = 1 }, out _);
             statuses.TryAdd(new StatusInstance { Kind = StatusKind.Shield, Stacks = 1, RemainingShield = 3 }, out _);
@@ -174,6 +176,7 @@ namespace DeckBattle.Tests
             try
             {
                 UnitStatusOverlayView view = root.GetComponent<UnitStatusOverlayView>();
+                SetPrivateField(view, "statusIconPrefab", statusIconPrefab);
                 view.SetStatuses(statuses, 3);
                 view.SetStatuses(statuses, 3);
 
@@ -189,6 +192,7 @@ namespace DeckBattle.Tests
             }
             finally
             {
+                Object.DestroyImmediate(statusIconPrefab);
                 Object.DestroyImmediate(root);
             }
         }
@@ -197,6 +201,7 @@ namespace DeckBattle.Tests
         public void SetPresentationStatuses_UsesPresentationShadowWithoutRuntimeState()
         {
             GameObject root = new GameObject("Overlay", typeof(RectTransform), typeof(UnitStatusOverlayView));
+            GameObject statusIconPrefab = CreateStatusIconPrefab();
             var statuses = new List<StatusPresentationState>
             {
                 new StatusPresentationState(StatusKind.Stun, 1, 1),
@@ -206,6 +211,7 @@ namespace DeckBattle.Tests
             try
             {
                 UnitStatusOverlayView view = root.GetComponent<UnitStatusOverlayView>();
+                SetPrivateField(view, "statusIconPrefab", statusIconPrefab);
                 view.SetPresentationStatuses(statuses, 4, null);
 
                 Assert.AreEqual(5, root.GetComponentsInChildren<Image>(true).Length);
@@ -215,8 +221,76 @@ namespace DeckBattle.Tests
             }
             finally
             {
+                Object.DestroyImmediate(statusIconPrefab);
                 Object.DestroyImmediate(root);
             }
+        }
+
+        [Test]
+        public void SetPresentationStatuses_CombinedPresentationEntryShowsConfiguredIcon()
+        {
+            GameObject root = new GameObject("Overlay", typeof(RectTransform), typeof(UnitStatusOverlayView));
+            GameObject statusIconPrefab = CreateStatusIconPrefab();
+            StatusPresentationCatalog catalog = ScriptableObject.CreateInstance<StatusPresentationCatalog>();
+            Texture2D texture = new Texture2D(1, 1);
+            Sprite icon = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f));
+
+            try
+            {
+                SetCatalogEntries(catalog, new[]
+                {
+                    new StatusPresentationEntry
+                    {
+                        Kind = StatusKind.Empower,
+                        Mode = StatusPresentationMode.IconAndVfx,
+                        Icon = icon
+                    }
+                });
+
+                UnitStatusOverlayView view = root.GetComponent<UnitStatusOverlayView>();
+                SetPrivateField(view, "statusIconPrefab", statusIconPrefab);
+                view.SetPresentationStatuses(
+                    new List<StatusPresentationState> { new StatusPresentationState(StatusKind.Empower, 1, 1) },
+                    0,
+                    catalog);
+
+                Image[] images = root.GetComponentsInChildren<Image>(true);
+                bool hasConfiguredIcon = false;
+                for (int i = 0; i < images.Length; i++)
+                {
+                    if (images[i].gameObject.activeSelf && images[i].sprite == icon)
+                    {
+                        hasConfiguredIcon = true;
+                        break;
+                    }
+                }
+
+                Assert.IsTrue(hasConfiguredIcon);
+            }
+            finally
+            {
+                Object.DestroyImmediate(icon);
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(catalog);
+                Object.DestroyImmediate(statusIconPrefab);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static GameObject CreateStatusIconPrefab()
+        {
+            GameObject icon = new GameObject("StatusIconPrefab", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            GameObject label = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            label.transform.SetParent(icon.transform, false);
+            return icon;
+        }
+
+        private static void SetCatalogEntries(StatusPresentationCatalog catalog, StatusPresentationEntry[] entries)
+        {
+            FieldInfo field = typeof(StatusPresentationCatalog).GetField("entries", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field);
+            field.SetValue(catalog, entries);
+            typeof(StatusPresentationCatalog).GetMethod("OnValidate", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(catalog, null);
         }
 
         private static void SetPrivateField(object target, string fieldName, Object value)

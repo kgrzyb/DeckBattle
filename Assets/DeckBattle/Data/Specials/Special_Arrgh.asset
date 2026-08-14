@@ -26,4 +26,4 @@ MonoBehaviour:
   AttackDamageMultiplier: 1
   EffectRadius: 0
   ExecuteHpThresholdPercent: 0
-  VfxProfile: {fileID: 0}
+  VfxProfile: {fileID: 11400000, guid: a694c8c679e13f141a4e3029c74a16c9, type: 2}
