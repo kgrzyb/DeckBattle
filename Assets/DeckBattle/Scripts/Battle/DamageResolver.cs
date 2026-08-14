@@ -47,17 +47,20 @@ namespace DeckBattle
             int markDamage = request.CanTriggerMark && request.Kind == DamageKind.Direct ? ConsumeMark(target, request.Source, eventQueue) : 0;
             if (target.StatusSnapshot.Invulnerable) return new HitResolutionResult(true, 0, false);
 
-            bool executesTarget = request.ExecuteHpThresholdPercent > 0
-                && (long)target.CurrentHp * 100L
-                    < (long)target.CombatSpec.MaxHp * request.ExecuteHpThresholdPercent;
-            int remaining = executesTarget ? target.CurrentHp : Math.Max(0, request.Amount);
-            if (!executesTarget && target.StatusSnapshot.Exposed > 0f)
+            int remaining = Math.Max(0, request.Amount);
+            if (target.StatusSnapshot.Exposed > 0f)
             {
                 remaining = Math.Max(0, (int)Math.Round(remaining * (1f + target.StatusSnapshot.Exposed), MidpointRounding.AwayFromZero));
             }
-            if (!executesTarget)
+            remaining = AbsorbShields(target, remaining, eventQueue);
+            bool executesTarget = remaining > 0
+                && target.CurrentHp > remaining
+                && request.ExecuteHpThresholdPercent > 0
+                && ((long)target.CurrentHp - remaining) * 100L
+                    < (long)target.CombatSpec.MaxHp * request.ExecuteHpThresholdPercent;
+            if (executesTarget)
             {
-                remaining = AbsorbShields(target, remaining, eventQueue);
+                remaining = target.CurrentHp;
             }
             if (remaining <= 0)
             {

@@ -600,13 +600,13 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void Longshot_ExecutesTargetBelowThresholdAtImpact()
+        public void Longshot_ExecutesTargetWhenDamageCrossesThresholdAtImpact()
         {
             BattleSimulation simulation = CreateLongshotSimulation(twoEnemies: false);
             UnitRuntimeState attacker = simulation.Units[0];
             UnitRuntimeState target = simulation.Units[1];
             attacker.CurrentMana = attacker.CombatSpec.ManaThreshold;
-            target.CurrentHp = 199;
+            target.CurrentHp = 200;
             var loop = new BattleTickLoop(simulation, TickDuration);
 
             loop.Tick(new BattleEventQueue());
@@ -616,10 +616,10 @@ namespace DeckBattle.Tests
             ProjectileResolutionResult result = ProjectileResolver.ResolveProjectiles(simulation, 5f, events);
 
             Assert.AreEqual(1, result.Hits);
-            Assert.AreEqual(199, result.TotalDamage);
+            Assert.AreEqual(200, result.TotalDamage);
             Assert.IsTrue(target.IsDefeated);
             Assert.AreEqual(0, target.CurrentHp);
-            Assert.AreEqual(199, FindEvent(events, BattleEventType.UnitDamaged).Amount);
+            Assert.AreEqual(200, FindEvent(events, BattleEventType.UnitDamaged).Amount);
             AssertEvent(events, BattleEventType.UnitDied);
         }
 

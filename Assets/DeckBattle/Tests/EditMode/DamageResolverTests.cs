@@ -66,7 +66,7 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void ExecuteBelowThreshold_BypassesShieldAndKillsForRemainingHp()
+        public void ExecuteAfterDamageCrossesThreshold_KillsForRemainingHp()
         {
             UnitDefinition attackerDefinition = TestDefinitions.CreateUnit("execute-attacker", 1);
             UnitDefinition targetDefinition = TestDefinitions.CreateUnit("execute-target", 1);
@@ -79,8 +79,7 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(2, targetDefinition, BattleSide.Enemy, new HexCoord(1, 0))
                 });
             UnitRuntimeState target = simulation.Units[1];
-            target.CurrentHp = 19;
-            Apply(simulation, target, StatusKind.Shield, StatusCategory.Beneficial, 100f);
+            target.CurrentHp = 20;
             var events = new BattleEventQueue();
 
             HitResolutionResult result = DamageResolver.Resolve(
@@ -94,14 +93,14 @@ namespace DeckBattle.Tests
                 events);
 
             Assert.IsTrue(result.Died);
-            Assert.AreEqual(19, result.Damage);
+            Assert.AreEqual(20, result.Damage);
             Assert.AreEqual(0, target.CurrentHp);
-            Assert.AreEqual(19, FindEvent(events, BattleEventType.UnitDamaged).Amount);
+            Assert.AreEqual(20, FindEvent(events, BattleEventType.UnitDamaged).Amount);
             AssertEventTypeExists(events, BattleEventType.UnitDied);
         }
 
         [Test]
-        public void ExecuteAtExactThreshold_UsesNormalDamage()
+        public void ExecuteAfterDamageAtExactThreshold_UsesNormalDamage()
         {
             UnitDefinition attackerDefinition = TestDefinitions.CreateUnit("threshold-attacker", 1);
             UnitDefinition targetDefinition = TestDefinitions.CreateUnit("threshold-target", 1);
@@ -114,7 +113,7 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(2, targetDefinition, BattleSide.Enemy, new HexCoord(1, 0))
                 });
             UnitRuntimeState target = simulation.Units[1];
-            target.CurrentHp = 20;
+            target.CurrentHp = 21;
 
             HitResolutionResult result = DamageResolver.Resolve(
                 simulation,
@@ -128,7 +127,39 @@ namespace DeckBattle.Tests
 
             Assert.IsFalse(result.Died);
             Assert.AreEqual(1, result.Damage);
-            Assert.AreEqual(19, target.CurrentHp);
+            Assert.AreEqual(20, target.CurrentHp);
+        }
+
+        [Test]
+        public void ExecuteAfterShieldAbsorbsDamage_DoesNotTrigger()
+        {
+            UnitDefinition attackerDefinition = TestDefinitions.CreateUnit("shielded-execute-attacker", 1);
+            UnitDefinition targetDefinition = TestDefinitions.CreateUnit("shielded-execute-target", 1);
+            targetDefinition.MaxHp = 100;
+            BattleSimulation simulation = BattleSimulation.Create(
+                new HexBoard(3, 3, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, attackerDefinition, BattleSide.Player, new HexCoord(0, 0)),
+                    new UnitSpawnData(2, targetDefinition, BattleSide.Enemy, new HexCoord(1, 0))
+                });
+            UnitRuntimeState target = simulation.Units[1];
+            target.CurrentHp = 21;
+            Apply(simulation, target, StatusKind.Shield, StatusCategory.Beneficial, 2f);
+
+            HitResolutionResult result = DamageResolver.Resolve(
+                simulation,
+                target,
+                new DamageRequest(
+                    simulation.Units[0],
+                    2,
+                    DamageKind.Special,
+                    executeHpThresholdPercent: 20),
+                null);
+
+            Assert.IsFalse(result.Died);
+            Assert.AreEqual(0, result.Damage);
+            Assert.AreEqual(21, target.CurrentHp);
         }
 
         [Test]
