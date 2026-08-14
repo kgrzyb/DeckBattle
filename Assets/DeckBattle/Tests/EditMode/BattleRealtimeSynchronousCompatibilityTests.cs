@@ -157,6 +157,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(expected.Side, actual.Side);
             Assert.AreEqual(expected.CurrentHp, actual.CurrentHp);
             Assert.AreEqual(expected.CurrentMana, actual.CurrentMana);
+            Assert.AreEqual(expected.PassiveManaRemainder, actual.PassiveManaRemainder);
             Assert.AreEqual(expected.CurrentHex, actual.CurrentHex);
             Assert.AreEqual(expected.PreviousHex, actual.PreviousHex);
             Assert.AreEqual(expected.TargetUnitId, actual.TargetUnitId);

@@ -234,7 +234,7 @@ namespace DeckBattle
         public readonly float AttackCooldown;
         public readonly float AttackWindupPercent;
         public readonly int ManaThreshold;
-        public readonly int ManaPerTick;
+        public readonly int ManaPerSecond;
         public readonly float Armor;
         public readonly float ArmorPenetration;
         public readonly ProjectileCombatSpec Projectile;
@@ -263,7 +263,7 @@ namespace DeckBattle
             float attackCooldown,
             float attackWindupPercent,
             int manaThreshold,
-            int manaPerTick,
+            int manaPerSecond,
             float armor,
             float armorPenetration,
             ProjectileCombatSpec projectile,
@@ -281,7 +281,7 @@ namespace DeckBattle
             AttackCooldown = Math.Max(0.01f, attackCooldown);
             AttackWindupPercent = Math.Max(0f, Math.Min(1f, attackWindupPercent));
             ManaThreshold = Math.Max(0, manaThreshold);
-            ManaPerTick = Math.Max(0, manaPerTick);
+            ManaPerSecond = Math.Max(0, manaPerSecond);
             Armor = ClampPercentage(armor);
             ArmorPenetration = ClampPercentage(armorPenetration);
             Projectile = projectile;
@@ -309,7 +309,7 @@ namespace DeckBattle
                 1f / Math.Max(0.001f, definition.AttacksPerSecond),
                 definition.AttackWindupPercent,
                 definition.ManaThreshold,
-                definition.ManaPerTick,
+                definition.ManaPerSecond,
                 definition.Armor,
                 definition.ArmorPenetration,
                 ProjectileCombatSpec.FromDefinition(definition.Projectile),

@@ -20,8 +20,8 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1, result.Attacks);
             Assert.AreEqual(10, simulation.Units[1].CurrentHp);
             Assert.That(simulation.Units[0].NextAttackTime, Is.EqualTo(1.25d).Within(0.000001d));
-            Assert.AreEqual(9, simulation.Units[0].CurrentMana);
-            Assert.AreEqual(6, simulation.Units[1].CurrentMana);
+            Assert.AreEqual(30, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(10, simulation.Units[1].CurrentMana);
             Assert.AreEqual(1, simulation.Projectiles.Count);
             AssertEventTypeExists(events, BattleEventType.ProjectileLaunched);
             AssertEventTypeDoesNotExist(events, BattleEventType.UnitDamaged);
@@ -48,7 +48,7 @@ namespace DeckBattle.Tests
             Assert.AreEqual(1, hit.Hits);
             Assert.AreEqual(3, hit.TotalDamage);
             Assert.AreEqual(7, simulation.Units[1].CurrentHp);
-            Assert.AreEqual(9, simulation.Units[1].CurrentMana);
+            Assert.AreEqual(30, simulation.Units[1].CurrentMana);
             Assert.AreEqual(0, simulation.Projectiles.Count);
             AssertEventTypeExists(events, BattleEventType.ProjectileHit);
             AssertEventTypeExists(events, BattleEventType.UnitDamaged);
@@ -86,7 +86,7 @@ namespace DeckBattle.Tests
             attacker.Projectile = CreateProjectile("arrow", 1f);
             attacker.CritChance = 100f;
             UnitDefinition target = CreateUnit("target", 10, 1, 1, 1f, UnitType.Melee);
-            target.ManaPerTick = 7;
+            target.ManaPerSecond = 7;
             BattleSimulation simulation = CreateSimulation(attacker, new HexCoord(1, 1), target, new HexCoord(2, 1));
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[0].NextAttackTime = 0d;
@@ -95,13 +95,13 @@ namespace DeckBattle.Tests
             TestDefinitions.ResolveNextAttack(simulation, events);
 
             AssertEventTypeDoesNotExist(events, BattleEventType.UnitCrit);
-            Assert.AreEqual(14, simulation.Units[1].CurrentMana);
+            Assert.AreEqual(3, simulation.Units[1].CurrentMana);
 
             events.Clear();
             ProjectileResolver.ResolveProjectiles(simulation, 1f, events);
 
             AssertEventTypeExists(events, BattleEventType.UnitCrit);
-            AssertManaChangedEventExists(events, 2, 21);
+            AssertManaChangedEventExists(events, 2, 10);
             Assert.IsTrue(FindEvent(events, BattleEventType.UnitDamaged).IsCritical);
         }
 

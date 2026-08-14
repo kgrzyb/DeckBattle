@@ -27,14 +27,14 @@ MonoBehaviour:
   CritMultiplier: 2
   AttacksPerSecond: 0.9
   AttackWindupPercent: 0.25
-  ManaThreshold: 100
-  ManaPerTick: 3
+  ManaThreshold: 80
+  ManaPerSecond: 8
   Special: {fileID: 11400000, guid: 4cdd9d33a37663442986b7c7bc036709, type: 2}
   Armor: 0
   ArmorPenetration: 25
   Projectile: {fileID: 11400000, guid: dc1b0f2c5ac6f7847943c4d589e96d82, type: 2}
   UnitPrefab: {fileID: 7506552908754966910, guid: 0dd885142cf444241be67946e1888b51,
     type: 3}
-  RunAnimationSpeedMultiplier: 1.8
+  RunAnimationSpeedMultiplier: 2
   VfxProfile: {fileID: 0}
   OnPlayEffect: {fileID: 11400000, guid: cfa0e0516847469aab6f34e5e6e45263, type: 2}

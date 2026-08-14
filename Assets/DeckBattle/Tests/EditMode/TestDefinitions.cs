@@ -52,7 +52,7 @@ namespace DeckBattle.Tests
             unit.AttacksPerSecond = 1f;
             unit.AttackWindupPercent = 0.25f;
             unit.ManaThreshold = 100;
-            unit.ManaPerTick = 3;
+            unit.ManaPerSecond = 20;
             unit.Armor = 0f;
             unit.ArmorPenetration = 0f;
             return unit;

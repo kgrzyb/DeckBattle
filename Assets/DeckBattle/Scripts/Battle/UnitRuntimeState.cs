@@ -49,6 +49,7 @@ namespace DeckBattle
         public double LastSpecialRecoveryEndTime;
         public double ManaLockEndTime;
         public int CurrentMana;
+        public long PassiveManaRemainder;
         public bool IsMoving;
         public HexCoord MovementDestination;
         public float MovementTimeRemaining;
@@ -97,6 +98,7 @@ namespace DeckBattle
             ResetAttackCycle();
             ResetSpecialCycle();
             CurrentMana = 0;
+            PassiveManaRemainder = 0L;
             IsMoving = false;
             MovementDestination = startHex;
             MovementTimeRemaining = 0f;
@@ -181,6 +183,7 @@ namespace DeckBattle
             ResetAttackCycle();
             ResetSpecialCycle();
             CurrentMana = 0;
+            PassiveManaRemainder = 0L;
             IsMoving = false;
             MovementDestination = startHex;
             MovementTimeRemaining = 0f;

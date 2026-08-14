@@ -133,6 +133,7 @@ namespace DeckBattle
                 : double.PositiveInfinity;
             unit.ManaLockEndTime = double.PositiveInfinity;
             unit.CurrentMana = 0;
+            unit.PassiveManaRemainder = 0L;
 
             eventQueue?.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, unit.CurrentMana));
             AttackCycleResolver.StartCooldownForSpecialCast(simulation, unit, eventQueue);

@@ -13,6 +13,7 @@ namespace DeckBattle
         private readonly SpecialCycleResolver.Workspace specialCycleWorkspace;
         private readonly TargetSelector.TargetSelection[] targetSelections;
         private readonly bool[] targetSelectionValid;
+        private readonly long tickDurationMicroseconds;
 
         public BattleTickLoop(BattleSimulation simulation, float tickDuration)
         {
@@ -28,6 +29,7 @@ namespace DeckBattle
 
             this.simulation = simulation;
             TickDuration = tickDuration;
+            tickDurationMicroseconds = ResolveTickDurationMicroseconds(tickDuration);
             int boardCellCapacity = simulation.Board.Width * simulation.Board.Height;
             movementWorkspace = new MovementResolver.Workspace(boardCellCapacity, simulation.Units.Count);
             targetWorkspace = new TargetSelector.Workspace(boardCellCapacity);
@@ -156,12 +158,27 @@ namespace DeckBattle
             unit.ClearTarget();
         }
 
-        private static void GrantPassiveMana(BattleSimulation simulation, BattleEventQueue eventQueue)
+        private void GrantPassiveMana(BattleSimulation simulation, BattleEventQueue eventQueue)
         {
             for (int i = 0; i < simulation.Units.Count; i++)
             {
-                CombatResolver.GrantManaPulse(simulation, simulation.Units[i], eventQueue);
+                CombatResolver.AccumulatePassiveMana(
+                    simulation,
+                    simulation.Units[i],
+                    tickDurationMicroseconds,
+                    eventQueue);
             }
+        }
+
+        private static long ResolveTickDurationMicroseconds(float tickDuration)
+        {
+            double microseconds = Math.Round(tickDuration * 1000000d);
+            if (microseconds < 1d || microseconds > long.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tickDuration));
+            }
+
+            return (long)microseconds;
         }
 
         private static bool TryEndBattle(BattleSimulation simulation, out BattleSide winner, out bool hasWinner)

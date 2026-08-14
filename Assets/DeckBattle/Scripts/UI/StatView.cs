@@ -15,7 +15,7 @@ namespace DeckBattle
         CritMultiplier = 5,
         AttackSpeed = 6,
         ManaThreshold = 7,
-        ManaPerTick = 8,
+        ManaPerSecond = 8,
         Armor = 10,
         ArmorPenetration = 11
     }
@@ -75,8 +75,8 @@ namespace DeckBattle
                     return FormatNumber(definition.AttacksPerSecond) + "/s";
                 case UnitStatType.ManaThreshold:
                     return definition.ManaThreshold.ToString();
-                case UnitStatType.ManaPerTick:
-                    return "+ " + definition.ManaPerTick;
+                case UnitStatType.ManaPerSecond:
+                    return "+ " + definition.ManaPerSecond + "/s";
                 case UnitStatType.Armor:
                     return FormatPercent(definition.Armor);
                 case UnitStatType.ArmorPenetration:

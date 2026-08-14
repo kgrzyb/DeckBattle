@@ -4,6 +4,8 @@ namespace DeckBattle
 {
     public static class CombatResolver
     {
+        private const long MicrosecondsPerSecond = 1000000L;
+
         internal static void AddMana(
             BattleSimulation simulation,
             UnitRuntimeState unit,
@@ -23,6 +25,11 @@ namespace DeckBattle
             int currentMana = threshold > 0
                 ? Math.Min(threshold, Math.Max(0, unit.CurrentMana + amount))
                 : Math.Max(0, unit.CurrentMana + amount);
+            if (threshold > 0 && currentMana >= threshold)
+            {
+                unit.PassiveManaRemainder = 0L;
+            }
+
             if (currentMana == previousMana)
             {
                 return;
@@ -32,7 +39,33 @@ namespace DeckBattle
             eventQueue?.Enqueue(BattleEvent.UnitManaChanged(unit.UnitId, currentMana));
         }
 
-        internal static void GrantManaPulse(
+        internal static void AccumulatePassiveMana(
+            BattleSimulation simulation,
+            UnitRuntimeState unit,
+            long tickDurationMicroseconds,
+            BattleEventQueue eventQueue)
+        {
+            if (unit == null || tickDurationMicroseconds <= 0L)
+            {
+                return;
+            }
+
+            if (unit.IsDefeated || unit.SpecialPhase != UnitSpecialPhase.Idle)
+            {
+                return;
+            }
+
+            long gainedMicroMana = (long)unit.CombatSpec.ManaPerSecond * tickDurationMicroseconds;
+            long accumulatedMicroMana = unit.PassiveManaRemainder + gainedMicroMana;
+            int wholeMana = (int)(accumulatedMicroMana / MicrosecondsPerSecond);
+            unit.PassiveManaRemainder = accumulatedMicroMana % MicrosecondsPerSecond;
+            if (wholeMana > 0)
+            {
+                AddMana(simulation, unit, wholeMana, eventQueue);
+            }
+        }
+
+        internal static void GrantCombatManaPulse(
             BattleSimulation simulation,
             UnitRuntimeState unit,
             BattleEventQueue eventQueue)
@@ -42,7 +75,7 @@ namespace DeckBattle
                 return;
             }
 
-            AddMana(simulation, unit, unit.CombatSpec.ManaPerTick, eventQueue);
+            AddMana(simulation, unit, unit.CombatSpec.ManaPerSecond, eventQueue);
         }
     }
 

@@ -36,7 +36,8 @@ namespace DeckBattle
         [Min(0.001f)] public float AttacksPerSecond = 1f;
         [Range(0f, 1f)] public float AttackWindupPercent = 0.25f;
         public int ManaThreshold = 100;
-        public int ManaPerTick = 3;
+        [Tooltip("Mana gained per second passively, and as one pulse for each basic attack or received positive damage event.")]
+        public int ManaPerSecond = 20;
         public UnitSpecialDefinition Special;
         public float Armor = 0f;
         public float ArmorPenetration = 0f;
@@ -59,7 +60,7 @@ namespace DeckBattle
             AttacksPerSecond = Mathf.Max(0.001f, AttacksPerSecond);
             AttackWindupPercent = Mathf.Clamp01(AttackWindupPercent);
             ManaThreshold = Mathf.Max(0, ManaThreshold);
-            ManaPerTick = Mathf.Max(0, ManaPerTick);
+            ManaPerSecond = Mathf.Max(0, ManaPerSecond);
             Armor = Mathf.Clamp(Armor, 0f, 100f);
             ArmorPenetration = Mathf.Clamp(ArmorPenetration, 0f, 100f);
             if (RunAnimationSpeedMultiplier <= 0f

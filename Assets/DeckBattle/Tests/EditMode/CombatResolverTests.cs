@@ -5,40 +5,97 @@ namespace DeckBattle.Tests
     public sealed class CombatResolverTests
     {
         [Test]
-        public void GrantManaPulse_AppliesConfiguredManaPerTickOnlyWhileIdle()
+        public void GrantCombatManaPulse_AppliesConfiguredManaPerSecondOnlyWhileIdle()
         {
             BattleSimulation simulation = CreateSimulation(1f);
             UnitRuntimeState unit = simulation.Units[0];
             var events = new BattleEventQueue();
 
             unit.SpecialPhase = UnitSpecialPhase.Casting;
-            CombatResolver.GrantManaPulse(simulation, unit, events);
+            CombatResolver.GrantCombatManaPulse(simulation, unit, events);
             unit.SpecialPhase = UnitSpecialPhase.RecoveryLock;
-            CombatResolver.GrantManaPulse(simulation, unit, events);
+            CombatResolver.GrantCombatManaPulse(simulation, unit, events);
 
             Assert.AreEqual(0, unit.CurrentMana);
             Assert.AreEqual(0, events.Count);
 
             unit.SpecialPhase = UnitSpecialPhase.Idle;
-            CombatResolver.GrantManaPulse(simulation, unit, events);
+            CombatResolver.GrantCombatManaPulse(simulation, unit, events);
 
-            Assert.AreEqual(3, unit.CurrentMana);
+            Assert.AreEqual(20, unit.CurrentMana);
             Assert.AreEqual(1, events.Count);
             Assert.AreEqual(BattleEventType.UnitManaChanged, events[0].Type);
         }
 
         [Test]
-        public void GrantManaPulse_DoesNotEmitEventWhenManaIsAlreadyAtThreshold()
+        public void GrantCombatManaPulse_DoesNotEmitEventWhenManaIsAlreadyAtThreshold()
         {
             BattleSimulation simulation = CreateSimulation(1f);
             UnitRuntimeState unit = simulation.Units[0];
             unit.CurrentMana = unit.CombatSpec.ManaThreshold;
             var events = new BattleEventQueue();
 
-            CombatResolver.GrantManaPulse(simulation, unit, events);
+            CombatResolver.GrantCombatManaPulse(simulation, unit, events);
 
             Assert.AreEqual(unit.CombatSpec.ManaThreshold, unit.CurrentMana);
             Assert.AreEqual(0, events.Count);
+        }
+
+        [Test]
+        public void AccumulatePassiveMana_ConvertsSecondsToWholeMana()
+        {
+            BattleSimulation simulation = CreateManaSimulation(20, 100);
+            UnitRuntimeState unit = simulation.Units[0];
+            var events = new BattleEventQueue();
+
+            CombatResolver.AccumulatePassiveMana(simulation, unit, 150000L, events);
+
+            Assert.AreEqual(3, unit.CurrentMana);
+            Assert.AreEqual(0L, unit.PassiveManaRemainder);
+            Assert.AreEqual(1, events.Count);
+        }
+
+        [Test]
+        public void AccumulatePassiveMana_PreservesFractionWithoutEmittingPrematureEvents()
+        {
+            BattleSimulation simulation = CreateManaSimulation(1, 100);
+            UnitRuntimeState unit = simulation.Units[0];
+            var events = new BattleEventQueue();
+
+            for (int i = 0; i < 6; i++)
+            {
+                CombatResolver.AccumulatePassiveMana(simulation, unit, 150000L, events);
+                Assert.AreEqual(0, events.Count);
+            }
+
+            CombatResolver.AccumulatePassiveMana(simulation, unit, 150000L, events);
+
+            Assert.AreEqual(1, unit.CurrentMana);
+            Assert.AreEqual(50000L, unit.PassiveManaRemainder);
+            Assert.AreEqual(1, events.Count);
+        }
+
+        [Test]
+        public void AccumulatePassiveMana_IsIndependentOfTickDurationForEqualSimulationTime()
+        {
+            Assert.AreEqual(20, ResolvePassiveManaAfterOneSecond(0.05f, 20));
+            Assert.AreEqual(20, ResolvePassiveManaAfterOneSecond(0.1f, 10));
+            Assert.AreEqual(20, ResolvePassiveManaAfterOneSecond(0.2f, 5));
+            Assert.AreEqual(20, ResolvePassiveManaAfterOneSecond(0.25f, 4));
+        }
+
+        [Test]
+        public void AddMana_ReachingThresholdClearsPassiveFraction()
+        {
+            BattleSimulation simulation = CreateManaSimulation(1, 1);
+            UnitRuntimeState unit = simulation.Units[0];
+            var events = new BattleEventQueue();
+
+            CombatResolver.AccumulatePassiveMana(simulation, unit, 900000L, events);
+            CombatResolver.AddMana(simulation, unit, 1, events);
+
+            Assert.AreEqual(1, unit.CurrentMana);
+            Assert.AreEqual(0L, unit.PassiveManaRemainder);
         }
 
         [Test]
@@ -113,6 +170,7 @@ namespace DeckBattle.Tests
         {
             UnitDefinition attacker = CreateUnit("attacker", 10, 2, 1, 1f);
             attacker.ManaThreshold = 10;
+            attacker.ManaPerSecond = 6;
             attacker.Special = TestDefinitions.Track(UnityEngine.ScriptableObject.CreateInstance<UnitSpecialDefinition>());
             attacker.Special.Kind = UnitSpecialKind.HasteBurst;
             attacker.Special.AppliedStatus = CreateHasteStatus(5f, 0.5f);
@@ -144,8 +202,11 @@ namespace DeckBattle.Tests
         public void Tick_ExpiresHasteAppliedBySpecialWithoutReschedulingAttack()
         {
             UnitDefinition attacker = CreateUnit("attacker", 100, 1, 1, 1f);
+            attacker.ManaPerSecond = 0;
             attacker.Special = CreateHasteBurstSpecial();
-            BattleSimulation simulation = CreateSimulation(attacker, CreateUnit("target", 100, 1, 1, 1f));
+            UnitDefinition target = CreateUnit("target", 100, 1, 1, 1f);
+            target.ManaPerSecond = 0;
+            BattleSimulation simulation = CreateSimulation(attacker, target);
             simulation.Units[0].SetTarget(simulation.Units[1]);
             StatusResolver.TryApply(
                 simulation,
@@ -166,8 +227,11 @@ namespace DeckBattle.Tests
         {
             UnitDefinition attacker = CreateUnit("attacker", 100, 1, 1, 1f);
             attacker.ManaThreshold = 10;
+            attacker.ManaPerSecond = 6;
             attacker.Special = CreateHasteBurstSpecial();
-            BattleSimulation simulation = CreateSimulation(attacker, CreateUnit("target", 100, 1, 1, 1f));
+            UnitDefinition target = CreateUnit("target", 100, 1, 1, 1f);
+            target.ManaPerSecond = 6;
+            BattleSimulation simulation = CreateSimulation(attacker, target);
             simulation.Units[0].SetTarget(simulation.Units[1]);
             simulation.Units[0].NextAttackTime = 0d;
 
@@ -235,6 +299,33 @@ namespace DeckBattle.Tests
                     new UnitSpawnData(1, attacker, BattleSide.Player, new HexCoord(1, 1)),
                     new UnitSpawnData(2, target, BattleSide.Enemy, new HexCoord(2, 1))
                 });
+        }
+
+        private static BattleSimulation CreateManaSimulation(int manaPerSecond, int manaThreshold)
+        {
+            UnitDefinition unit = CreateUnit("mana-unit", 100, 0, 1, 999f);
+            unit.ManaPerSecond = manaPerSecond;
+            unit.ManaThreshold = manaThreshold;
+            return BattleSimulation.Create(
+                new HexBoard(5, 6, 1f),
+                new[]
+                {
+                    new UnitSpawnData(1, unit, BattleSide.Player, new HexCoord(1, 1))
+                });
+        }
+
+        private static int ResolvePassiveManaAfterOneSecond(float tickDuration, int tickCount)
+        {
+            BattleSimulation simulation = CreateManaSimulation(20, 100);
+            UnitRuntimeState unit = simulation.Units[0];
+            long tickDurationMicroseconds = (long)System.Math.Round(tickDuration * 1000000d);
+            var events = new BattleEventQueue();
+            for (int i = 0; i < tickCount; i++)
+            {
+                CombatResolver.AccumulatePassiveMana(simulation, unit, tickDurationMicroseconds, events);
+            }
+
+            return unit.CurrentMana;
         }
 
         private static UnitSpecialDefinition CreateHasteBurstSpecial()

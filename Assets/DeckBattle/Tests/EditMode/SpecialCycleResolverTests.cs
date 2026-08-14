@@ -687,9 +687,11 @@ namespace DeckBattle.Tests
             UnitDefinition attacker = TestDefinitions.CreateUnit("attacker", 1);
             attacker.AttacksPerSecond = attacksPerSecond;
             attacker.ManaThreshold = 10;
+            attacker.ManaPerSecond = 12;
             attacker.Special = CreateHasteBurstSpecial(effectDelay, castDuration);
             UnitDefinition target = TestDefinitions.CreateUnit("target", 1);
             target.AttacksPerSecond = 1f / 999f;
+            target.ManaPerSecond = 12;
             return BattleSimulation.Create(
                 new HexBoard(5, 6, 1f),
                 new[]
@@ -709,7 +711,7 @@ namespace DeckBattle.Tests
             attacker.Attack = 100;
             attacker.AttacksPerSecond = 0.1f;
             attacker.ManaThreshold = 10;
-            attacker.ManaPerTick = 0;
+            attacker.ManaPerSecond = 0;
             attacker.Special = CreateFurySwipesSpecial();
             UnitDefinition target = TestDefinitions.CreateUnit("fury-target", 1);
             target.MaxHp = targetHp;
@@ -749,7 +751,7 @@ namespace DeckBattle.Tests
             attacker.AttackRange = 2;
             attacker.AttacksPerSecond = 0.001f;
             attacker.ManaThreshold = 10;
-            attacker.ManaPerTick = 0;
+            attacker.ManaPerSecond = 0;
             attacker.Special = CreateMegaArrowSpecial();
             UnitDefinition target = TestDefinitions.CreateUnit("mega-arrow-target", 1);
             target.MaxHp = targetHp;
@@ -805,7 +807,7 @@ namespace DeckBattle.Tests
             attacker.AttackRange = 1;
             attacker.AttacksPerSecond = 0.001f;
             attacker.ManaThreshold = 10;
-            attacker.ManaPerTick = 0;
+            attacker.ManaPerSecond = 0;
             attacker.Special = CreateLongshotSpecial();
             UnitDefinition firstEnemy = CreatePassiveUnit("longshot-first-enemy");
             UnitDefinition secondEnemy = CreatePassiveUnit("longshot-second-enemy");
@@ -832,7 +834,7 @@ namespace DeckBattle.Tests
             unit.Attack = 100;
             unit.AttacksPerSecond = 0.001f;
             unit.ManaThreshold = 10;
-            unit.ManaPerTick = 0;
+            unit.ManaPerSecond = 0;
             unit.Special = CreateSlamSpecial();
             return unit;
         }
@@ -842,7 +844,7 @@ namespace DeckBattle.Tests
             UnitDefinition unit = TestDefinitions.CreateUnit(unitId, 1);
             unit.MaxHp = 1000;
             unit.AttacksPerSecond = 0.001f;
-            unit.ManaPerTick = 0;
+            unit.ManaPerSecond = 0;
             return unit;
         }
 

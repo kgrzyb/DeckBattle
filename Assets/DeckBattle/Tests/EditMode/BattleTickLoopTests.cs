@@ -21,8 +21,8 @@ namespace DeckBattle.Tests
 
             loop.Tick(events);
 
-            Assert.AreEqual(3, simulation.Units[0].CurrentMana);
-            Assert.AreEqual(3, simulation.Units[1].CurrentMana);
+            Assert.AreEqual(5, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(5, simulation.Units[1].CurrentMana);
             Assert.AreEqual(2, CountEvents(events, BattleEventType.UnitManaChanged));
         }
 
@@ -46,11 +46,11 @@ namespace DeckBattle.Tests
             loop.Tick(events);
             loop.Tick(events);
 
-            Assert.AreEqual(9, simulation.Units[0].CurrentMana);
-            Assert.AreEqual(9, simulation.Units[1].CurrentMana);
+            Assert.AreEqual(30, simulation.Units[0].CurrentMana);
+            Assert.AreEqual(30, simulation.Units[1].CurrentMana);
             Assert.Less(
                 FindEventIndex(events, BattleEventType.UnitDamaged, simulation.Units[1].UnitId),
-                FindManaEventIndex(events, simulation.Units[0].UnitId, 6));
+                FindManaEventIndex(events, simulation.Units[0].UnitId, 25));
         }
         [Test]
         public void Tick_OneVsOneMelee_MovesThenEndsDeterministically()
@@ -455,7 +455,7 @@ namespace DeckBattle.Tests
         {
             UnitDefinition definition = CreateUnit(unitId, 35, 5, 1, 0.5f);
             definition.ManaThreshold = 100;
-            definition.ManaPerTick = 3;
+            definition.ManaPerSecond = 20;
             return definition;
         }
 

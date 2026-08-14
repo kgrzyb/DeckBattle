@@ -774,7 +774,7 @@ GameObject:
   - component: {fileID: 171805504}
   - component: {fileID: 171805505}
   m_Layer: 0
-  m_Name: Stat_ManaPerTick
+  m_Name: Stat_ManaPerSecond
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

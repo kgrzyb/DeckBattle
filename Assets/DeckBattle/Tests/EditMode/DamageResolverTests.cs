@@ -59,7 +59,7 @@ namespace DeckBattle.Tests
                 events);
 
             Assert.AreEqual(0, attacker.CurrentMana);
-            Assert.AreEqual(3, target.CurrentMana);
+            Assert.AreEqual(20, target.CurrentMana);
             Assert.AreEqual(BattleEventType.UnitDamaged, events[0].Type);
             Assert.AreEqual(BattleEventType.UnitManaChanged, events[1].Type);
             Assert.AreEqual(target.UnitId, events[1].UnitId);

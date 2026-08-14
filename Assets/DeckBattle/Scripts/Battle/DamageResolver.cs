@@ -72,7 +72,7 @@ namespace DeckBattle
                 Math.Max(0, target.CurrentHp),
                 target.CurrentHex,
                 request.IsCritical));
-            CombatResolver.GrantManaPulse(simulation, target, eventQueue);
+            CombatResolver.GrantCombatManaPulse(simulation, target, eventQueue);
             WakeSleep(target, eventQueue);
             bool died = target.CurrentHp <= 0;
             if (died)
