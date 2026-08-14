@@ -100,6 +100,7 @@ namespace DeckBattle
                 battleConfig.RuntimeTuningConfig.CreateRuntimeTuning());
             battleView.BoardPresenter.EnsureBuilt(simulation.Board);
             battleView.SetPresentationDefinitions(presentationDefinitions);
+            battleView.SetAnimationCrossFadeDuration(ResolveAnimationCrossFadeDuration());
             float resolvedTickDuration = battleTimingConfig != null ? battleTimingConfig.CombatTickDuration : tickDuration;
             int resolvedMaxTicks = battleTimingConfig != null ? battleTimingConfig.MaxCombatTicks : maxTicks;
             int resolvedMaxTicksPerFrame = battleTimingConfig != null ? battleTimingConfig.MaxTicksPerFrame : maxTicksPerFrame;
@@ -124,6 +125,14 @@ namespace DeckBattle
             combatRunner.TickProcessed += battleView.ProcessCombatTick;
             combatRunner.CombatSpeedChanged += battleView.SetCombatSpeed;
             battleView.SetCombatSpeed(combatRunner.CurrentCombatSpeed);
+        }
+
+        private float ResolveAnimationCrossFadeDuration()
+        {
+            float configuredDuration = battleTimingConfig != null
+                ? battleTimingConfig.AnimationCrossFadeDuration
+                : BattleTiming.DefaultAnimationCrossFadeDuration;
+            return BattleTiming.ResolveAnimationCrossFadeDuration(configuredDuration);
         }
 
         [Serializable]

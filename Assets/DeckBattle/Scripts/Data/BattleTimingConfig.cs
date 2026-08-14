@@ -17,6 +17,9 @@ namespace DeckBattle
         [Header("Round Resolution")]
         public float RoundResolutionDelay = BattleTiming.DefaultRoundResolutionDelay;
 
+        [Header("Animation")]
+        [Min(0f)] public float AnimationCrossFadeDuration = BattleTiming.DefaultAnimationCrossFadeDuration;
+
         private void OnValidate()
         {
             CombatTickDuration = Mathf.Max(BattleTiming.MinCombatTickDuration, CombatTickDuration);
@@ -25,6 +28,7 @@ namespace DeckBattle
             CombatAccelerationDelay = BattleTiming.ResolveCombatAccelerationDelay(CombatAccelerationDelay);
             AcceleratedCombatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(AcceleratedCombatSpeed);
             RoundResolutionDelay = Mathf.Max(0f, RoundResolutionDelay);
+            AnimationCrossFadeDuration = BattleTiming.ResolveAnimationCrossFadeDuration(AnimationCrossFadeDuration);
         }
     }
 }

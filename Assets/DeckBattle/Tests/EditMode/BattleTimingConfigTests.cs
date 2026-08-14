@@ -7,18 +7,20 @@ namespace DeckBattle.Tests
     public sealed class BattleTimingConfigTests
     {
         [Test]
-        public void OnValidate_ClampsCombatAccelerationControls()
+        public void OnValidate_ClampsTimedPresentationControls()
         {
             BattleTimingConfig config = ScriptableObject.CreateInstance<BattleTimingConfig>();
             try
             {
                 config.CombatAccelerationDelay = -2f;
                 config.AcceleratedCombatSpeed = 0.5f;
+                config.AnimationCrossFadeDuration = -0.1f;
 
                 Validate(config);
 
                 Assert.AreEqual(0f, config.CombatAccelerationDelay);
                 Assert.AreEqual(1f, config.AcceleratedCombatSpeed);
+                Assert.AreEqual(0f, config.AnimationCrossFadeDuration);
             }
             finally
             {
@@ -27,18 +29,20 @@ namespace DeckBattle.Tests
         }
 
         [Test]
-        public void OnValidate_ReplacesInvalidCombatAccelerationControlsWithDefaults()
+        public void OnValidate_ReplacesInvalidTimedPresentationControlsWithDefaults()
         {
             BattleTimingConfig config = ScriptableObject.CreateInstance<BattleTimingConfig>();
             try
             {
                 config.CombatAccelerationDelay = float.NaN;
                 config.AcceleratedCombatSpeed = float.PositiveInfinity;
+                config.AnimationCrossFadeDuration = float.NaN;
 
                 Validate(config);
 
                 Assert.AreEqual(BattleTiming.DefaultCombatAccelerationDelay, config.CombatAccelerationDelay);
                 Assert.AreEqual(BattleTiming.DefaultAcceleratedCombatSpeed, config.AcceleratedCombatSpeed);
+                Assert.AreEqual(BattleTiming.DefaultAnimationCrossFadeDuration, config.AnimationCrossFadeDuration);
             }
             finally
             {

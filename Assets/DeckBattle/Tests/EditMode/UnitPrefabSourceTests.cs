@@ -155,6 +155,36 @@ namespace DeckBattle.Tests
             }
         }
 
+        [Test]
+        public void Registry_AppliesGlobalAnimationCrossFadeDurationToExistingAndNewViews()
+        {
+            GameObject parentObject = new GameObject("UnitRoot");
+            GameObject prefabObject = new GameObject("UnitPrefab", typeof(UnitView));
+            UnitDefinition definition = TestDefinitions.CreateUnit("unit", 1);
+            definition.UnitPrefab = prefabObject.GetComponent<UnitView>();
+            BattlePresentationLookup lookup = CreateLookup(definition);
+            var registry = new UnitViewRegistry(lookup, parentObject.transform, parentObject);
+            var firstState = new UnitPresentationState(1, BattlePresentationId.ForUnit(definition), BattleSide.Player, default, 10, 10, 0, 100);
+            var secondState = new UnitPresentationState(2, BattlePresentationId.ForUnit(definition), BattleSide.Enemy, default, 10, 10, 0, 100);
+
+            try
+            {
+                UnitView firstView = registry.GetOrCreate(firstState);
+                registry.SetAnimationCrossFadeDuration(0.2f);
+                UnitView secondView = registry.GetOrCreate(secondState);
+
+                Assert.AreEqual(0.2f, firstView.AnimationCrossFadeDuration);
+                Assert.AreEqual(0.2f, secondView.AnimationCrossFadeDuration);
+            }
+            finally
+            {
+                registry.ReleaseAll();
+                Object.DestroyImmediate(definition);
+                Object.DestroyImmediate(parentObject);
+                Object.DestroyImmediate(prefabObject);
+            }
+        }
+
         [TestCase(0f)]
         [TestCase(-1f)]
         [TestCase(float.NaN)]

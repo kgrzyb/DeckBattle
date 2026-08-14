@@ -18,3 +18,4 @@ MonoBehaviour:
   CombatAccelerationDelay: 12
   AcceleratedCombatSpeed: 1.7
   RoundResolutionDelay: 1
+  AnimationCrossFadeDuration: 0.25

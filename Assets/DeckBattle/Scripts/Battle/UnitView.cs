@@ -17,10 +17,6 @@ namespace DeckBattle
         }
 
         private const int AnimatorLayerIndex = 0;
-        private const float LocomotionTransitionDuration = 0.1f;
-        private const float ActionTransitionDuration = 0.08f;
-        private const float DeathTransitionDuration = 0.05f;
-
         private static readonly int IdleState = Animator.StringToHash("Base Layer.Idle");
         private static readonly int RunState = Animator.StringToHash("Base Layer.Run");
         private static readonly int AttackState = Animator.StringToHash("Base Layer.Attack");
@@ -41,6 +37,7 @@ namespace DeckBattle
         public RuntimeUnit Unit { get; private set; }
         public UnitRuntimeState RealtimeUnit { get; private set; }
         internal float RunAnimationSpeedMultiplier { get { return runAnimationSpeedMultiplier; } }
+        internal float AnimationCrossFadeDuration { get { return animationCrossFadeDuration; } }
         public event Action<UnitView, UnitAnimationVfxSignal> AnimationVfxSignal;
 
         private Vector3 baseModelScale;
@@ -57,6 +54,7 @@ namespace DeckBattle
         private float deathTimer;
         private float combatSpeed = 1f;
         private float runAnimationSpeedMultiplier = 1f;
+        private float animationCrossFadeDuration = BattleTiming.DefaultAnimationCrossFadeDuration;
         private int queuedMoveHead;
         private int queuedMoveCount;
         private bool isMoving;
@@ -191,6 +189,11 @@ namespace DeckBattle
             {
                 animator.SetFloat(RunSpeedParameter, runAnimationSpeedMultiplier);
             }
+        }
+
+        public void SetAnimationCrossFadeDuration(float duration)
+        {
+            animationCrossFadeDuration = BattleTiming.ResolveAnimationCrossFadeDuration(duration);
         }
 
         public void MoveToWorldPosition(Vector3 worldPosition, float duration)
@@ -591,7 +594,7 @@ namespace DeckBattle
 
             animator.CrossFadeInFixedTime(
                 GetAnimatorState(nextState),
-                GetTransitionDuration(nextState),
+                animationCrossFadeDuration,
                 AnimatorLayerIndex,
                 0f);
         }
@@ -609,18 +612,5 @@ namespace DeckBattle
             }
         }
 
-        private static float GetTransitionDuration(UnitVisualState state)
-        {
-            switch (state)
-            {
-                case UnitVisualState.Idle:
-                case UnitVisualState.Run:
-                    return LocomotionTransitionDuration;
-                case UnitVisualState.Dead:
-                    return DeathTransitionDuration;
-                default:
-                    return ActionTransitionDuration;
-            }
-        }
     }
 }

@@ -36,6 +36,7 @@ namespace DeckBattle
         [SerializeField, HideInInspector] private float combatAccelerationDelay = BattleTiming.DefaultCombatAccelerationDelay;
         [SerializeField, HideInInspector] private float acceleratedCombatSpeed = BattleTiming.DefaultAcceleratedCombatSpeed;
         [SerializeField, HideInInspector] private float roundResolutionDelay = BattleTiming.DefaultRoundResolutionDelay;
+        [SerializeField, HideInInspector] private float animationCrossFadeDuration = BattleTiming.DefaultAnimationCrossFadeDuration;
 
         private UnitViewRegistry unitViewRegistry;
         private readonly List<UnitDefinition> presentationDefinitions = new List<UnitDefinition>(16);
@@ -87,6 +88,7 @@ namespace DeckBattle
             combatAccelerationDelay = BattleTiming.ResolveCombatAccelerationDelay(combatAccelerationDelay);
             acceleratedCombatSpeed = BattleTiming.ResolveAcceleratedCombatSpeed(acceleratedCombatSpeed);
             roundResolutionDelay = Mathf.Max(0f, roundResolutionDelay);
+            animationCrossFadeDuration = BattleTiming.ResolveAnimationCrossFadeDuration(animationCrossFadeDuration);
             enemyUnitPlacementDelay = Mathf.Max(0f, enemyUnitPlacementDelay);
             enemyReadyDelay = Mathf.Max(0f, enemyReadyDelay);
         }
@@ -135,6 +137,7 @@ namespace DeckBattle
             }
 
             ConfigureBattlePresentation();
+            ResolveBattleView()?.SetAnimationCrossFadeDuration(ResolveAnimationCrossFadeDuration());
 
             state.BeginRoundStart();
             lastCombatResult = null;
@@ -813,6 +816,14 @@ namespace DeckBattle
                 ? battleTimingConfig.RoundResolutionDelay
                 : roundResolutionDelay;
             return Mathf.Max(0f, configuredDelay);
+        }
+
+        private float ResolveAnimationCrossFadeDuration()
+        {
+            float configuredDuration = battleTimingConfig != null
+                ? battleTimingConfig.AnimationCrossFadeDuration
+                : animationCrossFadeDuration;
+            return BattleTiming.ResolveAnimationCrossFadeDuration(configuredDuration);
         }
 
         private void RefreshUnits(bool resetExistingViews = false)

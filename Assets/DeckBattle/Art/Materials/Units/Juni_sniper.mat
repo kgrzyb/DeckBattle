@@ -130,7 +130,7 @@ Material:
     - _MetallicStrength: 0.5
     - _OcclusionStrength: 1
     - _OutlineSmoothNormals: 0
-    - _OutlineWidth: 0.00025
+    - _OutlineWidth: 0.00015
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _RampSmoothness: 0.001

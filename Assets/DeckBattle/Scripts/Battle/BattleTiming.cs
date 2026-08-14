@@ -10,6 +10,7 @@ namespace DeckBattle
         public const float DefaultCombatAccelerationDelay = 10f;
         public const float DefaultAcceleratedCombatSpeed = 2f;
         public const float MinAcceleratedCombatSpeed = 1f;
+        public const float DefaultAnimationCrossFadeDuration = 0.1f;
 
         public static float ResolveCombatAccelerationDelay(float value)
         {
@@ -23,6 +24,13 @@ namespace DeckBattle
             return float.IsNaN(value) || float.IsInfinity(value)
                 ? DefaultAcceleratedCombatSpeed
                 : System.Math.Max(MinAcceleratedCombatSpeed, value);
+        }
+
+        public static float ResolveAnimationCrossFadeDuration(float value)
+        {
+            return float.IsNaN(value) || float.IsInfinity(value)
+                ? DefaultAnimationCrossFadeDuration
+                : System.Math.Max(0f, value);
         }
     }
 }

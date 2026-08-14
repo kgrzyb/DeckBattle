@@ -11,6 +11,7 @@ namespace DeckBattle
         private readonly UnityEngine.Object context;
         private readonly Dictionary<int, UnitView> viewsByUnitId = new Dictionary<int, UnitView>(16);
         private float combatSpeed = 1f;
+        private float animationCrossFadeDuration = BattleTiming.DefaultAnimationCrossFadeDuration;
 
         public UnitViewRegistry(BattlePresentationLookup presentationLookup, Transform parent, UnityEngine.Object context)
         {
@@ -39,6 +40,7 @@ namespace DeckBattle
             view = UnityEngine.Object.Instantiate(prefab, parent);
             view.SetRunAnimationSpeedMultiplier(runAnimationSpeedMultiplier);
             view.SetCombatSpeed(combatSpeed);
+            view.SetAnimationCrossFadeDuration(animationCrossFadeDuration);
             viewsByUnitId.Add(state.UnitId, view);
             return view;
         }
@@ -98,6 +100,24 @@ namespace DeckBattle
             }
         }
 
+        public void SetAnimationCrossFadeDuration(float duration)
+        {
+            float safeDuration = BattleTiming.ResolveAnimationCrossFadeDuration(duration);
+            if (Mathf.Approximately(animationCrossFadeDuration, safeDuration))
+            {
+                return;
+            }
+
+            animationCrossFadeDuration = safeDuration;
+            foreach (KeyValuePair<int, UnitView> entry in viewsByUnitId)
+            {
+                if (entry.Value != null)
+                {
+                    entry.Value.SetAnimationCrossFadeDuration(animationCrossFadeDuration);
+                }
+            }
+        }
+
         internal void RegisterExisting(int unitId, UnitView view)
         {
             if (unitId <= 0) throw new ArgumentOutOfRangeException(nameof(unitId));
@@ -110,6 +130,7 @@ namespace DeckBattle
 
             viewsByUnitId[unitId] = view;
             view.SetCombatSpeed(combatSpeed);
+            view.SetAnimationCrossFadeDuration(animationCrossFadeDuration);
         }
 
         private static void ReleaseView(UnitView view)

@@ -28,6 +28,7 @@ namespace DeckBattle
         private readonly Dictionary<int, int> shieldByUnitId = new Dictionary<int, int>(16);
         private float presentationTickDuration = BattleTiming.DefaultCombatTickDuration;
         private float combatSpeed = 1f;
+        private float animationCrossFadeDuration = BattleTiming.DefaultAnimationCrossFadeDuration;
 
         public BoardPresenter BoardPresenter
         {
@@ -72,6 +73,18 @@ namespace DeckBattle
             statusOverlayController?.SetCombatSpeed(combatSpeed);
             statusVfxController?.SetCombatSpeed(combatSpeed);
             floatingDamageTextController?.SetCombatSpeed(combatSpeed);
+        }
+
+        public void SetAnimationCrossFadeDuration(float duration)
+        {
+            float safeDuration = BattleTiming.ResolveAnimationCrossFadeDuration(duration);
+            if (Mathf.Approximately(animationCrossFadeDuration, safeDuration))
+            {
+                return;
+            }
+
+            animationCrossFadeDuration = safeDuration;
+            unitViewRegistry?.SetAnimationCrossFadeDuration(animationCrossFadeDuration);
         }
 
         private void Awake()
@@ -422,6 +435,7 @@ namespace DeckBattle
                     unitRoot != null ? unitRoot : transform,
                     this);
                 unitViewRegistry.SetCombatSpeed(combatSpeed);
+                unitViewRegistry.SetAnimationCrossFadeDuration(animationCrossFadeDuration);
             }
 
             return unitViewRegistry;
